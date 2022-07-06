@@ -1,3 +1,6 @@
+from fractions import Fraction
+from ccmatic.common import flatten
+from cegis import Cegis
 import z3
 
 from .verifier import setup_ccac
@@ -49,6 +52,11 @@ coeffs = {
 }
 
 # Search constr
+search_range = [Fraction(i, 2) for i in range(-4, 5)]
+domain_clauses = []
+for coeff in flatten(coeffs.values()):
+    domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
+search_constraints = z3.And(*domain_clauses)
 
 # Definitions
 definitions = None
@@ -56,3 +64,10 @@ definitions = None
 # CCmatic inputs
 ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
+generator_vars = flatten(list(coeffs.values()))
+verifier_vars = flatten([v.S_f, v.W, v.L_f])
+definition_vars = flatten([])
+
+cg = Cegis(generator_vars, verifier_vars, definition_vars,
+           search_constraints, definitions, specification, ctx)
+cg.run()
