@@ -97,12 +97,14 @@ ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
 definitions = z3.And(ccac_definitions, *definition_constrs)
 
-generator_vars = flatten(
-    list(coeffs.values()) + list(consts.values()))
+generator_vars = (flatten(list(coeffs.values())) +
+                  flatten(list(consts.values())))
 verifier_vars = flatten(
-    [v.A_f[:history], v.c_f[:history], v.S_f, v.W, v.L_f, v.epsilon, v.dupacks, v.alpha])
+    [v.A_f[:history], v.c_f[:history], v.S_f, v.W,
+     v.L_f, v.epsilon, v.dupacks, v.alpha])
 definition_vars = flatten(
-    [v.A_f[history:], v.A, v.c_f[history:], v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, v.qdel])
+    [v.A_f[history:], v.A, v.c_f[history:],
+     v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, v.qdel])
 
 cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                  search_constraints, definitions, specification, ctx)
