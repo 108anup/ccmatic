@@ -17,8 +17,8 @@ history = 4
 c, v, = setup_ccac()
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
-ccac_definitions = sd.assertions()
-environment = se.assertions()
+ccac_definitions = z3.And(*sd.assertion_list)
+environment = z3.And(*se.assertion_list)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -54,7 +54,7 @@ consts = {
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
 domain_clauses = []
-for coeff in flatten(coeffs.values()):
+for coeff in flatten(list(coeffs.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
 
@@ -90,7 +90,7 @@ for lvar_symbol in lhs_var_symbols:
         lvar = eval('v.{}'.format(lvar_symbol))
         rhs = get_expr(lvar_symbol, t)
         definition_constrs.append(
-            lvar == z3.If(rhs >= lower_bound, rhs, lower_bound))
+            lvar[t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -99,13 +99,27 @@ definitions = z3.And(ccac_definitions, *definition_constrs)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
+conditional_vvars = []
+if(not c.compose):
+    conditional_vvars.append(v.epsilon)
 verifier_vars = flatten(
     [v.A_f[:history], v.c_f[:history], v.S_f, v.W,
-     v.L_f, v.epsilon, v.dupacks, v.alpha])
+     v.L_f, v.dupacks, v.alpha, conditional_vvars])
 definition_vars = flatten(
     [v.A_f[history:], v.A, v.c_f[history:],
      v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, v.qdel])
 
-cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
-                 search_constraints, definitions, specification, ctx)
-cg.run()
+try:
+
+    cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
+                     search_constraints, definitions, specification, ctx)
+    cg.run()
+
+except Exception:
+    import sys
+    import traceback
+
+    import ipdb
+    extype, value, tb = sys.exc_info()
+    traceback.print_exc()
+    ipdb.post_mortem(tb)
