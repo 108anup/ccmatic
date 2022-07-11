@@ -101,7 +101,7 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
         cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
     # Queue seen by a new packet should not be more that delay_bound
     low_delay = z3.And(*cond_list)
-    # Serviced shoulf be at least util_frac that could have been serviced
+    # Serviced should be at least util_frac that could have been serviced
     high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
     # If the cwnd0 is very low then CCA should increase cwnd
     ramp_up = v.c_f[0][-1] > v.c_f[0][first]
@@ -111,4 +111,4 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
     desired = z3.And(
         z3.Or(high_util, ramp_up),
         z3.Or(low_delay, ramp_down))
-    return desired
+    return desired, high_util, low_delay, ramp_up, ramp_down

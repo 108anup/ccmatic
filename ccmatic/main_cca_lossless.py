@@ -34,7 +34,8 @@ first = history  # First cwnd idx decided by synthesized cca
 util_frac = 0.50
 delay_bound = 1.8 * c.C * (c.R + c.D)
 
-desired = desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
+(desired, high_util, low_delay, ramp_up, ramp_down) = \
+    desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
 assert isinstance(desired, z3.ExprRef)
 
 # Generator definitions
@@ -63,7 +64,7 @@ consts = {
 
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
-search_range = [-1, 0, 1]
+# search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
@@ -88,9 +89,9 @@ def get_expr(lvar_symbol, t) -> z3.ArithRef:
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
             time_idx = t - lag - h
             rvar = eval('v.{}'.format(rvar_symbol))
-            this_term = get_product_ite(rvar[time_idx], this_coeff)
+            this_term = get_product_ite(this_coeff, rvar[time_idx])
             term_list.append(this_term)
-    expr = z3.Sum(*term_list)
+    expr = z3.Sum(*term_list) + consts[lvar_symbol]
     assert isinstance(expr, z3.ArithRef)
     return expr
 
@@ -118,10 +119,10 @@ if(c.calculate_qdel):
     conditional_dvars.append(v.qdel)
 
 verifier_vars = flatten(
-    [v.A_f[:history], v.c_f[:history], v.S_f, v.W,
+    [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
      v.L_f, v.dupacks, v.alpha, conditional_vvars])
 definition_vars = flatten(
-    [v.A_f[history:], v.A, v.c_f[history:],
+    [v.A_f[0][history:], v.A, v.c_f[0][history:],
      v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 
@@ -141,6 +142,17 @@ def get_counter_example_str(counter_example: z3.ModelRef,
     }
     df = pd.DataFrame(cex_dict).astype(float)
     ret = "{}".format(df)
+    conds = {
+        "high_util": high_util,
+        "low_delay": low_delay,
+        "ramp_up": ramp_up,
+        "ramp_down": ramp_down
+    }
+    cond_list = []
+    for cond_name, cond in conds.items():
+        cond_list.append(
+            "{}={}".format(cond_name, counter_example.eval(cond)))
+    ret += "\n{}.".format(", ".join(cond_list))
     return ret
 
 
@@ -153,9 +165,10 @@ def get_solution_str(solution: z3.ModelRef,
         rvar_symbol = rhs_var_symbols[rvar_idx]
         for h in range(history):
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
-            this_coeff_val = solution.eval(this_coeff)
-            rhs_expr += "+ {}{}[t-{}] ".format(
-                this_coeff_val, rvar_symbol, h+1)
+            this_coeff_val = solution.eval(this_coeff).as_fraction()
+            if(this_coeff_val != 0):
+                rhs_expr += "+ {}{}[t-{}] ".format(
+                    this_coeff_val, rvar_symbol, h+1)
     this_const = consts[lvar_symbol]
     this_const_val = solution.eval(this_const)
     rhs_expr += "+ {}".format(this_const_val)
@@ -163,6 +176,23 @@ def get_solution_str(solution: z3.ModelRef,
         lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
     return ret
 
+
+# Debugging:
+if False:
+    # Known solution
+    lvar_symbol = "c_f[0]"
+    rvar_idx = 0
+    known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+                            coeffs[lvar_symbol][rvar_idx][1] == 0,
+                            coeffs[lvar_symbol][rvar_idx][2] == 0,
+                            coeffs[lvar_symbol][rvar_idx][3] == -1,
+                            consts[lvar_symbol] == 0)
+    search_constraints = z3.And(search_constraints, known_solution)
+
+    # Definitions (including template)
+    with open('definitions.txt', 'w') as f:
+        assert(isinstance(definitions, z3.ExprRef))
+        f.write(definitions.sexpr())
 
 try:
 
