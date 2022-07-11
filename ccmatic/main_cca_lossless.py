@@ -1,13 +1,22 @@
+import pandas as pd
 from fractions import Fraction
+from typing import List
 
 import z3
 from ccac.variables import VariableNames
 
-from ccmatic.common import flatten
+from ccmatic.common import flatten, get_name_for_list
 from ccmatic.cegis import CegisCCAGen
 
 from .verifier import (desired_high_util_low_delay, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
+
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+
 
 lag = 1
 history = 4
@@ -30,7 +39,8 @@ assert isinstance(desired, z3.ExprRef)
 
 # Generator definitions
 vn = VariableNames(v)
-rhs_var_symbols = ['c_f[0]', 'S_f[0]']
+rhs_var_symbols = ['S_f[0]']
+# rhs_var_symbols = ['c_f[0]', 'S_f[0]']
 lhs_var_symbols = ['c_f[0]']
 lvar_lower_bounds = {
     'c_f[0]': 0.01
@@ -53,8 +63,9 @@ consts = {
 
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
+search_range = [-1, 0, 1]
 domain_clauses = []
-for coeff in flatten(list(coeffs.values())):
+for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
 
@@ -102,17 +113,63 @@ generator_vars = (flatten(list(coeffs.values())) +
 conditional_vvars = []
 if(not c.compose):
     conditional_vvars.append(v.epsilon)
+conditional_dvars = []
+if(c.calculate_qdel):
+    conditional_dvars.append(v.qdel)
+
 verifier_vars = flatten(
     [v.A_f[:history], v.c_f[:history], v.S_f, v.W,
      v.L_f, v.dupacks, v.alpha, conditional_vvars])
 definition_vars = flatten(
     [v.A_f[history:], v.A, v.c_f[history:],
-     v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, v.qdel])
+     v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
+
+
+def get_counter_example_str(counter_example: z3.ModelRef,
+                            verifier_vars: List[z3.ExprRef]) -> str:
+    def _get_model_value(l):
+        ret = []
+        for vvar in l:
+            ret.append(counter_example.eval(vvar).as_fraction())
+        return ret
+    cex_dict = {
+        get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
+        get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
+        get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
+        get_name_for_list(vn.W): _get_model_value(v.W),
+        get_name_for_list(vn.L): _get_model_value(v.L),
+    }
+    df = pd.DataFrame(cex_dict).astype(float)
+    ret = "{}".format(df)
+    return ret
+
+
+def get_solution_str(solution: z3.ModelRef,
+                     generator_vars: List[z3.ExprRef]) -> str:
+    assert(len(lhs_var_symbols) == 1)
+    lvar_symbol = "c_f[0]"
+    rhs_expr = ""
+    for rvar_idx in range(len(rhs_var_symbols)):
+        rvar_symbol = rhs_var_symbols[rvar_idx]
+        for h in range(history):
+            this_coeff = coeffs[lvar_symbol][rvar_idx][h]
+            this_coeff_val = solution.eval(this_coeff)
+            rhs_expr += "+ {}{}[t-{}] ".format(
+                this_coeff_val, rvar_symbol, h+1)
+    this_const = consts[lvar_symbol]
+    this_const_val = solution.eval(this_const)
+    rhs_expr += "+ {}".format(this_const_val)
+    ret = "{}[t] = max({}, {})".format(
+        lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
+    return ret
+
 
 try:
 
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx)
+    cg.get_solution_str = get_solution_str
+    cg.get_counter_example_str = get_counter_example_str
     cg.run()
 
 except Exception:

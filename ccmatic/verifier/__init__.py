@@ -12,7 +12,7 @@ def setup_ccac():
     c.compose = True
     c.cca = "paced"
     c.simplify = False
-    c.calculate_qdel = True
+    c.calculate_qdel = False
     c.C = 100
     c.T = 7
 

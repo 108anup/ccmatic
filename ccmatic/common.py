@@ -30,7 +30,7 @@ def lcs(arr: List[str]) -> str:
 
 def get_name_for_list(l: Union[List[str], str]) -> str:
     if(isinstance(l, list)):
-        return lcs(l)
+        return lcs(l) + "t"
     elif(isinstance(l, str)):
         return l
     else:
