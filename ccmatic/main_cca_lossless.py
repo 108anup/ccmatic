@@ -1,15 +1,25 @@
+import logging
+import numpy as np
 import pandas as pd
 from fractions import Fraction
-from typing import List
+from typing import List, Tuple, Optional
 
 import z3
 from ccac.variables import VariableNames
 
 from ccmatic.common import flatten, get_name_for_list
 from ccmatic.cegis import CegisCCAGen
+from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
+from pyz3_utils.binary_search import BinarySearch
+from pyz3_utils.small_denom import find_small_denom_soln
 
 from .verifier import (desired_high_util_low_delay, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
+
+
+logger = logging.getLogger('cca_gen')
+GlobalConfig().default_logger_setup(logger)
 
 
 pd.set_option('display.max_rows', None)
@@ -23,7 +33,7 @@ history = 4
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
-c, v, = setup_ccac()
+c, v = setup_ccac()
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
@@ -126,6 +136,11 @@ definition_vars = flatten(
      v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 
+# Method overrides
+# These use function closures, hence have to be defined here.
+# Can use partial functions to use these elsewhere.
+
+
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     def _get_model_value(l):
@@ -177,6 +192,77 @@ def get_solution_str(solution: z3.ModelRef,
     return ret
 
 
+def maximize_gap(
+    verifier: MySolver
+) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
+    """
+    Adds constraints as a side effect to the verifier formulation
+    that try to maximize the gap between
+    service curve and the upper bound of service curve (based on waste choices).
+    """
+    s = verifier
+    # Get c, v, from closure
+
+    orig_sat = s.check()
+    if str(orig_sat) != "sat":
+        return orig_sat, None
+
+    orig_model = s.model()
+    cur_min = np.inf
+    for t in range(1, c.T):
+        if(orig_model.eval(v.W[t] > v.W[t-1])):
+            this_gap = orig_model.eval(
+                v.C0 + c.C * t - v.W[t] - v.S[t]).as_fraction()
+            cur_min = min(cur_min, this_gap)
+
+    # if(cur_min == np.inf):
+    #     return orig_sat
+
+    binary_search = BinarySearch(0, c.C * c.D, c.C * c.D/64)
+    min_gap = z3.Real('min_gap', ctx=ctx)
+
+    for t in range(1, c.T):
+        s.add(z3.Implies(
+            v.W[t] > v.W[t-1],
+            min_gap <= v.C0 + c.C * t - v.W[t] - v.S[t]))
+
+    while True:
+        pt = binary_search.next_pt()
+        if pt is None:
+            break
+
+        s.push()
+        s.add(min_gap >= pt)
+        sat = s.check()
+        s.pop()
+
+        if(str(sat) == 'sat'):
+            binary_search.register_pt(pt, 1)
+        elif str(sat) == "unknown":
+            binary_search.register_pt(pt, 2)
+        else:
+            assert str(sat) == "unsat", f"Unknown value: {str(sat)}"
+            binary_search.register_pt(pt, 3)
+
+    best_gap, _, _ = binary_search.get_bounds()
+    s.add(min_gap >= best_gap)
+
+    sat = s.check()
+    assert sat == orig_sat
+    model = s.model()
+
+    logger.info("Improved gap from {} to {}".format(cur_min, best_gap))
+    return sat, model
+
+
+def run_verifier(
+    verifier: MySolver
+) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
+    _, _ = maximize_gap(verifier)
+    sat, _, model = find_small_denom_soln(verifier, 4096)
+    return sat, model
+
+
 # Debugging:
 if False:
     # Known solution
@@ -200,6 +286,7 @@ try:
                      search_constraints, definitions, specification, ctx)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
+    cg.run_verifier = run_verifier
     cg.run()
 
 except Exception:
