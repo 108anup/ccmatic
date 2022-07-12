@@ -33,7 +33,8 @@ history = 4
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
-c, v = setup_ccac()
+c, s, v = setup_ccac()
+ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
@@ -117,7 +118,7 @@ for lvar_symbol in lhs_var_symbols:
 # CCmatic inputs
 ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
-definitions = z3.And(ccac_definitions, *definition_constrs)
+definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))

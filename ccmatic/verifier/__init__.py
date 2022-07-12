@@ -16,10 +16,10 @@ def setup_ccac():
     c.C = 100
     c.T = 7
 
-    dummy_s = MySolver()
-    v = Variables(c, dummy_s)
+    s = MySolver()
+    v = Variables(c, s)
 
-    return c, v
+    return c, s, v
 
 
 def setup_ccac_definitions(c, v):
