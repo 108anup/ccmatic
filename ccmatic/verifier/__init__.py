@@ -11,6 +11,7 @@ from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
                         multi_flows, network, relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.common import get_name_for_list
+from cegis import NAME_TEMPLATE
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -211,6 +212,37 @@ def get_cex_df(
         get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
         get_name_for_list(vn.W): _get_model_value(v.W),
         get_name_for_list(vn.L): _get_model_value(v.L),
+        get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
+        get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
+    }
+    df = pd.DataFrame(cex_dict).astype(float)
+    return df
+
+
+def get_gen_cex_df(
+    solution: z3.ModelRef, v: Variables, vn: VariableNames,
+    n_cex: int
+) -> pd.DataFrame:
+    if(n_cex == 0):
+        return pd.DataFrame()
+    name_template = NAME_TEMPLATE + str(n_cex)
+    ctx = solution.ctx
+
+    def _get_model_value(l):
+        ret = []
+        for vvar in l:
+            cex_vvar_name = name_template.format(vvar)
+            cex_var = z3.Const(cex_vvar_name, vvar.sort())
+            ret.append(solution.eval(cex_var).as_fraction())
+        return ret
+    cex_dict = {
+        get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
+        get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
+        get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
+        get_name_for_list(vn.W): _get_model_value(v.W),
+        get_name_for_list(vn.L): _get_model_value(v.L),
+        get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
+        get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
     }
     df = pd.DataFrame(cex_dict).astype(float)
     return df

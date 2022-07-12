@@ -156,7 +156,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 
 def get_solution_str(solution: z3.ModelRef,
-                     generator_vars: List[z3.ExprRef]) -> str:
+                     generator_vars: List[z3.ExprRef], n_cex: int) -> str:
     assert(len(lhs_var_symbols) == 1)
     lvar_symbol = "c_f[0]"
     rhs_expr = ""

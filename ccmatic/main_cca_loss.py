@@ -5,13 +5,14 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from cegis.util import tcolor
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, get_cex_df,
+from .verifier import (desired_high_util_low_delay, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -26,8 +27,7 @@ history = 4
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
-# Consider the no loss case for simplicity
-s.add(v.L[0] == v.L[-1])
+c.buf_min = c.C * (c.R + c.D)
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
@@ -50,7 +50,7 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.5
+util_frac = 0.1
 delay_bound = 2 * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
@@ -156,7 +156,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 
 def get_solution_str(solution: z3.ModelRef,
-                     generator_vars: List[z3.ExprRef]) -> str:
+                     generator_vars: List[z3.ExprRef], n_cex: int) -> str:
     assert(len(lhs_var_symbols) == 1)
     lvar_symbol = "c_f[0]"
     rhs_expr = ""
@@ -173,6 +173,11 @@ def get_solution_str(solution: z3.ModelRef,
     rhs_expr += "+ {}".format(this_const_val)
     ret = "{}[t] = max({}, {})".format(
         lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
+    gen_view_str = tcolor.generator(
+        "{}".format(get_gen_cex_df(solution, v, vn, n_cex)))
+    logger.info("Generator view of cex:\n{}"
+                .format(gen_view_str))
+
     return ret
 
 
