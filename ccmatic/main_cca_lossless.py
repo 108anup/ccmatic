@@ -42,7 +42,7 @@ environment = z3.And(*se.assertion_list)
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
 util_frac = 0.50
-delay_bound = 1.8 * c.C * (c.R + c.D)
+delay_bound = 2 * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
     desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
@@ -130,7 +130,7 @@ if(c.calculate_qdel):
 
 verifier_vars = flatten(
     [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-     v.L_f, v.dupacks, v.alpha, conditional_vvars])
+     v.L_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
 definition_vars = flatten(
     [v.A_f[0][history:], v.A, v.c_f[0][history:],
      v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
