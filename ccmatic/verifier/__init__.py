@@ -19,6 +19,8 @@ def setup_ccac():
     s = MySolver()
     v = Variables(c, s)
 
+    # s.add(z3.And(v.S[0] <= 1000, v.S[0] >= -1000))
+
     return c, s, v
 
 

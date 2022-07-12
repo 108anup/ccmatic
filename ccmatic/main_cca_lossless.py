@@ -42,7 +42,7 @@ environment = z3.And(*se.assertion_list)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.50
+util_frac = 0.5
 delay_bound = 2 * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
@@ -75,7 +75,7 @@ consts = {
 
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
-# search_range = [-1, 0, 1]
+search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
