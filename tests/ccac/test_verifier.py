@@ -2,13 +2,13 @@ from gc import get_count
 import z3
 from ccac.variables import VariableNames
 from ccmatic.common import flatten
-from ccmatic.verifier import (get_cex_df, setup_ccac, setup_ccac_definitions,
+from ccmatic.verifier import (desired_high_util_low_loss, get_cex_df, setup_ccac, setup_ccac_definitions,
                               setup_ccac_environment)
 from pyz3_utils.my_solver import MySolver
 
 
 lag = 1
-history = 1
+history = 4
 first = history
 
 # Verifier
@@ -16,6 +16,7 @@ first = history
 c, s, v = setup_ccac()
 vn = VariableNames(v)
 c.buf_max = c.C * (c.R + c.D)
+c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
@@ -40,24 +41,11 @@ definition_vars = flatten(
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
 util_frac = 0.5
-delay_bound = 0.5 * c.C * (c.R + c.D)
+loss_rate = 1 / ((c.T-1) - first)
 
-cond_list = []
-for t in range(first, c.T):
-    cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
-# Queue seen by a new packet should not be more that delay_bound
-low_delay = z3.And(*cond_list)
-# Serviced should be at least util_frac that could have been serviced
-high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
-# If the cwnd0 is very low then CCA should increase cwnd
-ramp_up = v.c_f[0][-1] > v.c_f[0][first]
-# If the queue is large to begin with then, CCA should cause queue to decrease.
-ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
-
-desired = z3.And(
-    z3.Or(high_util, ramp_up),
-    z3.Or(low_delay, ramp_down)
-)
+(desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
+    desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
+desired = z3.And(z3.Or(high_util, ramp_up), z3.Or(low_loss, ramp_down))
 assert isinstance(desired, z3.ExprRef)
 
 definition_constrs = []
@@ -69,22 +57,18 @@ for t in range(first, c.T):
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
+    # definition_constrs.append(v.c_f[0][t] == 4096)
+
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
-    df = get_cex_df(counter_example, v, vn)
-    queue_t = []
-    for t in range(c.T):
-        queue_t.append(
-            counter_example.eval(
-                v.A[t] - v.L[t] - v.S[t]
-            ).as_fraction())
-    df["queue_t"] = queue_t
+    df = get_cex_df(counter_example, v, vn, c)
     ret = "{}".format(df.astype(float))
     conds = {
         "high_util": high_util,
-        "low_delay": low_delay,
+        "low_loss": low_loss,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down
+        "ramp_down": ramp_down,
+        "measured_loss_rate": measured_loss_rate
     }
     cond_list = []
     for cond_name, cond in conds.items():

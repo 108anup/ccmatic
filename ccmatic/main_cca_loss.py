@@ -5,14 +5,15 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
-from cegis.util import tcolor
 from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
+from cegis.util import tcolor
 
-from .verifier import (desired_high_util_low_delay, get_cex_df, get_gen_cex_df,
+from .verifier import (desired_high_util_low_loss, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -28,6 +29,7 @@ history = 4
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
 c.buf_max = c.C * (c.R + c.D)
+c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
@@ -52,10 +54,10 @@ definition_vars = flatten(
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
 util_frac = 0.5
-delay_bound = 2 * c.C * (c.R + c.D)
+loss_rate = 1 / ((c.T-1) - first)
 
-(desired, high_util, low_delay, ramp_up, ramp_down) = \
-    desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
+(desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
+    desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
 assert isinstance(desired, z3.ExprRef)
 
 # Generator definitions
@@ -69,8 +71,8 @@ coeffs = {
 }
 
 consts = {
-    'c_f[0]_loss': z3.Real('Gen_const_c_f[0]_loss'),
-    'c_f[0]_noloss': z3.Real('Gen_const_c_f[0]_loss')
+    'c_f[0]_loss': z3.Real('Gen__const_c_f[0]_loss'),
+    'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss')
 }
 
 # Search constr
@@ -80,6 +82,7 @@ domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
+assert(isinstance(search_constraints, z3.ExprRef))
 
 # Definitions (Template)
 definition_constrs = []
@@ -95,7 +98,7 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 assert first >= 1
 for t in range(first, c.T):
     assert history > lag
-    cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
                 + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
@@ -103,7 +106,7 @@ for t in range(first, c.T):
     rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
                   + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
                   + consts['c_f[0]_noloss'])
-    rhs = z3.If(cond, rhs_loss, rhs_noloss)
+    rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(
         v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
@@ -113,6 +116,7 @@ for t in range(first, c.T):
 ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
 definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
+assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
@@ -125,13 +129,14 @@ generator_vars = (flatten(list(coeffs.values())) +
 
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
-    df = get_cex_df(counter_example, v, vn)
+    df = get_cex_df(counter_example, v, vn, c)
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,
-        "low_delay": low_delay,
+        "low_loss": low_loss,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down
+        "ramp_down": ramp_down,
+        "measured_loss_rate": measured_loss_rate
     }
     cond_list = []
     for cond_name, cond in conds.items():
@@ -165,17 +170,41 @@ def get_solution_str(solution: z3.ModelRef,
     return ret
 
 
+# Known solution
+known_solution_list = []
+known_solution_list.append(coeffs['c_f[0]_loss'] == 1/2)
+known_solution_list.append(coeffs['ack_f[0]_loss'] == 0)
+known_solution_list.append(consts['c_f[0]_loss'] == 0)
+
+known_solution_list.append(coeffs['c_f[0]_noloss'] == 1)
+known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
+known_solution_list.append(consts['c_f[0]_noloss'] == 1)
+known_solution = z3.And(*known_solution_list)
+assert(isinstance(known_solution, z3.ExprRef))
+
 # Debugging:
 if DEBUG:
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert(isinstance(search_constraints, z3.ExprRef))
+
+    # known_solver = MySolver()
+    # known_solver.warn_undeclared = False
+    # known_solver.add(known_solution)
+    # print(known_solver.check())
+    # print(known_solver.model())
+
+    # Search constraints
+    with open('search.txt', 'w') as f:
+        f.write(search_constraints.sexpr())
+
     # Definitions (including template)
     with open('definitions.txt', 'w') as f:
-        assert(isinstance(definitions, z3.ExprRef))
         f.write(definitions.sexpr())
 
 try:
-
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
-                     search_constraints, definitions, specification, ctx)
+                     search_constraints, definitions, specification, ctx,
+                     known_solution)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     run_verifier = functools.partial(

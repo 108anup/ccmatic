@@ -1,13 +1,13 @@
 import pandas as pd
 
 import logging
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import z3
 from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
                         cca_const, cca_copa, cca_paced, cwnd_rate_arrival,
-                        epsilon_alpha, initial, loss_detected, make_solver, monotone,
+                        epsilon_alpha, initial, loss_detected, loss_oracle, make_solver,
                         multi_flows, network, relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.common import get_name_for_list
@@ -21,6 +21,45 @@ logger = logging.getLogger('verifier')
 GlobalConfig().default_logger_setup(logger)
 
 
+def monotone_env(c, s, v):
+    for t in range(1, c.T):
+        for n in range(c.N):
+            # Keeping in defs so that CCA does not exploit this.
+            # In reality since arrival is max of prev and new value,
+            # this constriant should never be broken anyway.
+            # s.add(v.A_f[n][t] >= v.A_f[n][t - 1])
+
+            # Can be in env or def as only contain verifier vars.
+            # Keeping in env for now.
+            s.add(v.Ld_f[n][t] >= v.Ld_f[n][t - 1])
+            s.add(v.S_f[n][t] >= v.S_f[n][t - 1])
+            s.add(v.L_f[n][t] >= v.L_f[n][t - 1])
+
+            # Must be in environment. The loss may not be feasible
+            # for new arrival.
+            s.add(
+                v.A_f[n][t] - v.L_f[n][t] >= v.A_f[n][t - 1] - v.L_f[n][t - 1])
+
+        # Can be in env or def as only contain verifier vars.
+        # Keeping in env for now.
+        s.add(v.W[t] >= v.W[t - 1])
+        s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
+
+
+def monotone_defs(c, s, v):
+    for t in range(1, c.T):
+        for n in range(c.N):
+            s.add(v.A_f[n][t] >= v.A_f[n][t - 1])
+            # s.add(v.Ld_f[n][t] >= v.Ld_f[n][t - 1])
+            # s.add(v.S_f[n][t] >= v.S_f[n][t - 1])
+            # s.add(v.L_f[n][t] >= v.L_f[n][t - 1])
+
+            # s.add(
+            #     v.A_f[n][t] - v.L_f[n][t] >= v.A_f[n][t - 1] - v.L_f[n][t - 1])
+        # s.add(v.W[t] >= v.W[t - 1])
+        # s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
+
+
 def setup_ccac():
     c = ModelConfig.default()
     c.compose = True
@@ -28,7 +67,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 10
+    c.T = 7
 
     s = MySolver()
     v = Variables(c, s)
@@ -38,14 +77,17 @@ def setup_ccac():
     return c, s, v
 
 
-def setup_ccac_definitions(c, v):
+def setup_ccac_definitions(c, v, use_loss_oracle=False):
     s = MySolver()
     s.warn_undeclared = False
 
-    monotone(c, s, v)
+    monotone_defs(c, s, v)
     initial(c, s, v)
     relate_tot(c, s, v)
-    loss_detected(c, s, v)
+    if(use_loss_oracle):
+        loss_oracle(c, s, v)
+    else:
+        loss_detected(c, s, v)
     epsilon_alpha(c, s, v)
     if c.calculate_qdel:
         calculate_qdel(c, s, v)
@@ -84,6 +126,7 @@ def setup_ccac_definitions(c, v):
 def setup_ccac_environment(c, v):
     s = MySolver()
     s.warn_undeclared = False
+    monotone_env(c, s, v)
     network(c, s, v)
     return s
 
@@ -125,6 +168,23 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
         z3.Or(high_util, ramp_up),
         z3.Or(low_delay, ramp_down))
     return desired, high_util, low_delay, ramp_up, ramp_down
+
+
+def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
+    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
+
+    loss_list: List[z3.BoolRef] = []
+    for t in range(first, c.T):
+        loss_list.append(v.L[t] > v.L[t-1])
+    total_losses = z3.Sum(*loss_list)
+
+    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
+    ramp_down = v.c_f[0][-1] < v.c_f[0][first] # Check if we want something on queue.
+    low_loss = total_losses <= loss_rate * ((c.T-1) - first)
+    desired = z3.And(
+        z3.Or(high_util, ramp_up),
+        z3.Or(low_loss, ramp_down))
+    return desired, high_util, low_loss, ramp_up, ramp_down, total_losses/((c.T-1) - first)
 
 
 def maximize_gap(
@@ -199,12 +259,19 @@ def run_verifier_incomplete(
 
 
 def get_cex_df(
-    counter_example: z3.ModelRef, v: Variables, vn: VariableNames
+    counter_example: z3.ModelRef, v: Variables,
+    vn: VariableNames, c: ModelConfig
 ) -> pd.DataFrame:
     def _get_model_value(l):
         ret = []
         for vvar in l:
-            ret.append(counter_example.eval(vvar).as_fraction())
+            val = counter_example.eval(vvar)
+            parsed_val = val
+            if(isinstance(val, z3.RatNumRef)):
+                parsed_val = val.as_fraction()
+            elif(isinstance(val, z3.BoolRef)):
+                parsed_val = bool(val)
+            ret.append(parsed_val)
         return ret
     cex_dict = {
         get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
@@ -213,9 +280,17 @@ def get_cex_df(
         get_name_for_list(vn.W): _get_model_value(v.W),
         get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
         get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
+        # get_name_for_list(vn.timeout_f[0]): _get_model_value(v.timeout_f[0]),
     }
     df = pd.DataFrame(cex_dict).astype(float)
-    return df
+    queue_t = []
+    for t in range(c.T):
+        queue_t.append(
+            counter_example.eval(
+                v.A[t] - v.L[t] - v.S[t]
+            ).as_fraction())
+    df["queue_t"] = queue_t
+    return df.astype(float)
 
 
 def get_gen_cex_df(
