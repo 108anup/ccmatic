@@ -27,7 +27,7 @@ history = 4
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
-c.buf_min = c.C * (c.R + c.D)
+c.buf_max = c.C * (c.R + c.D)
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
@@ -41,16 +41,17 @@ conditional_dvars = []
 if(c.calculate_qdel):
     conditional_dvars.append(v.qdel)
 
+assert c.N == 1
 verifier_vars = flatten(
     [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-     v.L_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
+     v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
 definition_vars = flatten(
     [v.A_f[0][history:], v.A, v.c_f[0][history:],
-     v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
+     v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.1
+util_frac = 0.5
 delay_bound = 2 * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
@@ -59,31 +60,22 @@ assert isinstance(desired, z3.ExprRef)
 
 # Generator definitions
 vn = VariableNames(v)
-rhs_var_symbols = ['S_f[0]']
-# rhs_var_symbols = ['c_f[0]', 'S_f[0]']
-lhs_var_symbols = ['c_f[0]']
-lvar_lower_bounds = {
-    'c_f[0]': 0.01
-}
-n_coeffs = len(rhs_var_symbols) * history
-n_const = 1
-
-# Coeff for determining rhs var, of lhs var, at shift t
+lower_bound = 0.01
 coeffs = {
-    lvar: [
-        [z3.Real('Gen__coeff_{}_{}_{}'.format(lvar, rvar, h))
-         for h in range(history)]
-        for rvar in rhs_var_symbols
-    ] for lvar in lhs_var_symbols
+    'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
+    'c_f[0]_noloss': z3.Real('Gen__coeff_c_f[0]_noloss'),
+    'ack_f[0]_loss': z3.Real('Gen__coeff_ack_f[0]_loss'),
+    'ack_f[0]_noloss': z3.Real('Gen__coeff_ack_f[0]_noloss')
 }
+
 consts = {
-    lvar: z3.Real('Gen__const_{}'.format(lvar))
-    for lvar in lhs_var_symbols
+    'c_f[0]_loss': z3.Real('Gen_const_c_f[0]_loss'),
+    'c_f[0]_noloss': z3.Real('Gen_const_c_f[0]_loss')
 }
 
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
-search_range = [-1, 0, 1]
+# search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
@@ -93,35 +85,29 @@ search_constraints = z3.And(*domain_clauses)
 definition_constrs = []
 
 
-def get_product_ite(coeff, rvar):
+def get_product_ite(coeff, rvar, cdomain=search_range):
     term_list = []
-    for val in search_range:
+    for val in cdomain:
         term_list.append(z3.If(coeff == val, val * rvar, 0))
     return z3.Sum(*term_list)
 
 
-def get_expr(lvar_symbol, t) -> z3.ArithRef:
-    term_list = []
-    for rvar_idx in range(len(rhs_var_symbols)):
-        rvar_symbol = rhs_var_symbols[rvar_idx]
-        for h in range(history):
-            this_coeff = coeffs[lvar_symbol][rvar_idx][h]
-            time_idx = t - lag - h
-            rvar = eval('v.{}'.format(rvar_symbol))
-            this_term = get_product_ite(this_coeff, rvar[time_idx])
-            term_list.append(this_term)
-    expr = z3.Sum(*term_list) + consts[lvar_symbol]
-    assert isinstance(expr, z3.ArithRef)
-    return expr
-
-
-for lvar_symbol in lhs_var_symbols:
-    lower_bound = lvar_lower_bounds[lvar_symbol]
-    for t in range(first, c.T):
-        lvar = eval('v.{}'.format(lvar_symbol))
-        rhs = get_expr(lvar_symbol, t)
-        definition_constrs.append(
-            lvar[t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
+assert first >= 1
+for t in range(first, c.T):
+    assert history > lag
+    cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
+    rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
+                + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
+                + consts['c_f[0]_loss'])
+    rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
+                  + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
+                  + consts['c_f[0]_noloss'])
+    rhs = z3.If(cond, rhs_loss, rhs_noloss)
+    assert isinstance(rhs, z3.ArithRef)
+    definition_constrs.append(
+        v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
+    )
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -157,22 +143,20 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
-    assert(len(lhs_var_symbols) == 1)
-    lvar_symbol = "c_f[0]"
-    rhs_expr = ""
-    for rvar_idx in range(len(rhs_var_symbols)):
-        rvar_symbol = rhs_var_symbols[rvar_idx]
-        for h in range(history):
-            this_coeff = coeffs[lvar_symbol][rvar_idx][h]
-            this_coeff_val = solution.eval(this_coeff).as_fraction()
-            if(this_coeff_val != 0):
-                rhs_expr += "+ {}{}[t-{}] ".format(
-                    this_coeff_val, rvar_symbol, h+1)
-    this_const = consts[lvar_symbol]
-    this_const_val = solution.eval(this_const)
-    rhs_expr += "+ {}".format(this_const_val)
-    ret = "{}[t] = max({}, {})".format(
-        lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
+    rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
+                f"v.c_f[0][t-{lag}]"
+                f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
+                f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                f" + {solution.eval(consts['c_f[0]_loss'])}")
+    rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
+                  f"v.c_f[0][t-{lag}]"
+                  f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
+                  f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                  f" + {solution.eval(consts['c_f[0]_noloss'])}")
+    ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
+           f"else:\n"
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
     gen_view_str = tcolor.generator(
         "{}".format(get_gen_cex_df(solution, v, vn, n_cex)))
     logger.info("Generator view of cex:\n{}"
@@ -183,16 +167,6 @@ def get_solution_str(solution: z3.ModelRef,
 
 # Debugging:
 if DEBUG:
-    # Known solution
-    lvar_symbol = "c_f[0]"
-    rvar_idx = 0
-    known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
-                            coeffs[lvar_symbol][rvar_idx][1] == 0,
-                            coeffs[lvar_symbol][rvar_idx][2] == 0,
-                            coeffs[lvar_symbol][rvar_idx][3] == -1,
-                            consts[lvar_symbol] == 0)
-    search_constraints = z3.And(search_constraints, known_solution)
-
     # Definitions (including template)
     with open('definitions.txt', 'w') as f:
         assert(isinstance(definitions, z3.ExprRef))

@@ -28,7 +28,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 7
+    c.T = 10
 
     s = MySolver()
     v = Variables(c, s)
@@ -149,8 +149,8 @@ def maximize_gap(
                 v.C0 + c.C * t - v.W[t] - v.S[t]).as_fraction()
             cur_min = min(cur_min, this_gap)
 
-    # if(cur_min == np.inf):
-    #     return orig_sat
+    if(cur_min == np.inf):
+        return orig_sat, orig_model
 
     binary_search = BinarySearch(0, c.C * c.D, c.C * c.D/64)
     min_gap = z3.Real('min_gap', ctx=ctx)
@@ -211,7 +211,6 @@ def get_cex_df(
         get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
         get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
         get_name_for_list(vn.W): _get_model_value(v.W),
-        get_name_for_list(vn.L): _get_model_value(v.L),
         get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
         get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
     }
@@ -240,7 +239,6 @@ def get_gen_cex_df(
         get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
         get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
         get_name_for_list(vn.W): _get_model_value(v.W),
-        get_name_for_list(vn.L): _get_model_value(v.L),
         get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
         get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
     }
