@@ -53,7 +53,7 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.5
+util_frac = 0.505
 loss_rate = 1 / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
@@ -76,7 +76,7 @@ consts = {
 }
 
 # Search constr
-search_range = [Fraction(i, 2) for i in range(-4, 5)]
+search_range = [Fraction(i, 2) for i in range(5)]
 # search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):

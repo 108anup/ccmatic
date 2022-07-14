@@ -40,7 +40,7 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.5
+util_frac = 0.505
 loss_rate = 1 / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
@@ -51,13 +51,15 @@ assert isinstance(desired, z3.ExprRef)
 definition_constrs = []
 for t in range(first, c.T):
     cond = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
-    rhs_loss = v.c_f[0][t-lag] / 2
+    # rhs_loss = v.c_f[0][t-lag] / 2
+    rhs_loss = 0
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
     # definition_constrs.append(v.c_f[0][t] == 4096)
+    # definition_constrs.append(v.c_f[0][t] == 0.01)
 
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
