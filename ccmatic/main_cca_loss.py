@@ -46,9 +46,9 @@ if(c.calculate_qdel):
 assert c.N == 1
 verifier_vars = flatten(
     [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-     v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
+     v.dupacks, v.alpha, conditional_vvars, v.C0])
 definition_vars = flatten(
-    [v.A_f[0][history:], v.A, v.c_f[0][history:],
+    [v.A_f[0][history:], v.A, v.c_f[0][history:], v.L_f, v.Ld_f,
      v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 # Desired properties

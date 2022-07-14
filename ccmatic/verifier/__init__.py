@@ -86,6 +86,8 @@ def setup_ccac_definitions(c, v, use_loss_oracle=False):
     relate_tot(c, s, v)
     if(use_loss_oracle):
         loss_oracle(c, s, v)
+        for t in range(c.T):
+            s.add(v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_max)
     else:
         loss_detected(c, s, v)
     epsilon_alpha(c, s, v)
