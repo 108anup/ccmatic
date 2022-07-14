@@ -28,7 +28,7 @@ assert c.N == 1
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 1
+util_frac = 0.75
 loss_rate = 1 / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
@@ -44,10 +44,10 @@ for t in range(first, c.T):
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
-    # definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
+    definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
     # definition_constrs.append(v.c_f[0][t] == 4096)
-    definition_constrs.append(v.c_f[0][t] == 0.01)
+    # definition_constrs.append(v.c_f[0][t] == 0.01)
 
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
@@ -78,6 +78,7 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*definition_constrs))
 verifier.add(z3.Not(desired))
+# verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
 sat = verifier.check()
 if(str(sat) == "sat"):

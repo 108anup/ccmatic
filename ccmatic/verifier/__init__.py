@@ -67,7 +67,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 8
+    c.T = 10
 
     s = MySolver()
     v = Variables(c, s)
@@ -86,8 +86,16 @@ def setup_ccac_definitions(c, v, use_loss_oracle=False):
     relate_tot(c, s, v)
     if(use_loss_oracle):
         loss_oracle(c, s, v)
-        for t in range(c.T):
-            s.add(v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_max)
+        # for t in range(c.T):
+        #     s.add(v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_max)
+        for t in range(1, c.T):
+            s.add(z3.And(
+                z3.Implies(
+                    v.A[t] - v.L[t-1] > v.C0 + c.C * t - v.W[t] + c.buf_min,
+                    v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min),
+                z3.Implies(
+                    v.A[t] - v.L[t-1] <= v.C0 + c.C * t - v.W[t] + c.buf_min,
+                    v.L[t] == v.L[t-1])))
     else:
         loss_detected(c, s, v)
     epsilon_alpha(c, s, v)
