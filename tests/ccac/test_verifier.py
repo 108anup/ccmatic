@@ -40,10 +40,10 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.505
+util_frac = 0.1
 loss_rate = 1 / ((c.T-1) - first)
 
-(desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
+(desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
     desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
 desired = z3.And(z3.Or(high_util, ramp_up), z3.Or(low_loss, ramp_down))
 assert isinstance(desired, z3.ExprRef)
@@ -51,8 +51,8 @@ assert isinstance(desired, z3.ExprRef)
 definition_constrs = []
 for t in range(first, c.T):
     cond = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
-    # rhs_loss = v.c_f[0][t-lag] / 2
-    rhs_loss = 0
+    rhs_loss = v.c_f[0][t-lag] / 2
+    # rhs_loss = 0
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
@@ -70,7 +70,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
         "low_loss": low_loss,
         "ramp_up": ramp_up,
         "ramp_down": ramp_down,
-        "measured_loss_rate": measured_loss_rate
+        "total_losses": total_losses
     }
     cond_list = []
     for cond_name, cond in conds.items():
@@ -81,6 +81,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 
 print("Using c.buf_max={}.".format(c.buf_max))
+print("Allowed losses:", loss_rate * ((c.T-1) - first))
 
 verifier = MySolver()
 verifier.warn_undeclared = False

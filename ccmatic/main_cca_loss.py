@@ -56,7 +56,7 @@ first = history  # First cwnd idx decided by synthesized cca
 util_frac = 0.505
 loss_rate = 1 / ((c.T-1) - first)
 
-(desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
+(desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
     desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
 assert isinstance(desired, z3.ExprRef)
 
@@ -98,7 +98,7 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 assert first >= 1
 for t in range(first, c.T):
     assert history > lag
-    loss_detected = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
                 + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
@@ -136,7 +136,8 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         "low_loss": low_loss,
         "ramp_up": ramp_up,
         "ramp_down": ramp_down,
-        "measured_loss_rate": measured_loss_rate
+        "total_losses": total_losses,
+        "measured_loss_rate": total_losses/((c.T-1) - first)
     }
     cond_list = []
     for cond_name, cond in conds.items():
@@ -158,7 +159,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(Ld_f[0][t-c.R] > Ld_f[0][t-c.R-1]):\n"
+    ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
