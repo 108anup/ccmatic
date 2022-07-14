@@ -1,11 +1,11 @@
-from gc import get_count
 import z3
-from ccac.variables import VariableNames
 from ccmatic.common import flatten
-from ccmatic.verifier import (desired_high_util_low_loss, get_cex_df, setup_ccac, setup_ccac_definitions,
+from ccmatic.verifier import (desired_high_util_low_loss, get_cex_df,
+                              setup_ccac, setup_ccac_definitions,
                               setup_ccac_environment)
 from pyz3_utils.my_solver import MySolver
 
+from ccac.variables import VariableNames
 
 lag = 1
 history = 4
@@ -18,7 +18,7 @@ vn = VariableNames(v)
 c.buf_max = c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v)
+sd = setup_ccac_definitions(c, v, use_loss_oracle=True)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
@@ -77,6 +77,8 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     ret += "\n{}.".format(", ".join(cond_list))
     return ret
 
+
+print("Using c.buf_max={}.".format(c.buf_max))
 
 verifier = MySolver()
 verifier.warn_undeclared = False

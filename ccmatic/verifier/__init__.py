@@ -1,14 +1,13 @@
-import pandas as pd
-
 import logging
 from typing import List, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 import z3
 from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
                         cca_const, cca_copa, cca_paced, cwnd_rate_arrival,
-                        epsilon_alpha, initial, loss_detected, loss_oracle, make_solver,
-                        multi_flows, network, relate_tot)
+                        epsilon_alpha, initial, loss_detected, loss_oracle,
+                        make_solver, multi_flows, network, relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.common import get_name_for_list
 from cegis import NAME_TEMPLATE
@@ -68,7 +67,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 7
+    c.T = 8
 
     s = MySolver()
     v = Variables(c, s)
@@ -181,6 +180,11 @@ def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
 
     ramp_up = v.c_f[0][-1] > v.c_f[0][first]
     ramp_down = v.c_f[0][-1] < v.c_f[0][first] # Check if we want something on queue.
+    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+    # Bottleneck queue should decrese
+    # ramp_down = (
+    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
     low_loss = total_losses <= loss_rate * ((c.T-1) - first)
     desired = z3.And(
         z3.Or(high_util, ramp_up),
@@ -253,7 +257,8 @@ def maximize_gap(
 def run_verifier_incomplete(
     c: ModelConfig, v: Variables, ctx: z3.Context, verifier: MySolver
 ) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
-    # Get c, v, ctx from closure
+    # This is meant to create a partial function by
+    # getting c, v, ctx from closure.
     _, _ = maximize_gap(c, v, ctx, verifier)
     sat, _, model = find_small_denom_soln(verifier, 4096)
     return sat, model
@@ -287,6 +292,14 @@ def get_cex_df(
             get_raw_value(counter_example.eval(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
+
+    bottle_queue_t = []
+    for t in range(c.T):
+        bottle_queue_t.append(
+            get_raw_value(counter_example.eval(
+                v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
+            )))
+    df["bottle_queue_t"] = bottle_queue_t
     return df.astype(float)
 
 

@@ -162,11 +162,6 @@ def get_solution_str(solution: z3.ModelRef,
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
-    gen_view_str = tcolor.generator(
-        "{}".format(get_gen_cex_df(solution, v, vn, n_cex)))
-    logger.info("Generator view of cex:\n{}"
-                .format(gen_view_str))
-
     return ret
 
 
@@ -183,16 +178,18 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 
 # Known solution
-known_solution_list = []
-known_solution_list.append(coeffs['c_f[0]_loss'] == 1/2)
-known_solution_list.append(coeffs['ack_f[0]_loss'] == 0)
-known_solution_list.append(consts['c_f[0]_loss'] == 0)
+known_solution = None
 
-known_solution_list.append(coeffs['c_f[0]_noloss'] == 1)
-known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
-known_solution_list.append(consts['c_f[0]_noloss'] == 1)
-known_solution = z3.And(*known_solution_list)
-assert(isinstance(known_solution, z3.ExprRef))
+# known_solution_list = []
+# known_solution_list.append(coeffs['c_f[0]_loss'] == 1/2)
+# known_solution_list.append(coeffs['ack_f[0]_loss'] == 0)
+# known_solution_list.append(consts['c_f[0]_loss'] == 0)
+
+# known_solution_list.append(coeffs['c_f[0]_noloss'] == 1)
+# known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
+# known_solution_list.append(consts['c_f[0]_noloss'] == 1)
+# known_solution = z3.And(*known_solution_list)
+# assert(isinstance(known_solution, z3.ExprRef))
 
 # Debugging:
 if DEBUG:
