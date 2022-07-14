@@ -40,7 +40,7 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.1
+util_frac = 0.505
 loss_rate = 1 / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
@@ -50,7 +50,7 @@ assert isinstance(desired, z3.ExprRef)
 
 definition_constrs = []
 for t in range(first, c.T):
-    cond = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
+    cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     rhs_loss = v.c_f[0][t-lag] / 2
     # rhs_loss = 0
     rhs_noloss = v.c_f[0][t-lag] + 1
