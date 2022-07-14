@@ -50,7 +50,7 @@ assert isinstance(desired, z3.ExprRef)
 
 definition_constrs = []
 for t in range(first, c.T):
-    cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    cond = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
     rhs_loss = v.c_f[0][t-lag] / 2
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)

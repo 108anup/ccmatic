@@ -98,7 +98,7 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 assert first >= 1
 for t in range(first, c.T):
     assert history > lag
-    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    loss_detected = v.Ld_f[0][t-c.R] > v.Ld_f[0][t-c.R-1]
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
                 + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
@@ -158,7 +158,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+    ret = (f"if(Ld_f[0][t-c.R] > Ld_f[0][t-c.R-1]):\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
