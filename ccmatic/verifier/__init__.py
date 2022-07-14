@@ -191,7 +191,8 @@ def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
     desired = z3.And(
         z3.Or(high_util, ramp_up),
         z3.Or(low_loss, ramp_down))
-    return desired, high_util, low_loss, ramp_up, ramp_down, total_losses/((c.T-1) - first)
+    return (desired, high_util, low_loss, ramp_up, ramp_down,
+            total_losses)
 
 
 def maximize_gap(
