@@ -31,7 +31,7 @@ c, s, v = setup_ccac()
 c.buf_max = c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v)
+sd = setup_ccac_definitions(c, v, use_loss_oracle=True)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
@@ -170,6 +170,18 @@ def get_solution_str(solution: z3.ModelRef,
     return ret
 
 
+def get_verifier_view(
+            counter_example: z3.ModelRef, verifier_vars: List[z3.ExprRef],
+            definition_vars: List[z3.ExprRef]) -> str:
+    return get_counter_example_str(counter_example, verifier_vars)
+
+
+def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
+                       definition_vars: List[z3.ExprRef], n_cex: int) -> str:
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    return gen_view_str
+
+
 # Known solution
 known_solution_list = []
 known_solution_list.append(coeffs['c_f[0]_loss'] == 1/2)
@@ -207,6 +219,8 @@ try:
                      known_solution)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
+    cg.get_generator_view = get_generator_view
+    cg.get_verifier_view = get_verifier_view
     run_verifier = functools.partial(
         run_verifier_incomplete, c=c, v=v, ctx=ctx)
     cg.run_verifier = run_verifier

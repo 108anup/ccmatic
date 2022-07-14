@@ -5,13 +5,14 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from cegis.util import get_raw_value, tcolor
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, get_cex_df,
+from .verifier import (desired_high_util_low_delay, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -43,10 +44,10 @@ if(c.calculate_qdel):
 
 verifier_vars = flatten(
     [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-     v.L_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
+     v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
 definition_vars = flatten(
     [v.A_f[0][history:], v.A, v.c_f[0][history:],
-     v.r_f, v.Ld_f, v.S, v.L, v.timeout_f, conditional_dvars])
+     v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -88,6 +89,7 @@ domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
+assert(isinstance(search_constraints, z3.ExprRef))
 
 # Definitions (Template)
 definition_constrs = []
@@ -127,6 +129,7 @@ for lvar_symbol in lhs_var_symbols:
 ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
 definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
+assert(isinstance(definitions, z3.ExprRef))
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
@@ -139,7 +142,7 @@ generator_vars = (flatten(list(coeffs.values())) +
 
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
-    df = get_cex_df(counter_example, v, vn)
+    df = get_cex_df(counter_example, v, vn, c)
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,
@@ -164,7 +167,7 @@ def get_solution_str(solution: z3.ModelRef,
         rvar_symbol = rhs_var_symbols[rvar_idx]
         for h in range(history):
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
-            this_coeff_val = solution.eval(this_coeff).as_fraction()
+            this_coeff_val = get_raw_value(solution.eval(this_coeff))
             if(this_coeff_val != 0):
                 rhs_expr += "+ {}{}[t-{}] ".format(
                     this_coeff_val, rvar_symbol, h+1)
@@ -174,6 +177,18 @@ def get_solution_str(solution: z3.ModelRef,
     ret = "{}[t] = max({}, {})".format(
         lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
     return ret
+
+
+def get_verifier_view(
+            counter_example: z3.ModelRef, verifier_vars: List[z3.ExprRef],
+            definition_vars: List[z3.ExprRef]) -> str:
+    return get_counter_example_str(counter_example, verifier_vars)
+
+
+def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
+                       definition_vars: List[z3.ExprRef], n_cex: int) -> str:
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    return gen_view_str
 
 
 # Debugging:
@@ -187,6 +202,7 @@ if DEBUG:
                             coeffs[lvar_symbol][rvar_idx][3] == -1,
                             consts[lvar_symbol] == 0)
     search_constraints = z3.And(search_constraints, known_solution)
+    assert(isinstance(search_constraints, z3.ExprRef))
 
     # Definitions (including template)
     with open('definitions.txt', 'w') as f:
@@ -199,6 +215,8 @@ try:
                      search_constraints, definitions, specification, ctx)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
+    cg.get_generator_view = get_generator_view
+    cg.get_verifier_view = get_verifier_view
     run_verifier = functools.partial(
         run_verifier_incomplete, c=c, v=v, ctx=ctx)
     cg.run_verifier = run_verifier

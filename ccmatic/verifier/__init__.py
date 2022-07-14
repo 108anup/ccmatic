@@ -12,6 +12,7 @@ from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
 from ccac.variables import VariableNames, Variables
 from ccmatic.common import get_name_for_list
 from cegis import NAME_TEMPLATE
+from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -205,8 +206,8 @@ def maximize_gap(
     cur_min = np.inf
     for t in range(1, c.T):
         if(orig_model.eval(v.W[t] > v.W[t-1])):
-            this_gap = orig_model.eval(
-                v.C0 + c.C * t - v.W[t] - v.S[t]).as_fraction()
+            this_gap = get_raw_value(orig_model.eval(
+                v.C0 + c.C * t - v.W[t] - v.S[t]))
             cur_min = min(cur_min, this_gap)
 
     if(cur_min == np.inf):
@@ -265,13 +266,8 @@ def get_cex_df(
     def _get_model_value(l):
         ret = []
         for vvar in l:
-            val = counter_example.eval(vvar)
-            parsed_val = val
-            if(isinstance(val, z3.RatNumRef)):
-                parsed_val = val.as_fraction()
-            elif(isinstance(val, z3.BoolRef)):
-                parsed_val = bool(val)
-            ret.append(parsed_val)
+            val = get_raw_value(counter_example.eval(vvar))
+            ret.append(val)
         return ret
     cex_dict = {
         get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
@@ -283,12 +279,13 @@ def get_cex_df(
         # get_name_for_list(vn.timeout_f[0]): _get_model_value(v.timeout_f[0]),
     }
     df = pd.DataFrame(cex_dict).astype(float)
+    # Can remove this by adding queue_t as a definition variable...
+    # This would also allow easily quiering this from generator
     queue_t = []
     for t in range(c.T):
         queue_t.append(
-            counter_example.eval(
-                v.A[t] - v.L[t] - v.S[t]
-            ).as_fraction())
+            get_raw_value(counter_example.eval(
+                v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
     return df.astype(float)
 
@@ -307,7 +304,7 @@ def get_gen_cex_df(
         for vvar in l:
             cex_vvar_name = name_template.format(vvar)
             cex_var = z3.Const(cex_vvar_name, vvar.sort())
-            ret.append(solution.eval(cex_var).as_fraction())
+            ret.append(get_raw_value(solution.eval(cex_var)))
         return ret
     cex_dict = {
         get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
@@ -316,6 +313,7 @@ def get_gen_cex_df(
         get_name_for_list(vn.W): _get_model_value(v.W),
         get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
         get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
+        # get_name_for_list(vn.timeout_f[0]): _get_model_value(v.timeout_f[0]),
     }
     df = pd.DataFrame(cex_dict).astype(float)
     return df
