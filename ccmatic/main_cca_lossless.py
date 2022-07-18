@@ -23,10 +23,13 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 lag = 1
 history = 4
+util_frac = 0.5
+max_ideal_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
+c.loss_oracle = True
 # Consider the no loss case for simplicity
 s.add(v.L[0] == v.L[-1])
 ccac_domain = z3.And(*s.assertion_list)
@@ -51,8 +54,7 @@ definition_vars = flatten(
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.5
-delay_bound = 2 * c.C * (c.R + c.D)
+delay_bound = max_ideal_queue * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
     desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
