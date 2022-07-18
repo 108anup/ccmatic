@@ -86,6 +86,8 @@ def setup_ccac_definitions(c, v, use_loss_oracle=False):
     relate_tot(c, s, v)
     if(use_loss_oracle):
         loss_oracle(c, s, v)
+        for t in range(c.T):
+            s.add(v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_max)
     else:
         loss_detected(c, s, v)
     epsilon_alpha(c, s, v)
@@ -189,7 +191,8 @@ def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
     desired = z3.And(
         z3.Or(high_util, ramp_up),
         z3.Or(low_loss, ramp_down))
-    return desired, high_util, low_loss, ramp_up, ramp_down, total_losses
+    return (desired, high_util, low_loss, ramp_up, ramp_down,
+            total_losses)
 
 
 def maximize_gap(
