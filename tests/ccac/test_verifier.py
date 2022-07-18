@@ -28,7 +28,7 @@ assert c.N == 1
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.75
+util_frac = 0.8
 loss_rate = 1 / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
@@ -40,7 +40,7 @@ definition_constrs = []
 for t in range(first, c.T):
     cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     rhs_loss = v.c_f[0][t-lag] / 2
-    rhs_loss = 0
+    # rhs_loss = 0
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
@@ -85,17 +85,17 @@ if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
 
-else:
-    # Unsat core
-    dummy = MySolver()
-    dummy.warn_undeclared = False
-    dummy.set(unsat_core=True)
+# else:
+#     # Unsat core
+#     dummy = MySolver()
+#     dummy.warn_undeclared = False
+#     dummy.set(unsat_core=True)
 
-    assertion_list = verifier.assertion_list
-    for assertion in assertion_list:
-        for expr in unroll_assertions(assertion):
-            dummy.add(expr)
-    assert(str(dummy.check()) == "unsat")
-    unsat_core = dummy.unsat_core()
-    print(len(unsat_core))
-    import ipdb; ipdb.set_trace()
+#     assertion_list = verifier.assertion_list
+#     for assertion in assertion_list:
+#         for expr in unroll_assertions(assertion):
+#             dummy.add(expr)
+#     assert(str(dummy.check()) == "unsat")
+#     unsat_core = dummy.unsat_core()
+#     print(len(unsat_core))
+#     import ipdb; ipdb.set_trace()
