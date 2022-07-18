@@ -22,14 +22,16 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 lag = 1
 history = 4
-deterministic_loss = True
+deterministic_loss = False
+util_frac = 0.505
+n_losses = 1
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
 if(deterministic_loss):
     c.deterministic_loss = True
-    c.loss_oracle = True
+c.loss_oracle = True
 c.buf_max = c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
@@ -46,9 +48,9 @@ if(c.calculate_qdel):
     conditional_dvars.append(v.qdel)
 
 assert c.N == 1
+# Loss detected at time 0 is unconstrained...
+# Let verifier choose it, it is not used anywhere.
 if(deterministic_loss):
-    # Loss detected at time 0 is unconstrained...
-    # Let verifier choose it, it is not used anywhere.
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.Ld_f[0][0],
          v.dupacks, v.alpha, conditional_vvars, v.C0])
@@ -57,16 +59,15 @@ if(deterministic_loss):
          v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 else:
     verifier_vars = flatten(
-        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f, v.Ld_f,
-         v.dupacks, v.alpha, conditional_vvars, v.C0])
+        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f,
+         v.Ld_f[0][0], v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:],
+        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][1:],
          v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 0.8
-loss_rate = 1 / ((c.T-1) - first)
+loss_rate = n_losses / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, measured_loss_rate) = \
     desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
