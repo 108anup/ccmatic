@@ -7,7 +7,7 @@ import z3
 from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
                         cca_const, cca_copa, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
-                        make_solver, multi_flows, network, relate_tot)
+                        make_solver, multi_flows, relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.common import get_name_for_list
 from cegis import NAME_TEMPLATE
@@ -60,6 +60,62 @@ def monotone_defs(c, s, v):
         # s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
 
 
+def service_waste(c: ModelConfig, s: MySolver, v: Variables):
+    for t in range(c.T):
+        for n in range(c.N):
+            s.add(v.S_f[n][t] <= v.A_f[n][t] - v.L_f[n][t])
+
+        s.add(v.S[t] <= v.C0 + c.C * t - v.W[t])
+        if t >= c.D:
+            s.add(v.C0 + c.C * (t - c.D) - v.W[t - c.D] <= v.S[t])
+        else:
+            # The constraint is the most slack when black line is steepest. So
+            # we'll say there was no wastage when t < 0
+            s.add(v.C0 + c.C * (t - c.D) - v.W[0] <= v.S[t])
+
+        if c.compose:
+            if t > 0:
+                s.add(
+                    z3.Implies(v.W[t] > v.W[t - 1],
+                               v.A[t] - v.L[t] <= v.C0 + c.C * t - v.W[t]))
+        else:
+            if t > 0:
+                s.add(
+                    z3.Implies(v.W[t] > v.W[t - 1],
+                               v.A[t] - v.L[t] <= v.S[t] + v.epsilon))
+
+
+def loss(c: ModelConfig, s: MySolver, v: Variables):
+    if(c.deterministic_loss):
+        assert c.buf_max == c.buf_min
+
+    for t in range(c.T):
+        if c.buf_min is not None:
+            if t > 0:
+                if(c.deterministic_loss):
+                    s.add(z3.And(
+                        z3.Implies(
+                            v.A[t] - v.L[t-1] > v.C0 +
+                            c.C * t - v.W[t] + c.buf_min,
+                            v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min),
+                        z3.Implies(
+                            v.A[t] - v.L[t-1] <= v.C0 +
+                            c.C * t - v.W[t] + c.buf_min,
+                            v.L[t] == v.L[t-1])))
+                else:
+                    s.add(
+                        z3.Implies(
+                            v.L[t] > v.L[t - 1], v.A[t] - v.L[t] >= v.C0 + c.C *
+                            (t - 1) - v.W[t - 1] + c.buf_min
+                        ))
+        else:
+            s.add(v.L[t] == v.L[0])
+
+        # Enforce buf_max if given
+        if c.buf_max is not None:
+            s.add(v.A[t] - v.L[t] <= v.C0 + c.C * t - v.W[t] + c.buf_max)
+
+
 def setup_ccac():
     c = ModelConfig.default()
     c.compose = True
@@ -67,7 +123,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 8
+    c.T = 9
 
     s = MySolver()
     v = Variables(c, s)
@@ -77,19 +133,17 @@ def setup_ccac():
     return c, s, v
 
 
-def setup_ccac_definitions(c, v, use_loss_oracle=False):
+def setup_ccac_definitions(c, v):
     s = MySolver()
     s.warn_undeclared = False
 
     monotone_defs(c, s, v)
     initial(c, s, v)
     relate_tot(c, s, v)
-    if(use_loss_oracle):
+    if(c.deterministic_loss):
+        loss(c, s, v)
+    if(c.loss_oracle):
         loss_oracle(c, s, v)
-        for t in range(c.T):
-            s.add(v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_max)
-    else:
-        loss_detected(c, s, v)
     epsilon_alpha(c, s, v)
     if c.calculate_qdel:
         calculate_qdel(c, s, v)
@@ -129,7 +183,11 @@ def setup_ccac_environment(c, v):
     s = MySolver()
     s.warn_undeclared = False
     monotone_env(c, s, v)
-    network(c, s, v)
+    service_waste(c, s, v)
+    if(not c.deterministic_loss):
+        loss(c, s, v)
+    if(not c.loss_oracle):
+        loss_detected(c, s, v)
     return s
 
 

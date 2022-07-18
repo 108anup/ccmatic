@@ -10,16 +10,21 @@ from ccac.variables import VariableNames
 
 lag = 1
 history = 4
-first = history
+deterministic_loss = False
+util_frac = 0.505
+n_losses = 1
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
 vn = VariableNames(v)
+if(deterministic_loss):
+    c.deterministic_loss = True
+c.loss_oracle = True
 c.buf_max = c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v, use_loss_oracle=True)
+sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
@@ -28,8 +33,7 @@ assert c.N == 1
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-util_frac = 1
-loss_rate = 1 / ((c.T-1) - first)
+loss_rate = n_losses / ((c.T-1) - first)
 
 (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
     desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
@@ -44,10 +48,10 @@ for t in range(first, c.T):
     rhs_noloss = v.c_f[0][t-lag] + 1
     rhs = z3.If(cond, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
-    # definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
+    definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
     # definition_constrs.append(v.c_f[0][t] == 4096)
-    definition_constrs.append(v.c_f[0][t] == 0.01)
+    # definition_constrs.append(v.c_f[0][t] == 0.01)
 
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
@@ -79,23 +83,24 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*definition_constrs))
 verifier.add(z3.Not(desired))
+# verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
 sat = verifier.check()
 if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
 
-else:
-    # Unsat core
-    dummy = MySolver()
-    dummy.warn_undeclared = False
-    dummy.set(unsat_core=True)
+# else:
+#     # Unsat core
+#     dummy = MySolver()
+#     dummy.warn_undeclared = False
+#     dummy.set(unsat_core=True)
 
-    assertion_list = verifier.assertion_list
-    for assertion in assertion_list:
-        for expr in unroll_assertions(assertion):
-            dummy.add(expr)
-    assert(str(dummy.check()) == "unsat")
-    unsat_core = dummy.unsat_core()
-    print(len(unsat_core))
-    import ipdb; ipdb.set_trace()
+#     assertion_list = verifier.assertion_list
+#     for assertion in assertion_list:
+#         for expr in unroll_assertions(assertion):
+#             dummy.add(expr)
+#     assert(str(dummy.check()) == "unsat")
+#     unsat_core = dummy.unsat_core()
+#     print(len(unsat_core))
+#     import ipdb; ipdb.set_trace()
