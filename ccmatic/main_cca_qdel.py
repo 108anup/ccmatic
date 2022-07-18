@@ -250,11 +250,11 @@ if DEBUG:
     # print(known_solver.model())
 
     # Search constraints
-    with open('search.txt', 'w') as f:
+    with open('tmp/search.txt', 'w') as f:
         f.write(search_constraints.sexpr())
 
     # Definitions (including template)
-    with open('definitions.txt', 'w') as f:
+    with open('tmp/definitions.txt', 'w') as f:
         f.write(definitions.sexpr())
 
 try:

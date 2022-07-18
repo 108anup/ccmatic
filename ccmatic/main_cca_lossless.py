@@ -207,7 +207,7 @@ if DEBUG:
     assert(isinstance(search_constraints, z3.ExprRef))
 
     # Definitions (including template)
-    with open('definitions.txt', 'w') as f:
+    with open('tmp/definitions.txt', 'w') as f:
         assert(isinstance(definitions, z3.ExprRef))
         f.write(definitions.sexpr())
 
