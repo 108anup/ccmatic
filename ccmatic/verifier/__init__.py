@@ -123,7 +123,7 @@ def setup_ccac():
     c.simplify = False
     c.calculate_qdel = False
     c.C = 100
-    c.T = 8
+    c.T = 9
 
     s = MySolver()
     v = Variables(c, s)
