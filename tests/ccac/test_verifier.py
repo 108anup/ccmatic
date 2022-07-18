@@ -10,16 +10,19 @@ from ccac.variables import VariableNames
 
 lag = 1
 history = 4
-first = history
+deterministic_loss = True
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
 c, s, v = setup_ccac()
 vn = VariableNames(v)
+if(deterministic_loss):
+    c.deterministic_loss = True
+    c.loss_oracle = True
 c.buf_max = c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v, use_loss_oracle=True)
+sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
