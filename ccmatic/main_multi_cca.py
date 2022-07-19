@@ -76,27 +76,33 @@ assert c.N == 2
 if(deterministic_loss):
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.Ld_f[0][0],
-         v.dupacks, v.alpha, conditional_vvars, v.C0])
+         v.dupacks, v.alpha, conditional_vvars, v.C0]) + flatten(
+        [v.A_f[1][:history], v.c_f[1][:history], v.Ld_f[1][0]])
     definition_vars = flatten(
         [v.A_f[0][history:], v.A, v.c_f[0][history:], v.L_f, v.Ld_f[0][1:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars]) + flatten(
+        [v.A_f[1][history:], v.A, v.c_f[1][history:], v.Ld_f[1][1:]])
 
 else:
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f,
-         v.Ld_f[0][0], v.dupacks, v.alpha, conditional_vvars, v.C0])
+         v.Ld_f[0][0], v.dupacks, v.alpha, conditional_vvars, v.C0]) + \
+        flatten([v.A_f[1][:history], v.c_f[1][:history], v.Ld_f[1][0]])
     definition_vars = flatten(
         [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][1:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars]) + flatten(
+        [v.A_f[1][history:], v.A, v.c_f[1][history:], v.Ld_f[1][1:]])
 
 # No loss
 if(not use_loss):
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-         v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
+         v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0]) + \
+        flatten([v.A_f[1][:history], v.c_f[1][:history]])
     definition_vars = flatten(
         [v.A_f[0][history:], v.A, v.c_f[0][history:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars]) + flatten(
+        [v.A_f[1][history:], v.A, v.c_f[1][history:]])
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
