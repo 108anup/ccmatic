@@ -26,7 +26,7 @@ lag = 1
 history = 4
 use_loss = False
 deterministic_loss = False
-util_frac = 1
+util_frac = 0.5
 # n_losses = 1
 ideal_max_queue = 2
 
@@ -162,8 +162,8 @@ for n in range(c.N):
         assert lag == 1
         assert c.R == 1
         # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-        loss_detected = (v.A[t-lag] - v.L[t-lag]
-                         - v.S[t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+        loss_detected = (v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1]
+                         >= qsize_thresh * c.C * (c.R + c.D))
         acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
         rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[0][t-lag])
                     + get_product_ite(coeffs['ack_f[n]_loss'], acked_bytes)
@@ -222,7 +222,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
                   f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
                   f" + {solution.eval(consts['c_f[n]_noloss'])}")
-    ret = (f"if(A[t-1] - L[t-1] - S[t-1]"
+    ret = (f"if(A_f[n][t-1] - Ld_f[n][t] - S_f[n][t-1]"
            f" >= {solution.eval(qsize_thresh)} * C * (R + D)):\n"
            f"\tc_f[n][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"

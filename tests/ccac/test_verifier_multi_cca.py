@@ -64,7 +64,7 @@ assert isinstance(desired, z3.ExprRef)
 definition_constrs = []
 for n in range(c.N):
     for t in range(first, c.T):
-        cond = v.A[t-1] - v.L[t-1] - v.S[t-1] >= 1/2 * c.C * (c.R + c.D)
+        cond = v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1] >= 1/2 * c.C * (c.R + c.D)
         rhs_loss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1
         rhs_loss = v.c_f[n][t-1] / 2
         rhs_noloss = v.c_f[n][t-lag] + 1
