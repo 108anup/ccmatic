@@ -147,9 +147,9 @@ def setup_ccac_definitions(c, v):
     epsilon_alpha(c, s, v)
     if c.calculate_qdel:
         calculate_qdel(c, s, v)
-    if c.N > 1:
-        assert (c.calculate_qdel)
-        multi_flows(c, s, v)
+        if c.N > 1:
+            assert (c.calculate_qdel)
+            multi_flows(c, s, v)
     cwnd_rate_arrival(c, s, v)
 
     if c.cca == "const":
@@ -336,14 +336,20 @@ def get_cex_df(
             ret.append(val)
         return ret
     cex_dict = {
-        get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
-        get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
-        get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
+        get_name_for_list(vn.A): _get_model_value(v.A),
+        get_name_for_list(vn.S): _get_model_value(v.S),
         get_name_for_list(vn.W): _get_model_value(v.W),
-        get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
-        get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
-        # get_name_for_list(vn.timeout_f[0]): _get_model_value(v.timeout_f[0]),
+        # get_name_for_list(vn.L): _get_model_value(v.L),
     }
+    for n in range(c.N):
+        cex_dict.update({
+            get_name_for_list(vn.A_f[n]): _get_model_value(v.A_f[n]),
+            get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
+            get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
+            # get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
+            # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
+            # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
+        })
     df = pd.DataFrame(cex_dict).astype(float)
     # Can remove this by adding queue_t as a definition variable...
     # This would also allow easily quiering this from generator
@@ -366,7 +372,7 @@ def get_cex_df(
 
 def get_gen_cex_df(
     solution: z3.ModelRef, v: Variables, vn: VariableNames,
-    n_cex: int
+    n_cex: int, c: ModelConfig
 ) -> pd.DataFrame:
     if(n_cex == 0):
         return pd.DataFrame()
@@ -381,13 +387,19 @@ def get_gen_cex_df(
             ret.append(get_raw_value(solution.eval(cex_var)))
         return ret
     cex_dict = {
-        get_name_for_list(vn.A_f[0]): _get_model_value(v.A_f[0]),
-        get_name_for_list(vn.c_f[0]): _get_model_value(v.c_f[0]),
-        get_name_for_list(vn.S_f[0]): _get_model_value(v.S_f[0]),
+        get_name_for_list(vn.A): _get_model_value(v.A),
+        get_name_for_list(vn.S): _get_model_value(v.S),
         get_name_for_list(vn.W): _get_model_value(v.W),
-        get_name_for_list(vn.L_f[0]): _get_model_value(v.L_f[0]),
-        get_name_for_list(vn.Ld_f[0]): _get_model_value(v.Ld_f[0]),
-        # get_name_for_list(vn.timeout_f[0]): _get_model_value(v.timeout_f[0]),
+        get_name_for_list(vn.L): _get_model_value(v.L),
     }
+    for n in range(c.N):
+        cex_dict.update({
+            get_name_for_list(vn.A_f[n]): _get_model_value(v.A_f[n]),
+            get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
+            get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
+            get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
+            get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
+            # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
+        })
     df = pd.DataFrame(cex_dict).astype(float)
     return df

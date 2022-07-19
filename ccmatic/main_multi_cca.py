@@ -7,15 +7,15 @@ import z3
 from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
 from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
-from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_delay, desired_high_util_low_loss, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac,
-                       setup_ccac_definitions, setup_ccac_environment)
+from .verifier import (desired_high_util_low_delay, get_cex_df, get_gen_cex_df,
+                       run_verifier_incomplete, setup_ccac_definitions,
+                       setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -118,15 +118,15 @@ assert isinstance(desired, z3.ExprRef)
 vn = VariableNames(v)
 lower_bound = 0.01
 coeffs = {
-    'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
-    'c_f[0]_noloss': z3.Real('Gen__coeff_c_f[0]_noloss'),
-    'ack_f[0]_loss': z3.Real('Gen__coeff_ack_f[0]_loss'),
-    'ack_f[0]_noloss': z3.Real('Gen__coeff_ack_f[0]_noloss')
+    'c_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_loss'),
+    'c_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_noloss'),
+    'ack_f[n]_loss': z3.Real('Gen__coeff_ack_f[n]_loss'),
+    'ack_f[n]_noloss': z3.Real('Gen__coeff_ack_f[n]_noloss')
 }
 
 consts = {
-    'c_f[0]_loss': z3.Real('Gen__const_c_f[0]_loss'),
-    'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss'),
+    'c_f[n]_loss': z3.Real('Gen__const_c_f[n]_loss'),
+    'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_noloss'),
 }
 
 qsize_thresh = z3.Real('Gen__const_qsize_thresh')
@@ -156,25 +156,26 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 
 
 assert first >= 1
-for t in range(first, c.T):
-    assert history > lag
-    assert lag == 1
-    assert c.R == 1
-    # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-    loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
-                     - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
-    acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
-    rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
-                + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
-                + consts['c_f[0]_loss'])
-    rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
-                  + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
-                  + consts['c_f[0]_noloss'])
-    rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
-    assert isinstance(rhs, z3.ArithRef)
-    definition_constrs.append(
-        v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
-    )
+for n in range(c.N):
+    for t in range(first, c.T):
+        assert history > lag
+        assert lag == 1
+        assert c.R == 1
+        # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+        loss_detected = (v.A[t-lag] - v.L[t-lag]
+                         - v.S[t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+        acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
+        rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[0][t-lag])
+                    + get_product_ite(coeffs['ack_f[n]_loss'], acked_bytes)
+                    + consts['c_f[n]_loss'])
+        rhs_noloss = (get_product_ite(coeffs['c_f[n]_noloss'], v.c_f[0][t-lag])
+                      + get_product_ite(coeffs['ack_f[n]_noloss'], acked_bytes)
+                      + consts['c_f[n]_noloss'])
+        rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
+        assert isinstance(rhs, z3.ArithRef)
+        definition_constrs.append(
+            v.c_f[n][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
+        )
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -211,21 +212,21 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
-    rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
-                f"c_f[0][t-{lag}]"
-                f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
-                f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
-                f" + {solution.eval(consts['c_f[0]_loss'])}")
-    rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
-                  f"c_f[0][t-{lag}]"
-                  f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
-                  f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
-                  f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(A_f[0][t-1] - Ld_f[0][t] - S_f[0][t-1]"
+    rhs_loss = (f"{solution.eval(coeffs['c_f[n]_loss'])}"
+                f"c_f[n][t-{lag}]"
+                f" + {solution.eval(coeffs['ack_f[n]_loss'])}"
+                f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
+                f" + {solution.eval(consts['c_f[n]_loss'])}")
+    rhs_noloss = (f"{solution.eval(coeffs['c_f[n]_noloss'])}"
+                  f"c_f[n][t-{lag}]"
+                  f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
+                  f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
+                  f" + {solution.eval(consts['c_f[n]_noloss'])}")
+    ret = (f"if(A[t-1] - L[t-1] - S[t-1]"
            f" >= {solution.eval(qsize_thresh)} * C * (R + D)):\n"
-           f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
+           f"\tc_f[n][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
-           f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
+           f"\tc_f[n][t] = max({lower_bound}, {rhs_noloss})")
     return ret
 
 
@@ -237,7 +238,7 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
     return gen_view_str
 
 
