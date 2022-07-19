@@ -220,7 +220,7 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
     # Serviced should be at least util_frac that could have been serviced
     high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
     # If the cwnd0 is very low then CCA should increase cwnd
-    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
+    ramp_up = z3.Or(*[v.c_f[n][-1] > v.c_f[n][first] for n in range(c.N)])
     # If the queue is large to begin with then, CCA should cause queue to decrease.
     ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
 
