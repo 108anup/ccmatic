@@ -22,9 +22,9 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 lag = 1
 history = 4
-deterministic_loss = False
-util_frac = 0.505
-n_losses = 1
+deterministic_loss = True
+util_frac = 0.5
+n_losses = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -32,7 +32,7 @@ c, s, v = setup_ccac()
 if(deterministic_loss):
     c.deterministic_loss = True
 c.loss_oracle = True
-c.buf_max = c.C * (c.R + c.D)
+c.buf_max = 0.1 * c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)

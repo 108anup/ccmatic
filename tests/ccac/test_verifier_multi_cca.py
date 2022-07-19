@@ -66,13 +66,13 @@ for n in range(c.N):
     for t in range(first, c.T):
         cond = v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1] >= 1/2 * c.C * (c.R + c.D)
         rhs_loss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1
-        rhs_loss = v.c_f[n][t-1] / 2
+        # rhs_loss = v.c_f[n][t-1] / 2
         rhs_noloss = v.c_f[n][t-lag] + 1
         rhs = z3.If(cond, rhs_loss, rhs_noloss)
         assert isinstance(rhs, z3.ArithRef)
-        # definition_constrs.append(v.c_f[n][t] == z3.If(rhs >= 0.01, rhs, 0.01))
+        definition_constrs.append(v.c_f[n][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
-        definition_constrs.append(v.c_f[n][t] == 100/c.N)
+        # definition_constrs.append(v.c_f[n][t] == c.C/c.N)
         # definition_constrs.append(v.c_f[n][t] == 4096)
         # definition_constrs.append(v.c_f[n][t] == 0.01)
 
