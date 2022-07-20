@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import z3
-from ccac.model import (ModelConfig, calculate_qdel, cca_aimd, cca_bbr,
+from ccac.model import (ModelConfig, calculate_qbound, calculate_qdel, cca_aimd, cca_bbr,
                         cca_const, cca_copa, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
@@ -21,27 +21,64 @@ logger = logging.getLogger('verifier')
 GlobalConfig().default_logger_setup(logger)
 
 
+# * First write concrete $\exists\forall$ formula.
+# * Decide classification of variables:
+# 1. If variable has $\exists$ quantifier then it is a generator variable. If a
+#    variable has $\forall$ quantifier then it can be a verifier variable or a
+#    definition variable.
+# 2. Technically, we can keep all $\forall$ variables as verifier variable.
+#    Though, it is helpful to convert verifier variables to definition variables
+#    (reduces CEGIS iterations, provides more information to generator for why
+#    or why not a particular candidate works). This can be done iff the variable
+#    can be computed as a deterministic function of other generator and verifier
+#    variables. Ideally convert as many verifier variables to definition
+#    variables as possible (if a variable needs non-deterministic choice, then
+#    must keep it as verifier variable).
+# * Decide classification of assertions:
+# 1. If assertion only contains generator variables, then keep as search
+#    constraint.
+# 2. If assertion only contains verifier variables, then can keep as
+#    specification or definition. Can choose based on convenience, e.g.,
+#    depending on if other similar constraints need to be in definition or
+#    specification.
+# 3. Assertions that only involve definition variables are meant for sanity
+#    only, they are not needed / should not be needed.
+# 4. If assertion contains a definition variable and at least one other
+#    generator or verifier variable, then this should be put in definitions iff
+#    this is needed to compute the value of the definition variable in the
+#    constraint. If we don't add a required constraint to definition then the
+#    candidate solution can repeat, but this is very easy to spot/debug.
+# 4. Err on the side of keeping assertions in specification, if we erroneously
+#    add assertion into definitions, then a solution maybe erroneously pruned.
+#    This is hard to debug.
+# * Time per iteration concerns
+# 1. For definition variables that solely depend on verifier variables. Can keep
+#    those in verifier variables, and corresponding assertions in specification.
+
+
 def monotone_env(c, s, v):
     for t in range(1, c.T):
         for n in range(c.N):
-            # Keeping in defs so that CCA does not exploit this.
-            # In reality since arrival is max of prev and new value,
-            # this constriant should never be broken anyway.
+            # Definition only (assertion really not needed). Keeping in defs.
+            # In reality since arrival is max of prev and new value, this
+            # constriant should never be broken anyway.
             # s.add(v.A_f[n][t] >= v.A_f[n][t - 1])
 
-            # Can be in env or def as only contain verifier vars.
-            # Keeping in env for now.
-            s.add(v.Ld_f[n][t] >= v.Ld_f[n][t - 1])
+            # Verifier only. Keep part of specification.
             s.add(v.S_f[n][t] >= v.S_f[n][t - 1])
+
+            # For loss detected and loss. If non-deterministic then, part of
+            # specification, otherwise not needed in defs so keep in
+            # specification always.
+            s.add(v.Ld_f[n][t] >= v.Ld_f[n][t - 1])
             s.add(v.L_f[n][t] >= v.L_f[n][t - 1])
 
-            # Must be in environment. The loss may not be feasible
-            # for new arrival.
+            # For non-deterministic loss, loss may not be feasible for new
+            # arrival. For deterministic loss, not needed in defs.
             s.add(
                 v.A_f[n][t] - v.L_f[n][t] >= v.A_f[n][t - 1] - v.L_f[n][t - 1])
 
-        # Can be in env or def as only contain verifier vars.
-        # Keeping in env for now.
+        # Verifier only. Keep part of specification.
         s.add(v.W[t] >= v.W[t - 1])
         s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
 
@@ -85,35 +122,78 @@ def service_waste(c: ModelConfig, s: MySolver, v: Variables):
                                v.A[t] - v.L[t] <= v.S[t] + v.epsilon))
 
 
-def loss(c: ModelConfig, s: MySolver, v: Variables):
-    if(c.deterministic_loss):
-        assert c.buf_max == c.buf_min
+def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
+    assert c.deterministic_loss
+    assert c.buf_max == c.buf_min
 
+    for t in range(1, c.T):
+        s.add(z3.Implies(
+            v.A[t] - v.L[t-1] > v.C0 + c.C * t - v.W[t] + c.buf_min,
+            v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min))
+        s.add(z3.Implies(
+            v.A[t] - v.L[t-1] <= v.C0 + c.C * t - v.W[t] + c.buf_min,
+            v.L[t] == v.L[t-1]))
+    # L[0] is still chosen non-deterministically in an unconstrained fashion.
+
+
+def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
+    assert not c.deterministic_loss
     for t in range(c.T):
         if c.buf_min is not None:
             if t > 0:
-                if(c.deterministic_loss):
-                    s.add(z3.And(
-                        z3.Implies(
-                            v.A[t] - v.L[t-1] > v.C0 +
-                            c.C * t - v.W[t] + c.buf_min,
-                            v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min),
-                        z3.Implies(
-                            v.A[t] - v.L[t-1] <= v.C0 +
-                            c.C * t - v.W[t] + c.buf_min,
-                            v.L[t] == v.L[t-1])))
-                else:
-                    s.add(
-                        z3.Implies(
-                            v.L[t] > v.L[t - 1], v.A[t] - v.L[t] >= v.C0 + c.C *
-                            (t - 1) - v.W[t - 1] + c.buf_min
-                        ))
+                s.add(
+                    z3.Implies(
+                        v.L[t] > v.L[t - 1], v.A[t] - v.L[t] >= v.C0 + c.C *
+                        (t - 1) - v.W[t - 1] + c.buf_min
+                    ))
+            # L[0] is chosen non-deterministically without any constraints.
         else:
             s.add(v.L[t] == v.L[0])
 
         # Enforce buf_max if given
         if c.buf_max is not None:
             s.add(v.A[t] - v.L[t] <= v.C0 + c.C * t - v.W[t] + c.buf_max)
+
+
+def calculate_qbound_defs(c: ModelConfig, s: MySolver, v: Variables):
+    # qbound[0][dt] is non deterministic
+    # qbound[t][dt>t] is non deterministic
+
+    # Let solver choose non-deterministically what happens when
+    # t <= 0, i.e., no constraint on qbound[0][dt].
+    for t in range(1, c.T):
+        for dt in range(c.T):
+            if(dt == 0):
+                # by definition queuing delay >= 0
+                s.add(v.qbound[t][dt])
+            elif(dt <= t):
+                s.add(
+                    z3.Implies(v.S[t] == v.S[t-1],
+                               v.qbound[t][dt] == v.qbound[t-1][dt]))
+                s.add(
+                    z3.Implies(v.S[t] != v.S[t-1],
+                               v.qbound[t][dt] ==
+                               (v.S[t] <= v.A[t-dt] - v.L[t-dt])))
+            else:
+                s.add(
+                    z3.Implies(v.S[t] == v.S[t-1],
+                               v.qbound[t][dt] == v.qbound[t-1][dt]))
+                # Let solver choose non-deterministically what happens when
+                # S[t] != S[t-1] for t-dt < 0, i.e.,
+                # no constraint on qbound[t][dt>t]
+
+
+def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
+    # qbound[0][dt] is non deterministic
+    # qbound[t][dt>t] is non deterministic
+
+    # Needed only for non-deterministic choices, mostly a sanity constraint for
+    # deterministic variables.
+    for t in range(c.T):
+        for dt in range(c.T-1):
+            # If queuing delay at t is greater than dt+1 then
+            # it is also greater than dt.
+            s.add(z3.Implies(v.qbound[t][dt+1], v.qbound[t][dt]))
 
 
 def setup_ccac():
@@ -137,44 +217,21 @@ def setup_ccac_definitions(c, v):
     s = MySolver()
     s.warn_undeclared = False
 
-    monotone_defs(c, s, v)
-    initial(c, s, v)
-    relate_tot(c, s, v)
+    monotone_defs(c, s, v)  # Def only. Constraint not needed.
+    initial(c, s, v)  # Either definition vars or verifier vars.
+    # Keep as definitions for convenience.
+    relate_tot(c, s, v)  # Definitions required to compute tot variables.
     if(c.deterministic_loss):
-        loss(c, s, v)
+        loss_deterministic(c, s, v)  # Def to compute loss.
     if(c.loss_oracle):
-        loss_oracle(c, s, v)
-    epsilon_alpha(c, s, v)
-    if c.calculate_qdel:
-        calculate_qdel(c, s, v)
-        if c.N > 1:
-            assert (c.calculate_qdel)
-            multi_flows(c, s, v)
-    cwnd_rate_arrival(c, s, v)
-
-    if c.cca == "const":
-        cca_const(c, s, v)
-    elif c.cca == "aimd":
-        cca_aimd(c, s, v)
-    elif c.cca == "bbr":
-        cca_bbr(c, s, v)
-    elif c.cca == "copa":
-        cca_copa(c, s, v)
-    elif c.cca == "any":
-        pass
-    elif c.cca == "paced":
-        cca_paced(c, s, v)
-    else:
-        assert False, "CCA {} not found".format(c.cca)
-
-    # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
-    s.add(v.L_f[0][0] == 0)
-
-    # Remove periodicity, as generator overfits and produces monotonic CCAs.
-    # make_periodic(c, s, v, c.R + c.D)
-
-    # Avoid weird cases where single packet is larger than BDP.
-    s.add(v.alpha < 1/5)
+        loss_oracle(c, s, v)  # Def to compute loss detected.
+    if(c.calculate_qdel):
+        calculate_qdel(c, s, v)  # TODO(108anup): split this into defs/env.
+    if(c.calculate_qbound):
+        calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
+    cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
+    assert c.cca == "paced"
+    cca_paced(c, s, v)  # Defs to compute rate.
 
     return s
 
@@ -185,9 +242,24 @@ def setup_ccac_environment(c, v):
     monotone_env(c, s, v)
     service_waste(c, s, v)
     if(not c.deterministic_loss):
-        loss(c, s, v)
+        loss_non_deterministic(c, s, v)
     if(not c.loss_oracle):
         loss_detected(c, s, v)
+    if(c.N > 1):
+        multi_flows(c, s, v)  # Flows should be serviced fairly
+    epsilon_alpha(c, s, v)  # Verifier only
+    if(c.calculate_qbound):
+        calculate_qbound_env(c, s, v)  # How to pick initial qbounds
+        # non-deterministically.
+
+    # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
+    # s.add(v.L_f[0][0] == 0)
+
+    # Remove periodicity, as generator overfits and produces monotonic CCAs.
+    # make_periodic(c, s, v, c.R + c.D)
+
+    # Avoid weird cases where single packet is larger than BDP.
+    s.add(v.alpha < 1/5)  # Verifier only
     return s
 
 
@@ -346,7 +418,7 @@ def get_cex_df(
             get_name_for_list(vn.A_f[n]): _get_model_value(v.A_f[n]),
             get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
-            # get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
+            get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
             # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })

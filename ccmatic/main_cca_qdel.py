@@ -5,6 +5,7 @@ from typing import List
 
 import z3
 from ccac.config import ModelConfig
+from ccac.model import loss_detected
 from ccac.variables import VariableNames, Variables
 from pyz3_utils.common import GlobalConfig
 

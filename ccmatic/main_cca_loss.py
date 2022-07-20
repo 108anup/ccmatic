@@ -10,6 +10,7 @@ from pyz3_utils.common import GlobalConfig
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
+from pyz3_utils.my_solver import MySolver
 
 from .verifier import (desired_high_util_low_loss, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
@@ -43,26 +44,39 @@ environment = z3.And(*se.assertion_list)
 conditional_vvars = []
 if(not c.compose):
     conditional_vvars.append(v.epsilon)
+if(c.calculate_qbound):
+    # qbound[0][dt] is non deterministic
+    # qbound[t][dt>t] is non deterministic
+    conditional_vvars.append(v.qbound[0][:])
+    conditional_vvars.append(
+        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1, c.T)])
 conditional_dvars = []
 if(c.calculate_qdel):
-    conditional_dvars.append(v.qdel)
+    conditional_dvars.append(v.qdel)  # TODO(108anup): Split qdel into defs and verifier.
+if(c.calculate_qbound):
+    conditional_vvars.append(
+        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t)])
 
 assert c.N == 1
+assert c.loss_oracle
 # Loss detected at time 0 is unconstrained...
+# Loss at 0 is always non-deterministic
 # Let verifier choose it, it is not used anywhere.
 if(deterministic_loss):
     verifier_vars = flatten(
-        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.Ld_f[0][0],
+        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
+         v.L_f[0][:1], v.Ld_f[0][:c.R],
          v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.L_f, v.Ld_f[0][1:],
+        [v.A_f[0][history:], v.A, v.c_f[0][history:],
+         v.L_f[0][1:], v.Ld_f[0][c.R:],
          v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 else:
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f,
-         v.Ld_f[0][0], v.dupacks, v.alpha, conditional_vvars, v.C0])
+         v.Ld_f[0][:c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][1:],
+        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][c.R:],
          v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
 # Desired properties
@@ -187,7 +201,7 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
     return gen_view_str
 
 
@@ -199,9 +213,9 @@ known_solution = None
 # known_solution_list.append(coeffs['ack_f[0]_loss'] == 0)
 # known_solution_list.append(consts['c_f[0]_loss'] == 0)
 
-# known_solution_list.append(coeffs['c_f[0]_noloss'] == 1)
+# known_solution_list.append(coeffs['c_f[0]_noloss'] == 3/2)
 # known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
-# known_solution_list.append(consts['c_f[0]_noloss'] == 1)
+# known_solution_list.append(consts['c_f[0]_noloss'] == 0)
 # known_solution = z3.And(*known_solution_list)
 # assert(isinstance(known_solution, z3.ExprRef))
 
