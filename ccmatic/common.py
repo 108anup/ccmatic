@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from typing import List, Union
 
@@ -10,7 +11,7 @@ pd.set_option('display.max_colwidth', None)
 
 def flatten(l) -> list:
     ret = []
-    if(isinstance(l, list)):
+    if(isinstance(l, list) or isinstance(l, np.ndarray)):
         for item in l:
             ret.extend(flatten(item))
         return ret
@@ -18,7 +19,7 @@ def flatten(l) -> list:
         return [l]
 
 
-def lcs(arr: List[str]) -> str:
+def lcs(arr: Union[List[str], np.ndarray]) -> str:
     """
     Least common substring of a list of strings
     """
@@ -35,8 +36,9 @@ def lcs(arr: List[str]) -> str:
     return arr[0][:min(larr)]
 
 
-def get_name_for_list(l: Union[List[str], str]) -> str:
-    if(isinstance(l, list)):
+def get_name_for_list(l: Union[np.ndarray, List[str], str]) -> str:
+    # import ipdb; ipdb.set_trace()
+    if(isinstance(l, list) or isinstance(l, np.ndarray)):
         return lcs(l) + "t"
     elif(isinstance(l, str)):
         return l

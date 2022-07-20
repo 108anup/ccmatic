@@ -9,7 +9,7 @@ from ccac.model import (ModelConfig, calculate_qbound, calculate_qdel, cca_aimd,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
 from ccac.variables import VariableNames, Variables
-from ccmatic.common import get_name_for_list
+from ccmatic.common import flatten, get_name_for_list
 from cegis import NAME_TEMPLATE
 from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
@@ -260,6 +260,66 @@ def setup_ccac():
     # s.add(z3.And(v.S[0] <= 1000, v.S[0] >= -1000))
 
     return c, s, v
+
+
+def get_cegis_vars(
+    c: ModelConfig, v: Variables, history: int
+) -> Tuple[List[z3.ArithRef], List[z3.ArithRef]]:
+
+    conditional_vvars = []
+    if(not c.compose):
+        conditional_vvars.append(v.epsilon)
+    if(c.calculate_qdel):
+        # qdel[t][dt<t] is deterministic
+        # qdel[t][dt>=t] is non-deterministic
+        conditional_vvars.append(
+            [v.qdel[t][dt] for t in range(c.T) for dt in range(t, c.T)])
+    if(c.calculate_qbound):
+        # qbound[t][dt<=t] is deterministic
+        # qbound[t][dt>t] is non deterministic
+        conditional_vvars.append(
+            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1, c.T)])
+
+    conditional_dvars = []
+    if(c.calculate_qdel):
+        conditional_dvars.append(
+            [v.qdel[t][dt] for t in range(c.T) for dt in range(t)])
+    if(c.calculate_qbound):
+        conditional_dvars.append(
+            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1)])
+
+    if(c.buf_min is None):
+        # No loss
+        verifier_vars = flatten(
+            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W,
+             v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
+        definition_vars = flatten(
+            [v.A_f[:, history:], v.A, v.c_f[:, history:],
+             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+
+    elif(c.deterministic_loss):
+        # Determinisitic loss
+        assert c.loss_oracle
+        verifier_vars = flatten(
+            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W,
+             v.L_f[:, :1], v.Ld_f[:, :c.R],
+             v.dupacks, v.alpha, conditional_vvars, v.C0])
+        definition_vars = flatten(
+            [v.A_f[:, history:], v.A, v.c_f[:, history:],
+             v.L_f[:, 1:], v.Ld_f[:, c.R:],
+             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+
+    else:
+        # Non-determinisitic loss
+        assert c.loss_oracle
+        verifier_vars = flatten(
+            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W, v.L_f,
+             v.Ld_f[:, :c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
+        definition_vars = flatten(
+            [v.A_f[:, history:], v.A, v.c_f[:, history:], v.Ld_f[:, c.R:],
+             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+
+    return verifier_vars, definition_vars
 
 
 def setup_ccac_definitions(c, v):

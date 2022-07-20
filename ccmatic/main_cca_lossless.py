@@ -12,7 +12,7 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, get_cex_df, get_gen_cex_df,
+from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -37,20 +37,7 @@ sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
-
-conditional_vvars = []
-if(not c.compose):
-    conditional_vvars.append(v.epsilon)
-conditional_dvars = []
-if(c.calculate_qdel):
-    conditional_dvars.append(v.qdel)
-
-verifier_vars = flatten(
-    [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-     v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
-definition_vars = flatten(
-    [v.A_f[0][history:], v.A, v.c_f[0][history:],
-     v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+verifier_vars, definition_vars = get_cegis_vars(c, v, history)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca

@@ -12,7 +12,7 @@ from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_loss, get_cex_df, get_gen_cex_df,
+from .verifier import (desired_high_util_low_loss, get_cegis_vars, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -40,44 +40,7 @@ sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
-
-conditional_vvars = []
-if(not c.compose):
-    conditional_vvars.append(v.epsilon)
-if(c.calculate_qbound):
-    # qbound[0][dt] is non deterministic
-    # qbound[t][dt>t] is non deterministic
-    conditional_vvars.append(v.qbound[0][:])
-    conditional_vvars.append(
-        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1, c.T)])
-conditional_dvars = []
-if(c.calculate_qdel):
-    conditional_dvars.append(v.qdel)  # TODO(108anup): Split qdel into defs and verifier.
-if(c.calculate_qbound):
-    conditional_dvars.append(
-        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1)])
-
-assert c.N == 1
-assert c.loss_oracle
-# Loss detected at time 0 is unconstrained...
-# Loss at 0 is always non-deterministic
-# Let verifier choose it, it is not used anywhere.
-if(deterministic_loss):
-    verifier_vars = flatten(
-        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
-         v.L_f[0][:1], v.Ld_f[0][:c.R],
-         v.dupacks, v.alpha, conditional_vvars, v.C0])
-    definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:],
-         v.L_f[0][1:], v.Ld_f[0][c.R:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
-else:
-    verifier_vars = flatten(
-        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f,
-         v.Ld_f[0][:c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
-    definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][c.R:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+verifier_vars, definition_vars = get_cegis_vars(c, v, history)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
