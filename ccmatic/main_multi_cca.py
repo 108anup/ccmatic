@@ -38,7 +38,8 @@ c = ModelConfig.default()
 c.compose = True
 c.cca = "paced"
 c.simplify = False
-c.calculate_qdel = False
+c.calculate_qdel = True
+c.calculate_qbound = True
 c.C = 100
 c.T = 9
 c.N = 2
@@ -62,6 +63,10 @@ se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
 verifier_vars, definition_vars = get_cegis_vars(c, v, history)
+exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
+                  for n in range(c.N)]  # definition variable
+definition_vars.extend(flatten(exceed_queue_f))
+
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -88,8 +93,10 @@ consts = {
     'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_noloss'),
 }
 
+# This is in multiples of Rm
 qsize_thresh = z3.Real('Gen__const_qsize_thresh')
-qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
+# qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
+qsize_thresh_choices = [x for x in range(1, c.T)]
 assert isinstance(qsize_thresh, z3.ArithRef)
 
 # Search constr
@@ -121,8 +128,20 @@ for n in range(c.N):
         assert lag == 1
         assert c.R == 1
         # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-        loss_detected = (v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1]
-                         >= qsize_thresh * c.C * (c.R + c.D))
+        # loss_detected = (v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1]
+        #                  >= qsize_thresh * c.C * (c.R + c.D))
+        for dt in range(c.T):
+            definition_constrs.append(
+                z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
+                           exceed_queue_f[n][t]))
+            definition_constrs.append(
+                z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
+                           z3.Not(exceed_queue_f[n][t])))
+        loss_detected = exceed_queue_f[n][t]
+        # Exceed queue really does not depend on n
+        # Is this realisitic? All flows share the exact same view for
+        # qbound and qdel?
+
         acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
         rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[0][t-lag])
                     + get_product_ite(coeffs['ack_f[n]_loss'], acked_bytes)
@@ -181,8 +200,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
                   f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
                   f" + {solution.eval(consts['c_f[n]_noloss'])}")
-    ret = (f"if(A_f[n][t-1] - Ld_f[n][t] - S_f[n][t-1]"
-           f" >= {solution.eval(qsize_thresh)} * C * (R + D)):\n"
+    ret = (f"if(qbound[t][{solution.eval(qsize_thresh)}]):\n"
            f"\tc_f[n][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[n][t] = max({lower_bound}, {rhs_noloss})")
