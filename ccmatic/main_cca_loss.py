@@ -54,8 +54,8 @@ conditional_dvars = []
 if(c.calculate_qdel):
     conditional_dvars.append(v.qdel)  # TODO(108anup): Split qdel into defs and verifier.
 if(c.calculate_qbound):
-    conditional_vvars.append(
-        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t)])
+    conditional_dvars.append(
+        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1)])
 
 assert c.N == 1
 assert c.loss_oracle

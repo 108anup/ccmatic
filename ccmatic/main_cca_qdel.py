@@ -27,14 +27,24 @@ lag = 1
 history = 4
 use_loss = False
 deterministic_loss = False
-util_frac = 1
+util_frac = 0.5
 # n_losses = 1
 ideal_max_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
 # Config
-c, s, v = setup_ccac()
+c = ModelConfig.default()
+c.compose = True
+c.cca = "paced"
+c.simplify = False
+c.calculate_qdel = False
+c.calculate_qbound = True
+c.C = 100
+c.T = 9
+
+s = MySolver()
+v = Variables(c, s)
 if(deterministic_loss):
     c.deterministic_loss = True
 c.loss_oracle = True
@@ -55,30 +65,45 @@ environment = z3.And(*se.assertion_list)
 conditional_vvars = []
 if(not c.compose):
     conditional_vvars.append(v.epsilon)
+if(c.calculate_qbound):
+    # qbound[0][dt] is non deterministic
+    # qbound[t][dt>t] is non deterministic
+    conditional_vvars.append(v.qbound[0][:])
+    conditional_vvars.append(
+        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1, c.T)])
 conditional_dvars = []
 if(c.calculate_qdel):
-    conditional_dvars.append(v.qdel)
+    conditional_dvars.append(v.qdel)  # TODO(108anup): Split qdel into defs and verifier.
+if(c.calculate_qbound):
+    conditional_dvars.append(
+        [v.qbound[t][dt] for t in range(1, c.T) for dt in range(t+1)])
+
 
 assert c.N == 1
-
+assert c.loss_oracle
 # Loss detected at time 0 is unconstrained...
+# Loss at 0 is always non-deterministic
 # Let verifier choose it, it is not used anywhere.
+exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
+                  for n in range(c.N)]  # definition variable
 if(deterministic_loss):
     verifier_vars = flatten(
-        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.Ld_f[0][0],
+        [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W,
+         v.L_f[0][:1], v.Ld_f[0][:c.R],
          v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.L_f, v.Ld_f[0][1:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
-
+        [v.A_f[0][history:], v.A, v.c_f[0][history:],
+         v.L_f[0][1:], v.Ld_f[0][c.R:],
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars,
+         exceed_queue_f])
 else:
     verifier_vars = flatten(
         [v.A_f[0][:history], v.c_f[0][:history], v.S_f, v.W, v.L_f,
-         v.Ld_f[0][0], v.dupacks, v.alpha, conditional_vvars, v.C0])
+         v.Ld_f[0][:c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
-        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][1:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
-
+        [v.A_f[0][history:], v.A, v.c_f[0][history:], v.Ld_f[0][c.R:],
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars,
+         exceed_queue_f])
 # No loss
 if(not use_loss):
     verifier_vars = flatten(
@@ -86,7 +111,8 @@ if(not use_loss):
          v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
     definition_vars = flatten(
         [v.A_f[0][history:], v.A, v.c_f[0][history:],
-         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+         v.r_f, v.S, v.L, v.timeout_f, conditional_dvars,
+         exceed_queue_f])
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -113,8 +139,10 @@ consts = {
     'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss'),
 }
 
+# This is in multiples of Rm
 qsize_thresh = z3.Real('Gen__const_qsize_thresh')
-qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
+# qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
+qsize_thresh_choices = [x for x in range(1, c.T)]
 assert isinstance(qsize_thresh, z3.ArithRef)
 
 # Search constr
@@ -145,8 +173,20 @@ for t in range(first, c.T):
     assert lag == 1
     assert c.R == 1
     # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-    loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
-                     - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+
+    # This is meaningless as c.C * (c.R + c.D) is unknown...
+    # loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
+    #                  - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+
+    for dt in range(c.T):
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
+                       exceed_queue_f[0][t]))
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
+                       z3.Not(exceed_queue_f[0][t])))
+    loss_detected = exceed_queue_f[0][t]
+
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
                 + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
@@ -205,8 +245,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(A_f[0][t-1] - Ld_f[0][t] - S_f[0][t-1]"
-           f" >= {solution.eval(qsize_thresh)} * C * (R + D)):\n"
+    ret = (f"if(qbound[t][{solution.eval(qsize_thresh)}]):\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
@@ -221,7 +260,7 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
     return gen_view_str
 
 
