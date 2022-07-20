@@ -264,7 +264,7 @@ def setup_ccac():
 
 def get_cegis_vars(
     c: ModelConfig, v: Variables, history: int
-) -> Tuple[List[z3.ArithRef], List[z3.ArithRef]]:
+) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
 
     conditional_vvars = []
     if(not c.compose):
