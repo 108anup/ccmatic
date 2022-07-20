@@ -156,17 +156,28 @@ def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def calculate_qbound_defs(c: ModelConfig, s: MySolver, v: Variables):
-    # qbound[0][dt] is non deterministic
-    # qbound[t][dt>t] is non deterministic
+    # qbound[t][dt<=t] is deterministic
+    # qbound[t][dt>t] is non deterministic (including qbound[0][dt>0])
+    """
+           dt
+         0 1 2 3
+       ----------
+      0| d n n n
+    t 1| d d n n
+      2| d d d n
+      3| d d d d
+    """
 
-    # Let solver choose non-deterministically what happens when
-    # t <= 0, i.e., no constraint on qbound[0][dt].
+    # Let solver choose non-deterministically what happens for
+    # t = 0, dt > 0, i.e., no constraint on qdel[0][dt>0].
+
+    # By definition queuing delay >= 0
+    for t in range(c.T):
+        s.add(v.qbound[t][0])
+
     for t in range(1, c.T):
-        for dt in range(c.T):
-            if(dt == 0):
-                # by definition queuing delay >= 0
-                s.add(v.qbound[t][dt])
-            elif(dt <= t):
+        for dt in range(1, c.T):
+            if(dt <= t):
                 s.add(
                     z3.Implies(v.S[t] == v.S[t-1],
                                v.qbound[t][dt] == v.qbound[t-1][dt]))
@@ -184,9 +195,6 @@ def calculate_qbound_defs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
-    # qbound[0][dt] is non deterministic
-    # qbound[t][dt>t] is non deterministic
-
     # Needed only for non-deterministic choices, mostly a sanity constraint for
     # deterministic variables.
     for t in range(c.T):
@@ -194,6 +202,47 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
             # If queuing delay at t is greater than dt+1 then
             # it is also greater than dt.
             s.add(z3.Implies(v.qbound[t][dt+1], v.qbound[t][dt]))
+
+
+def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
+    # qdel[t][dt<t] is deterministic
+    # qdel[t][dt>=t] is non-deterministic (including,
+    # qdel[0][dt], qdel[t][dt>t-1])
+    """
+           dt
+         0 1 2 3
+       ----------
+      0| n n n n
+    t 1| d n n n
+      2| d d n n
+      3| d d d n
+    """
+
+    # Let solver choose non-deterministically what happens for
+    # t = 0, i.e., no constraint on qdel[0][dt].
+    for t in range(1, c.T):
+        for dt in range(c.T):
+            if(dt <= t-1):
+                s.add(z3.Implies(v.S[t] != v.S[t - 1],
+                                 v.qdel[t][dt] == z3.And(
+                    v.A[t - dt - 1] - v.L[t - dt - 1] < v.S[t],
+                    v.A[t - dt] - v.L[t - dt] >= v.S[t])))
+                s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
+            else:
+                s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
+                # We let solver choose non-deterministically what happens when
+                # S[t] != S[t-1] for dt > t-1, i.e.,
+                # no constraint on qdel[t][dt>t-1]
+
+
+def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
+    # There can be only one value for queuing delay at a given time.
+    # Needed only for non-deterministic choices, mostly a sanity constraint for
+    # deterministic variables.
+    for t in range(c.T):
+        s.add(z3.Sum(*v.qdel[t]) <= 1)
 
 
 def setup_ccac():
@@ -224,9 +273,9 @@ def setup_ccac_definitions(c, v):
     if(c.deterministic_loss):
         loss_deterministic(c, s, v)  # Def to compute loss.
     if(c.loss_oracle):
-        loss_oracle(c, s, v)  # Def to compute loss detected.
+        loss_oracle(c, s, v)  # Defs to compute loss detected.
     if(c.calculate_qdel):
-        calculate_qdel(c, s, v)  # TODO(108anup): split this into defs/env.
+        calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
     if(c.calculate_qbound):
         calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
     cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
@@ -245,12 +294,15 @@ def setup_ccac_environment(c, v):
         loss_non_deterministic(c, s, v)
     if(not c.loss_oracle):
         loss_detected(c, s, v)
-    if(c.N > 1):
-        multi_flows(c, s, v)  # Flows should be serviced fairly
-    epsilon_alpha(c, s, v)  # Verifier only
+    if(c.calculate_qdel):
+        calculate_qdel_env(c, s, v)  # How to pick initial qdels
+        # non-deterministically.
     if(c.calculate_qbound):
         calculate_qbound_env(c, s, v)  # How to pick initial qbounds
         # non-deterministically.
+    if(c.N > 1):
+        multi_flows(c, s, v)  # Flows should be serviced fairly
+    epsilon_alpha(c, s, v)  # Verifier only
 
     # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
     # s.add(v.L_f[0][0] == 0)
