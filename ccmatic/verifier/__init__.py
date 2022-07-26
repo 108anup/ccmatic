@@ -270,6 +270,16 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
     for t in range(c.T):
         s.add(z3.Sum(*v.qdel[t]) <= 1)
 
+    for t1 in range(c.T-1):
+        for dt1 in range(c.T):
+            t2 = t1+1
+            # dt2 starts from dt1+1+1
+            for dt2 in range(dt1+1+1, c.T):
+                s.add(z3.Implies(
+                    v.qdel[t1][dt1],
+                    z3.Not(v.qdel[t2][dt2])
+                ))
+
 
 def setup_ccac():
     c = ModelConfig.default()

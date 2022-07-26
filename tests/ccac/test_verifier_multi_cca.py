@@ -1,3 +1,4 @@
+import numpy as np
 import z3
 from ccmatic.verifier import (desired_high_util_low_delay,
                               desired_high_util_low_loss, get_cex_df,
@@ -13,7 +14,7 @@ use_loss = False
 deterministic_loss = False
 util_frac = 0.5
 n_losses = 1
-ideal_max_queue = 2
+ideal_max_queue = 4
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -21,7 +22,7 @@ c = ModelConfig.default()
 c.compose = True
 c.cca = "paced"
 c.simplify = False
-c.calculate_qdel = False
+c.calculate_qdel = True
 c.C = 100
 c.T = 9
 c.N = 2
@@ -62,10 +63,11 @@ assert isinstance(desired, z3.ExprRef)
 definition_constrs = []
 for n in range(c.N):
     for t in range(first, c.T):
-        cond = v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1] >= 1/2 * c.C * (c.R + c.D)
-        rhs_loss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1
+        cond = True
+        rhs_loss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1/2
         # rhs_loss = v.c_f[n][t-1] / 2
-        rhs_noloss = v.c_f[n][t-lag] + 1
+        rhs_noloss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1/2
+        # rhs_noloss = v.c_f[n][t-lag] + 1
         rhs = z3.If(cond, rhs_loss, rhs_noloss)
         assert isinstance(rhs, z3.ArithRef)
         definition_constrs.append(v.c_f[n][t] == z3.If(rhs >= 0.01, rhs, 0.01))
@@ -77,6 +79,18 @@ for n in range(c.N):
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
+    qdelay = []
+    for t in range(c.T):
+        added = False
+        for dt in range(c.T):
+            if(bool(counter_example.eval(v.qdel[t][dt]))):
+                qdelay.append(dt)
+                added = True
+                break
+        if(not added):
+            qdelay.append(c.T)
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
     ret = "{}".format(df.astype(float))
     conds = {
         "high_util": high_util,

@@ -24,8 +24,9 @@ DEBUG = False
 lag = 1
 history = 4
 deterministic_loss = True
-util_frac = 0.5
+util_frac = 1
 n_losses = 2
+buf_size = 1
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -33,7 +34,7 @@ c, s, v = setup_ccac()
 if(deterministic_loss):
     c.deterministic_loss = True
 c.loss_oracle = True
-c.buf_max = 0.1 * c.C * (c.R + c.D)
+c.buf_max = buf_size * c.C * (c.R + c.D)
 c.buf_min = c.buf_max
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
@@ -169,18 +170,18 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 
 # Known solution
-known_solution = None
+# known_solution = None
 
-# known_solution_list = []
-# known_solution_list.append(coeffs['c_f[0]_loss'] == 1/2)
-# known_solution_list.append(coeffs['ack_f[0]_loss'] == 0)
-# known_solution_list.append(consts['c_f[0]_loss'] == 0)
+known_solution_list = []
+known_solution_list.append(coeffs['c_f[0]_loss'] == 0)
+known_solution_list.append(coeffs['ack_f[0]_loss'] == 1/2)
+known_solution_list.append(consts['c_f[0]_loss'] == 0)
 
-# known_solution_list.append(coeffs['c_f[0]_noloss'] == 3/2)
-# known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
-# known_solution_list.append(consts['c_f[0]_noloss'] == 0)
-# known_solution = z3.And(*known_solution_list)
-# assert(isinstance(known_solution, z3.ExprRef))
+known_solution_list.append(coeffs['c_f[0]_noloss'] == 2)
+known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
+known_solution_list.append(consts['c_f[0]_noloss'] == 0)
+known_solution = z3.And(*known_solution_list)
+assert(isinstance(known_solution, z3.ExprRef))
 
 # Debugging:
 if DEBUG:
