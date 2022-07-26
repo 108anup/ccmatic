@@ -132,10 +132,10 @@ for t in range(first, c.T):
 
     for dt in range(c.T):
         definition_constrs.append(
-            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
                        exceed_queue_f[0][t]))
         definition_constrs.append(
-            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
     loss_detected = exceed_queue_f[0][t]
 
@@ -197,7 +197,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(qbound[t][{solution.eval(qsize_thresh)}]):\n"
+    ret = (f"if(qbound[t-1][{solution.eval(qsize_thresh)}]):\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")

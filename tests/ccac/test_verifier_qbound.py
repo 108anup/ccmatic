@@ -1,13 +1,11 @@
+import numpy as np
 import z3
-from ccmatic.common import flatten
-from ccmatic.verifier import (desired_high_util_low_delay, desired_high_util_low_loss, get_cex_df,
-                              setup_ccac, setup_ccac_definitions,
-                              setup_ccac_environment)
-from cegis.util import unroll_assertions
+from ccmatic.verifier import (desired_high_util_low_delay, get_cex_df,
+                              setup_ccac_definitions, setup_ccac_environment)
 from pyz3_utils.my_solver import MySolver
-from ccac.config import ModelConfig
 
-from ccac.variables import VariableNames
+from ccac.config import ModelConfig
+from ccac.variables import VariableNames, Variables
 
 lag = 1
 history = 4
@@ -59,7 +57,9 @@ delay_bound = ideal_max_queue * c.C * (c.R + c.D)
     desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
 assert isinstance(desired, z3.ExprRef)
 
-qsize_thresh = 4
+vn = VariableNames(v)
+
+qsize_thresh = 6
 assert first >= 1
 definition_constrs = []
 for t in range(first, c.T):
@@ -69,10 +69,10 @@ for t in range(first, c.T):
 
     for dt in range(c.T):
         definition_constrs.append(
-            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
                        exceed_queue_f[0][t]))
         definition_constrs.append(
-            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
     cond = exceed_queue_f[0][t]
     rhs_loss = v.c_f[0][t-lag] / 2
@@ -88,6 +88,20 @@ for t in range(first, c.T):
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
+    qdelay = []
+    for t in range(c.T):
+        assert bool(counter_example.eval(v.qbound[t][0]))
+        added = False
+        for dt in range(1, c.T):
+            if(not bool(counter_example.eval(v.qbound[t][dt]))):
+                qdelay.append(dt-1)
+                added = True
+                break
+        if(not added):
+            qdelay.append(c.T)
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+
     ret = "{}".format(df.astype(float))
     conds = {
         "high_util": high_util,
