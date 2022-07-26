@@ -1,6 +1,6 @@
 import numpy as np
 import z3
-from ccmatic.verifier import (desired_high_util_low_delay,
+from ccmatic.verifier.ccac_stubs import (desired_high_util_low_delay,
                               desired_high_util_low_loss, get_cex_df,
                               setup_ccac_definitions, setup_ccac_environment)
 from pyz3_utils.my_solver import MySolver

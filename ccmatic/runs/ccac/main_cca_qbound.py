@@ -5,17 +5,18 @@ from typing import List
 
 import z3
 from ccac.config import ModelConfig
+from ccac.model import loss_detected
 from ccac.variables import VariableNames, Variables
 from pyz3_utils.common import GlobalConfig
-from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
+from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac_definitions,
-                       setup_ccac_environment)
+from .verifier.ccac_stubs import (desired_high_util_low_delay, desired_high_util_low_loss, get_cegis_vars, get_cex_df, get_gen_cex_df,
+                       run_verifier_incomplete, setup_ccac,
+                       setup_ccac_definitions, setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -33,16 +34,14 @@ ideal_max_queue = 2
 # Verifier
 # Dummy variables used to create CCAC formulation only
 # Config
-# c, s, v = setup_ccac()
 c = ModelConfig.default()
 c.compose = True
 c.cca = "paced"
 c.simplify = False
-c.calculate_qdel = True
+c.calculate_qdel = False
 c.calculate_qbound = True
 c.C = 100
 c.T = 9
-c.N = 2
 
 s = MySolver()
 v = Variables(c, s)
@@ -67,7 +66,6 @@ exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
                   for n in range(c.N)]  # definition variable
 definition_vars.extend(flatten(exceed_queue_f))
 
-
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
 # loss_rate = n_losses / ((c.T-1) - first)
@@ -82,15 +80,15 @@ assert isinstance(desired, z3.ExprRef)
 vn = VariableNames(v)
 lower_bound = 0.01
 coeffs = {
-    'c_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_loss'),
-    'c_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_noloss'),
-    'ack_f[n]_loss': z3.Real('Gen__coeff_ack_f[n]_loss'),
-    'ack_f[n]_noloss': z3.Real('Gen__coeff_ack_f[n]_noloss')
+    'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
+    'c_f[0]_noloss': z3.Real('Gen__coeff_c_f[0]_noloss'),
+    'ack_f[0]_loss': z3.Real('Gen__coeff_ack_f[0]_loss'),
+    'ack_f[0]_noloss': z3.Real('Gen__coeff_ack_f[0]_noloss')
 }
 
 consts = {
-    'c_f[n]_loss': z3.Real('Gen__const_c_f[n]_loss'),
-    'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_noloss'),
+    'c_f[0]_loss': z3.Real('Gen__const_c_f[0]_loss'),
+    'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss'),
 }
 
 # This is in multiples of Rm
@@ -122,38 +120,37 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 
 
 assert first >= 1
-for n in range(c.N):
-    for t in range(first, c.T):
-        assert history > lag
-        assert lag == 1
-        assert c.R == 1
-        # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-        # loss_detected = (v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1]
-        #                  >= qsize_thresh * c.C * (c.R + c.D))
-        for dt in range(c.T):
-            definition_constrs.append(
-                z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
-                           exceed_queue_f[n][t]))
-            definition_constrs.append(
-                z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
-                           z3.Not(exceed_queue_f[n][t])))
-        loss_detected = exceed_queue_f[n][t]
-        # Exceed queue really does not depend on n
-        # Is this realisitic? All flows share the exact same view for
-        # qbound and qdel?
+for t in range(first, c.T):
+    assert history > lag
+    assert lag == 1
+    assert c.R == 1
+    # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
 
-        acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
-        rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[0][t-lag])
-                    + get_product_ite(coeffs['ack_f[n]_loss'], acked_bytes)
-                    + consts['c_f[n]_loss'])
-        rhs_noloss = (get_product_ite(coeffs['c_f[n]_noloss'], v.c_f[0][t-lag])
-                      + get_product_ite(coeffs['ack_f[n]_noloss'], acked_bytes)
-                      + consts['c_f[n]_noloss'])
-        rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
-        assert isinstance(rhs, z3.ArithRef)
+    # This is meaningless as c.C * (c.R + c.D) is unknown...
+    # loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
+    #                  - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+
+    for dt in range(c.T):
         definition_constrs.append(
-            v.c_f[n][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
-        )
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
+                       exceed_queue_f[0][t]))
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
+                       z3.Not(exceed_queue_f[0][t])))
+    loss_detected = exceed_queue_f[0][t]
+
+    acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
+    rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
+                + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
+                + consts['c_f[0]_loss'])
+    rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
+                  + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
+                  + consts['c_f[0]_noloss'])
+    rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
+    assert isinstance(rhs, z3.ArithRef)
+    definition_constrs.append(
+        v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
+    )
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -190,20 +187,20 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
-    rhs_loss = (f"{solution.eval(coeffs['c_f[n]_loss'])}"
-                f"c_f[n][t-{lag}]"
-                f" + {solution.eval(coeffs['ack_f[n]_loss'])}"
-                f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
-                f" + {solution.eval(consts['c_f[n]_loss'])}")
-    rhs_noloss = (f"{solution.eval(coeffs['c_f[n]_noloss'])}"
-                  f"c_f[n][t-{lag}]"
-                  f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
-                  f"(S_f[n][t-{lag}]-S_f[n][t-{history}])"
-                  f" + {solution.eval(consts['c_f[n]_noloss'])}")
-    ret = (f"if(qbound[t][{solution.eval(qsize_thresh)}]):\n"
-           f"\tc_f[n][t] = max({lower_bound}, {rhs_loss})\n"
+    rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
+                f"c_f[0][t-{lag}]"
+                f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
+                f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                f" + {solution.eval(consts['c_f[0]_loss'])}")
+    rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
+                  f"c_f[0][t-{lag}]"
+                  f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
+                  f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                  f" + {solution.eval(consts['c_f[0]_noloss'])}")
+    ret = (f"if(qbound[t-1][{solution.eval(qsize_thresh)}]):\n"
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
            f"else:\n"
-           f"\tc_f[n][t] = max({lower_bound}, {rhs_noloss})")
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
     return ret
 
 

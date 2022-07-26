@@ -1,6 +1,6 @@
 import z3
 from ccmatic.common import flatten
-from ccmatic.verifier import (desired_high_util_low_loss, get_cex_df,
+from ccmatic.verifier.ccac_stubs import (desired_high_util_low_loss, get_cex_df,
                               setup_ccac, setup_ccac_definitions,
                               setup_ccac_environment)
 from cegis.util import unroll_assertions
