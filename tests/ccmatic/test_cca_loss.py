@@ -22,10 +22,12 @@ from tests import setup_logger_file
 
 @pytest.mark.parametrize(
     "buf_size, n_losses, util_frac",
-    [(1, 1, 0.5), (1, 1, 0.8), (1, 1, 1),
-     (2, 1, 1),
-     (0.1, 1, 0.8), (0.1, 2, 0.5)
-     ])
+    [
+        (1, 1, 0.5), (1, 1, 0.8), (1, 1, 1),
+        (2, 1, 1),
+        (0.1, 1, 0.8), (0.1, 2, 0.5),
+        (0.1, 2, 0.8), (0.1, 1, 0.5),
+    ])
 def test_cca_loss(buf_size, n_losses, util_frac):
     logger = logging.getLogger('cca_gen')
     GlobalConfig().default_logger_setup(logger)
