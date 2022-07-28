@@ -127,12 +127,15 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
     assert c.buf_max == c.buf_min
 
     for t in range(1, c.T):
-        s.add(z3.Implies(
-            v.A[t] - v.L[t-1] > v.C0 + c.C * t - v.W[t] + c.buf_min,
-            v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min))
-        s.add(z3.Implies(
-            v.A[t] - v.L[t-1] <= v.C0 + c.C * t - v.W[t] + c.buf_min,
-            v.L[t] == v.L[t-1]))
+        if c.buf_min is None:  # no loss case
+            s.add(v.L[t] == v.L[0])
+        else:
+            s.add(z3.Implies(
+                v.A[t] - v.L[t-1] > v.C0 + c.C * t - v.W[t] + c.buf_min,
+                v.A[t] - v.L[t] == v.C0 + c.C * t - v.W[t] + c.buf_min))
+            s.add(z3.Implies(
+                v.A[t] - v.L[t-1] <= v.C0 + c.C * t - v.W[t] + c.buf_min,
+                v.L[t] == v.L[t-1]))
     # L[0] is still chosen non-deterministically in an unconstrained fashion.
 
 

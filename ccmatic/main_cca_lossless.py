@@ -31,7 +31,8 @@ max_ideal_queue = 2
 c, s, v = setup_ccac()
 c.loss_oracle = True
 # Consider the no loss case for simplicity
-s.add(v.L[0] == v.L[-1])
+c.buf_min = None
+c.buf_max = None
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)

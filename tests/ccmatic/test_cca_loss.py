@@ -79,8 +79,8 @@ def test_cca_loss(buf_size, n_losses, util_frac):
     }
 
     # Search constr
-    # search_range = [Fraction(i, 2) for i in range(5)]
-    search_range = [0, 1]
+    search_range = [Fraction(i, 2) for i in range(5)]
+    # search_range = [0, 1]
     domain_clauses = []
     for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
         domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
