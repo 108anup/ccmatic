@@ -64,7 +64,10 @@ environment = z3.And(*se.assertion_list)
 verifier_vars, definition_vars = get_cegis_vars(c, v, history)
 exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
                   for n in range(c.N)]  # definition variable
+last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)]  # definition variable
 definition_vars.extend(flatten(exceed_queue_f))
+definition_vars.extend(flatten(last_decrease_f))
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -120,16 +123,15 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 
 
 assert first >= 1
-for t in range(first, c.T):
-    assert history > lag
-    assert lag == 1
-    assert c.R == 1
-    # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+assert history > lag
+assert lag == c.R
+assert c.R == 1
 
-    # This is meaningless as c.C * (c.R + c.D) is unknown...
-    # loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
-    #                  - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+for t in range(first):
+    definition_constrs.append(
+        last_decrease_f[0][t] == v.S_f[0][t])
 
+for t in range(lag, c.T):
     for dt in range(c.T):
         definition_constrs.append(
             z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
@@ -137,7 +139,23 @@ for t in range(first, c.T):
         definition_constrs.append(
             z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
+
+for t in range(first, c.T):
+    # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+
+    # This is meaningless as c.C * (c.R + c.D) is unknown...
+    # loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
+    #                  - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
+
     loss_detected = exceed_queue_f[0][t]
+
+    assert first >= lag + 1
+    this_decrease = z3.And(loss_detected, v.S[t-1-lag] >= last_decrease_f[0][t-1])
+
+    definition_constrs.append(z3.Implies(
+        this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(z3.Implies(
+        z3.Not(this_decrease), last_decrease_f[0][t] == last_decrease_f[0][t-1]))
 
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
@@ -146,7 +164,7 @@ for t in range(first, c.T):
     rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
                   + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
                   + consts['c_f[0]_noloss'])
-    rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
+    rhs = z3.If(this_decrease, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(
         v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)

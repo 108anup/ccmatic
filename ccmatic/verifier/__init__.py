@@ -445,12 +445,12 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
     # If the cwnd0 is very low then CCA should increase cwnd
     ramp_up = z3.Or(*[v.c_f[n][-1] > v.c_f[n][first] for n in range(c.N)])
     # If the queue is large to begin with then, CCA should cause queue to decrease.
-    ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
 
     # Bottleneck queue should decrease
-    # ramp_down = (
-    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    ramp_down = (
+        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+        < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
 
     desired = z3.And(
         z3.Or(high_util, ramp_up),

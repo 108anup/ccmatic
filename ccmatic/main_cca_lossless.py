@@ -177,7 +177,7 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex))
+    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
     return gen_view_str
 
 

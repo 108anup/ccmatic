@@ -1,5 +1,6 @@
 import numpy as np
 import z3
+from ccac.model import loss_detected
 from ccmatic.verifier import (desired_high_util_low_delay, get_cex_df,
                               setup_ccac_definitions, setup_ccac_environment)
 from pyz3_utils.my_solver import MySolver
@@ -13,7 +14,7 @@ use_loss = False
 deterministic_loss = False
 util_frac = 0.5
 # n_losses = 1
-ideal_max_queue = 2
+ideal_max_queue = 8
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -47,6 +48,8 @@ ccac_definitions = z3.And(*sd.assertion_list)
 environment = z3.And(*se.assertion_list)
 exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
                   for n in range(c.N)]  # definition variable
+last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)]  # definition variable
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -59,14 +62,19 @@ assert isinstance(desired, z3.ExprRef)
 
 vn = VariableNames(v)
 
-qsize_thresh = 6
-assert first >= 1
+qsize_thresh = 4
 definition_constrs = []
-for t in range(first, c.T):
-    assert history > lag
-    assert lag == 1
-    assert c.R == 1
 
+assert first >= 1
+assert history > lag
+assert lag == c.R
+assert c.R == 1
+
+for t in range(first):
+    definition_constrs.append(
+        last_decrease_f[0][t] == v.S_f[0][t])
+
+for t in range(lag, c.T):
     for dt in range(c.T):
         definition_constrs.append(
             z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
@@ -74,11 +82,22 @@ for t in range(first, c.T):
         definition_constrs.append(
             z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
-    cond = exceed_queue_f[0][t]
+
+for t in range(first, c.T):
+    loss_detected = exceed_queue_f[0][t]
+
+    assert first >= lag + 1
+    this_decrease = z3.And(loss_detected, v.S[t-1-lag] >= last_decrease_f[0][t-1])
+
+    definition_constrs.append(z3.Implies(
+        this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(z3.Implies(
+        z3.Not(this_decrease), last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+
     rhs_loss = v.c_f[0][t-lag] / 2
     # rhs_loss = 0
     rhs_noloss = v.c_f[0][t-lag] + 1
-    rhs = z3.If(cond, rhs_loss, rhs_noloss)
+    rhs = z3.If(this_decrease, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
 
@@ -101,6 +120,21 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
             qdelay.append(c.T)
     assert len(qdelay) == c.T
     df["qdelay"] = np.array(qdelay).astype(float)
+    df["last_decrease_f"] = [counter_example.eval(x).as_fraction()
+                             for x in last_decrease_f[0]]
+    # for t in range(c.T):
+    #     print(t)
+    #     print(
+    #         counter_example.eval(
+    #             z3.And(exceed_queue_f[0][t], v.S[t-1-lag] >= last_decrease_f[0][t-1]))
+    #     )
+    # import ipdb; ipdb.set_trace()
+    df["this_decrease"] = [-1] + [
+        bool(counter_example.eval(
+            z3.And(exceed_queue_f[0][t], v.S[t-1-lag] >= last_decrease_f[0][t-1])))
+        for t in range(1, c.T)]
+    df["exceed_queue_f"] = [-1] + [bool(counter_example.eval(x)) for x in exceed_queue_f[0][1:]]
+    df["qbound_thresh_f"] = [-1] + [bool(counter_example.eval(v.qbound[t][qsize_thresh])) for t in range(1, c.T)]
 
     ret = "{}".format(df.astype(float))
     conds = {
