@@ -3,18 +3,20 @@ import logging
 from fractions import Fraction
 from typing import List
 
+import ccmatic.common  # Used for side effects
 import z3
-from ccac.variables import VariableNames
+from ccmatic.cegis import CegisCCAGen
+from ccmatic.common import flatten
+from ccmatic.verifier.ccac_stubs import (desired_high_util_low_delay,
+                                         get_cegis_vars, get_cex_df,
+                                         get_gen_cex_df,
+                                         run_verifier_incomplete, setup_ccac,
+                                         setup_ccac_definitions,
+                                         setup_ccac_environment)
 from cegis.util import get_raw_value, tcolor
 from pyz3_utils.common import GlobalConfig
 
-import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen
-from ccmatic.common import flatten
-
-from .verifier.ccac_stubs import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac,
-                       setup_ccac_definitions, setup_ccac_environment)
+from ccac.variables import VariableNames
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)

@@ -1,53 +1,47 @@
 from fractions import Fraction
+from typing import List, Set
 import z3
 from ccac2.config import Config
-from ccac2.model import ModelVariables, all_constraints
+from ccac2.model import ModelVariables, all_constraints, config_constraints
+from ccmatic.verifier.ccac2_stubs import get_cegis_vars, separate_initial_conditions, setup_definitions, setup_environment
 from cegis import Cegis
+from pyz3_utils.helpers import extract_all_aux_vars, extract_vars
 from pyz3_utils.my_solver import MySolver
 
 
 c = Config()
 c.unsat_core = False
-c.T = 10
 c.F = 2
 c.inf_buf = False
+init_rtts = 4
+init_tsteps = 6
+total_rtts = 10
+c.T = 20  # total tsteps
+assert c.T > init_tsteps
 c.check()
+
 s = MySolver()
 v = ModelVariables(c, s)
-all_constraints(c, s, v)
 
-s.add(v.times[-1].time >= 5)
+s.add(v.times[-1].time >= total_rtts)
+separate_initial_conditions(c, s, v, init_tsteps, init_rtts)
+config_constraints(c, s, v)
 
-# for t in range(c.T):
-#     s.add(v.times[t].flows[0].cwnd == 1)
-#     s.add(v.times[t].flows[0].rate == 0.5)
+ccac2_domain = z3.And(*s.assertion_list)
+verifier_vars, definition_vars = get_cegis_vars(c, v, init_tsteps)
+sd = setup_definitions(c, v)
+se = setup_environment(c, v)
 
-# sat = s.check()
-# print(str(sat))
+def_aux_vars = extract_all_aux_vars(z3.And(*sd.assertion_list))
+env_aux_vars = extract_all_aux_vars(z3.And(*se.assertion_list))
+assert len(env_aux_vars) == 0
 
-verifier_vars = []
-verifier_vars.append(v.buf)
-if not c.compose:
-    verifier_vars.append(v.epsilon)
-for time in v.times:
-    verifier_vars.append(time.W)
-    for flow in time.flows:
-        verifier_vars.append(flow.A)
+definition_vars.extend(def_aux_vars)
 
-definition_vars = []
-for time in v.times:
-    # TODO(108anup): capture and add delta_t aux variables.
-    definition_vars.append(time.A)
-    definition_vars.append(time.S)
-    definition_vars.append(time.L)
-    for flow in time.flows:
-        definition_vars.append(flow.A)
-        definition_vars.append(flow.L)
-        definition_vars.append(flow.Ld)
-
-# TODO(108anup): corss check that union of definition and env vars is same as
+# TODO(108anup): cross check that union of definition and env vars is same as
 #  original vars.
-environment = z3.And(s.assertion_list)
+environment = z3.And(*se.assertion_list)
+
 
 # Search constr
 coeffs = {
