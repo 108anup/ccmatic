@@ -9,7 +9,7 @@ from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
 
 lag = 1
-history = 4
+history = 1
 use_loss = False
 deterministic_loss = False
 util_frac = 0.5
@@ -62,17 +62,24 @@ assert isinstance(desired, z3.ExprRef)
 
 vn = VariableNames(v)
 
-qsize_thresh = 4
+qsize_thresh = 5
 definition_constrs = []
 
 assert first >= 1
-assert history > lag
+# assert history > lag
 assert lag == c.R
 assert c.R == 1
 
-for t in range(first):
+definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])  # v.S_f[0][0])
+for t in range(1, first):
     definition_constrs.append(
-        last_decrease_f[0][t] == v.S_f[0][t])
+        z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
+                   last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(
+        z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+                   last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+    # definition_constrs.append(
+    #     last_decrease_f[0][t] == v.S_f[0][t])
 
 for t in range(lag, c.T):
     for dt in range(c.T):
@@ -86,8 +93,8 @@ for t in range(lag, c.T):
 for t in range(first, c.T):
     loss_detected = exceed_queue_f[0][t]
 
-    assert first >= lag + 1
-    this_decrease = z3.And(loss_detected, v.S[t-1-lag] >= last_decrease_f[0][t-1])
+    # assert first >= lag + 1
+    this_decrease = z3.And(loss_detected, v.S[t-lag] > last_decrease_f[0][t-1])
 
     definition_constrs.append(z3.Implies(
         this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
