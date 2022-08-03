@@ -12,7 +12,7 @@ lag = 1
 history = 1
 use_loss = False
 deterministic_loss = False
-util_frac = 0.5
+util_frac = 0.2
 # n_losses = 1
 ideal_max_queue = 8
 
@@ -95,7 +95,7 @@ for t in range(first, c.T):
     loss_detected = exceed_queue_f[0][t]
 
     # assert first >= lag + 1
-    this_decrease = z3.And(loss_detected, v.S[t-lag] >= last_decrease_f[0][t-1])
+    this_decrease = z3.And(loss_detected, v.S[t-lag] > last_decrease_f[0][t-1])
 
     definition_constrs.append(z3.Implies(
         this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
@@ -139,7 +139,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     # import ipdb; ipdb.set_trace()
     df["this_decrease"] = [-1] + [
         bool(counter_example.eval(
-            z3.And(exceed_queue_f[0][t], v.S[t-lag] >= last_decrease_f[0][t-1])))
+            z3.And(exceed_queue_f[0][t], v.S[t-lag] > last_decrease_f[0][t-1])))
         for t in range(1, c.T)]
     df["exceed_queue_f"] = [-1] + [bool(counter_example.eval(x)) for x in exceed_queue_f[0][1:]]
     df["qbound_thresh_f"] = [bool(counter_example.eval(v.qbound[t][qsize_thresh])) for t in range(c.T)]

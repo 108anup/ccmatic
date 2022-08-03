@@ -86,11 +86,14 @@ consts = {
 }
 
 # Search constr
-search_range = [Fraction(i, 2) for i in range(5)]
+search_range_coeff = [Fraction(i, 2) for i in range(5)]
+search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
 # search_range = [-1, 0, 1]
 domain_clauses = []
-for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
-    domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
+for coeff in flatten(list(coeffs.values())):
+    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeff]))
+for const in flatten(list(consts.values())):
+    domain_clauses.append(z3.Or(*[const == val for val in search_range_const]))
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -98,7 +101,7 @@ assert(isinstance(search_constraints, z3.ExprRef))
 definition_constrs = []
 
 
-def get_product_ite(coeff, rvar, cdomain=search_range):
+def get_product_ite(coeff, rvar, cdomain=search_range_coeff):
     term_list = []
     for val in cdomain:
         term_list.append(z3.If(coeff == val, val * rvar, 0))
