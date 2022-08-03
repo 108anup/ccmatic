@@ -24,8 +24,9 @@ DEBUG = False
 lag = 1
 history = 4
 deterministic_loss = True
-util_frac = 1
+util_frac = 0.5
 n_losses = 2
+dynamic_buffer = True
 buf_size = 1
 
 # Verifier
@@ -34,14 +35,32 @@ c, s, v = setup_ccac()
 if(deterministic_loss):
     c.deterministic_loss = True
 c.loss_oracle = True
-c.buf_max = buf_size * c.C * (c.R + c.D)
+
+# Try variable buffer.
+if(dynamic_buffer):
+    c.buf_max = z3.Real('buf_size')  # buf_size * c.C * (c.R + c.D)
+else:
+    c.buf_max = buf_size * c.C * (c.R + c.D)
 c.buf_min = c.buf_max
+
 ccac_domain = z3.And(*s.assertion_list)
 sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
-environment = z3.And(*se.assertion_list)
+environment_assertions = se.assertion_list
 verifier_vars, definition_vars = get_cegis_vars(c, v, history)
+
+if(dynamic_buffer):
+    verifier_vars.append(c.buf_min)
+
+    # Buffer should have atleast one packet
+    environment_assertions.append(c.buf_min > v.alpha)
+
+    # environment_assertions.append(
+    #     z3.Or(c.buf_min == c.C * (c.R + c.D),
+    #           c.buf_min == 0.1 * c.C * (c.R + c.D)))
+
+environment = z3.And(*environment_assertions)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -128,8 +147,10 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         "ramp_up": ramp_up,
         "ramp_down": ramp_down,
         "total_losses": total_losses,
-        "measured_loss_rate": total_losses/((c.T-1) - first)
+        # "measured_loss_rate": total_losses/((c.T-1) - first)
     }
+    if(dynamic_buffer):
+        conds["buffer"] = c.buf_min
     cond_list = []
     for cond_name, cond in conds.items():
         cond_list.append(
@@ -170,18 +191,18 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 
 # Known solution
-# known_solution = None
+known_solution = None
 
-known_solution_list = []
-known_solution_list.append(coeffs['c_f[0]_loss'] == 0)
-known_solution_list.append(coeffs['ack_f[0]_loss'] == 1/2)
-known_solution_list.append(consts['c_f[0]_loss'] == 0)
+# known_solution_list = []
+# known_solution_list.append(coeffs['c_f[0]_loss'] == 0)
+# known_solution_list.append(coeffs['ack_f[0]_loss'] == 1/2)
+# known_solution_list.append(consts['c_f[0]_loss'] == 0)
 
-known_solution_list.append(coeffs['c_f[0]_noloss'] == 2)
-known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
-known_solution_list.append(consts['c_f[0]_noloss'] == 0)
-known_solution = z3.And(*known_solution_list)
-assert(isinstance(known_solution, z3.ExprRef))
+# known_solution_list.append(coeffs['c_f[0]_noloss'] == 2)
+# known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
+# known_solution_list.append(consts['c_f[0]_noloss'] == 0)
+# known_solution = z3.And(*known_solution_list)
+# assert(isinstance(known_solution, z3.ExprRef))
 
 # Debugging:
 if DEBUG:

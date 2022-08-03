@@ -62,7 +62,7 @@ assert isinstance(desired, z3.ExprRef)
 
 vn = VariableNames(v)
 
-qsize_thresh = 5
+qsize_thresh = 4
 definition_constrs = []
 
 assert first >= 1
@@ -70,7 +70,8 @@ assert first >= 1
 assert lag == c.R
 assert c.R == 1
 
-definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])  # v.S_f[0][0])
+# definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
+definition_constrs.append(last_decrease_f[0][0] == v.S_f[0][0])
 for t in range(1, first):
     definition_constrs.append(
         z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
@@ -94,7 +95,7 @@ for t in range(first, c.T):
     loss_detected = exceed_queue_f[0][t]
 
     # assert first >= lag + 1
-    this_decrease = z3.And(loss_detected, v.S[t-lag] > last_decrease_f[0][t-1])
+    this_decrease = z3.And(loss_detected, v.S[t-lag] >= last_decrease_f[0][t-1])
 
     definition_constrs.append(z3.Implies(
         this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
@@ -138,10 +139,10 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     # import ipdb; ipdb.set_trace()
     df["this_decrease"] = [-1] + [
         bool(counter_example.eval(
-            z3.And(exceed_queue_f[0][t], v.S[t-1-lag] >= last_decrease_f[0][t-1])))
+            z3.And(exceed_queue_f[0][t], v.S[t-lag] >= last_decrease_f[0][t-1])))
         for t in range(1, c.T)]
     df["exceed_queue_f"] = [-1] + [bool(counter_example.eval(x)) for x in exceed_queue_f[0][1:]]
-    df["qbound_thresh_f"] = [-1] + [bool(counter_example.eval(v.qbound[t][qsize_thresh])) for t in range(1, c.T)]
+    df["qbound_thresh_f"] = [bool(counter_example.eval(v.qbound[t][qsize_thresh])) for t in range(c.T)]
 
     ret = "{}".format(df.astype(float))
     conds = {
