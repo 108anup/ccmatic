@@ -650,7 +650,7 @@ def get_gen_cex_df(
         get_name_for_list(vn.A): _get_model_value(v.A),
         get_name_for_list(vn.S): _get_model_value(v.S),
         get_name_for_list(vn.W): _get_model_value(v.W),
-        get_name_for_list(vn.L): _get_model_value(v.L),
+        # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
         cex_dict.update({
@@ -658,7 +658,7 @@ def get_gen_cex_df(
             get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
-            get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
+            # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })
     df = pd.DataFrame(cex_dict).astype(float)

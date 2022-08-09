@@ -3,18 +3,23 @@ import logging
 from fractions import Fraction
 from typing import List
 
+import numpy as np
 import z3
-from ccac.variables import VariableNames
+from ccac.config import ModelConfig
+from ccac.variables import VariableNames, Variables
+from cegis import NAME_TEMPLATE
 from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
-from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_loss, desired_high_util_low_loss_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac,
-                       setup_ccac_definitions, setup_ccac_environment)
+from .verifier import (desired_high_util_low_loss,
+                       desired_high_util_low_loss_low_delay, get_cegis_vars,
+                       get_cex_df, get_gen_cex_df, run_verifier_incomplete,
+                       setup_ccac, setup_ccac_definitions,
+                       setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -32,7 +37,18 @@ ideal_max_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
-c, s, v = setup_ccac()
+# Config
+c = ModelConfig.default()
+c.compose = True
+c.cca = "paced"
+c.simplify = False
+c.calculate_qdel = False
+c.calculate_qbound = True
+c.C = 100
+c.T = 9
+
+s = MySolver()
+v = Variables(c, s)
 if(deterministic_loss):
     c.deterministic_loss = True
 c.loss_oracle = True
@@ -50,6 +66,12 @@ se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment_assertions = se.assertion_list
 verifier_vars, definition_vars = get_cegis_vars(c, v, history)
+exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
+                  for n in range(c.N)]  # definition variable
+last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)]  # definition variable
+definition_vars.extend(flatten(exceed_queue_f))
+definition_vars.extend(flatten(last_decrease_f))
 
 if(dynamic_buffer):
     verifier_vars.append(c.buf_min)
@@ -78,15 +100,24 @@ vn = VariableNames(v)
 lower_bound = 0.01
 coeffs = {
     'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
+    'c_f[0]_delay': z3.Real('Gen__coeff_c_f[0]_delay'),
     'c_f[0]_noloss': z3.Real('Gen__coeff_c_f[0]_noloss'),
     'ack_f[0]_loss': z3.Real('Gen__coeff_ack_f[0]_loss'),
+    'ack_f[0]_delay': z3.Real('Gen__coeff_ack_f[0]_delay'),
     'ack_f[0]_noloss': z3.Real('Gen__coeff_ack_f[0]_noloss')
 }
 
 consts = {
     'c_f[0]_loss': z3.Real('Gen__const_c_f[0]_loss'),
+    'c_f[0]_delay': z3.Real('Gen__const_c_f[0]_delay'),
     'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss')
 }
+
+# This is in multiples of Rm
+qsize_thresh = z3.Real('Gen__const_qsize_thresh')
+# qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
+qsize_thresh_choices = [x for x in range(1, c.T)]
+assert isinstance(qsize_thresh, z3.ArithRef)
 
 # Search constr
 search_range_coeff = [Fraction(i, 2) for i in range(5)]
@@ -97,6 +128,8 @@ for coeff in flatten(list(coeffs.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeff]))
 for const in flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_const]))
+domain_clauses.append(z3.Or(
+    *[qsize_thresh == val for val in qsize_thresh_choices]))
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -112,17 +145,62 @@ def get_product_ite(coeff, rvar, cdomain=search_range_coeff):
 
 
 assert first >= 1
+assert history >= lag
+assert lag == c.R
+assert c.R == 1
+
+# definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
+definition_constrs.append(last_decrease_f[0][0] == v.S_f[0][0])
+for t in range(1, first):
+    definition_constrs.append(
+        z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
+                   last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(
+        z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+                   last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+    # Const last_decrease in history
+    # definition_constrs.append(
+    #     last_decrease_f[0][t] == v.S_f[0][t])
+
+for t in range(lag, c.T):
+    for dt in range(c.T):
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
+                       exceed_queue_f[0][t]))
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
+                       z3.Not(exceed_queue_f[0][t])))
+
 for t in range(first, c.T):
     assert history > lag
     loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    delay_detected = exceed_queue_f[0][t]
+
+    # TODO: see if we want to replace the last statement
+    #  with (S_f[n][t-lag] > last_decrease[n][t-1])
+    this_decrease = z3.And(delay_detected,
+                           v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+                           v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1])
+
+    definition_constrs.append(z3.Implies(
+        this_decrease,
+        last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(z3.Implies(
+        z3.Not(this_decrease),
+        last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
                 + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
                 + consts['c_f[0]_loss'])
+    rhs_delay = (get_product_ite(coeffs['c_f[0]_delay'], v.c_f[0][t-lag])
+                 + get_product_ite(coeffs['ack_f[0]_delay'], acked_bytes)
+                 + consts['c_f[0]_delay'])
     rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
                   + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
                   + consts['c_f[0]_noloss'])
-    rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
+    rhs = z3.If(loss_detected, rhs_loss, z3.If(
+        delay_detected, rhs_delay, rhs_noloss))
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(
         v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
@@ -135,7 +213,7 @@ definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
 assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
-                  flatten(list(consts.values())))
+                  flatten(list(consts.values())) + [qsize_thresh])
 
 
 # Method overrides
@@ -143,9 +221,53 @@ generator_vars = (flatten(list(coeffs.values())) +
 # Can use partial functions to use these elsewhere.
 
 
+def get_val_list(model: z3.ModelRef, l: List) -> List:
+    ret = []
+    for x in l:
+        if(isinstance(x, z3.BoolRef)):
+            try:
+                val = bool(model.eval(x))
+            except z3.z3types.Z3Exception:
+                # Ideally this should not happen
+                # This will mostly only happen in buggy cases.
+                assert False
+                val = -1
+            ret.append(val)
+        else:
+            raise NotImplementedError
+    return ret
+
+
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
+    qdelay = []
+    for t in range(c.T):
+        assert bool(counter_example.eval(v.qbound[t][0]))
+        for dt in range(c.T-1, -1, -1):
+            value = counter_example.eval(v.qbound[t][dt])
+            try:
+                bool_value = bool(value)
+            except z3.z3types.Z3Exception:
+                bool_value = True
+            if(bool_value):
+                qdelay.append(dt+1)
+                break
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+    df["last_decrease_f"] = np.array(
+        [counter_example.eval(x).as_fraction()
+         for x in last_decrease_f[0]]).astype(float)
+    df["this_decrease"] = [-1] + get_val_list(counter_example, [
+        counter_example.eval(z3.And(
+            exceed_queue_f[0][t],
+            v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+            v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1]
+        ))
+        for t in range(1, c.T)])
+    df["exceed_queue_f"] = [-1] + \
+        get_val_list(counter_example, exceed_queue_f[0][1:])
+
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,
@@ -163,6 +285,13 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         cond_list.append(
             "{}={}".format(cond_name, counter_example.eval(cond)))
     ret += "\n{}.".format(", ".join(cond_list))
+
+    # qbound_vals = []
+    # for qbound_list in v.qbound:
+    #     qbound_val_list = get_val_list(counter_example, qbound_list)
+    #     qbound_vals.append(qbound_val_list)
+    # ret += "\n{}".format(np.array(qbound_vals))
+    # ret += "\n{}".format(counter_example.eval(qsize_thresh))
     return ret
 
 
@@ -178,8 +307,15 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
+    rhs_delay = (f"{solution.eval(coeffs['c_f[0]_delay'])}"
+                 f"v.c_f[0][t-{lag}]"
+                 f" + {solution.eval(coeffs['ack_f[0]_delay'])}"
+                 f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                 f" + {solution.eval(consts['c_f[0]_delay'])}")
     ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
+           f"elif(qbound[t-1][{solution.eval(qsize_thresh)}]):\n"
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_delay})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
     return ret
@@ -193,8 +329,75 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
-    return gen_view_str
+    df = get_gen_cex_df(solution, v, vn, n_cex, c)
+
+    def _get_renamed(definition_vars):
+        renamed_definition_vars = []
+        name_template = NAME_TEMPLATE + str(n_cex)
+        for def_var in definition_vars:
+            renamed_var = z3.Const(
+                name_template.format(def_var.decl().name()), def_var.sort())
+            renamed_definition_vars.append(renamed_var)
+        return renamed_definition_vars
+
+    qdelay = []
+    for t in range(c.T):
+        qbound_t = _get_renamed(v.qbound[t])
+        assert bool(solution.eval(qbound_t[0]))
+        for dt in range(c.T-1, -1, -1):
+            value = solution.eval(qbound_t[dt])
+            try:
+                bool_value = bool(value)
+            except z3.z3types.Z3Exception:
+                bool_value = True
+            if(bool_value):
+                qdelay.append(dt+1)
+                break
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+
+    this_last_decrease_f = _get_renamed(last_decrease_f[0])
+    df["last_decrease_f"] = np.array(
+        [solution.eval(x).as_fraction()
+         for x in this_last_decrease_f]).astype(float)
+
+    this_exceed_queue_f = _get_renamed(exceed_queue_f[0])
+    S_f = _get_renamed(v.S_f[0])
+    df["this_decrease"] = [-1] + get_val_list(solution, [
+        solution.eval(z3.And(
+            this_exceed_queue_f[t],
+            S_f[t-lag] > S_f[t-lag-1],
+            S_f[t-1-lag] >= this_last_decrease_f[t-1]
+        ))
+        for t in range(1, c.T)])
+    df["exceed_queue_f"] = [-1] + \
+        get_val_list(solution, this_exceed_queue_f[1:])
+
+    ret = "{}".format(df)
+    conds = {
+        "high_util": high_util,
+        "low_loss": low_loss,
+        "low_delay": low_delay,
+        "ramp_up": ramp_up,
+        "ramp_down": ramp_down,
+        "total_losses": total_losses,
+        # "measured_loss_rate": total_losses/((c.T-1) - first)
+    }
+    if(dynamic_buffer):
+        conds["buffer"] = c.buf_min
+    cond_list = []
+    for cond_name, cond in conds.items():
+        cond_list.append(
+            "{}={}".format(cond_name, solution.eval(cond)))
+    ret += "\n{}.".format(", ".join(cond_list))
+
+    # qbound_vals = []
+    # for qbound_list in v.qbound:
+    #     qbound_val_list = get_val_list(solution, _get_renamed(qbound_list))
+    #     qbound_vals.append(qbound_val_list)
+    # ret += "\n{}".format(np.array(qbound_vals))
+
+    return ret
 
 
 # Known solution
