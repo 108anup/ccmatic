@@ -12,7 +12,7 @@ from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_loss, get_cegis_vars, get_cex_df, get_gen_cex_df,
+from .verifier import (desired_high_util_low_loss, desired_high_util_low_loss_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -28,6 +28,7 @@ util_frac = 0.5
 n_losses = 2
 dynamic_buffer = True
 buf_size = 1
+ideal_max_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -65,9 +66,11 @@ environment = z3.And(*environment_assertions)
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
 loss_rate = n_losses / ((c.T-1) - first)
+delay_bound = ideal_max_queue * c.C * (c.R + c.D)
 
-(desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
-    desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
+(desired, high_util, low_loss, low_delay, ramp_up, ramp_down, total_losses) = \
+    desired_high_util_low_loss_low_delay(
+        c, v, first, util_frac, loss_rate, delay_bound)
 assert isinstance(desired, z3.ExprRef)
 
 # Generator definitions
@@ -147,6 +150,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
     conds = {
         "high_util": high_util,
         "low_loss": low_loss,
+        "low_delay": low_delay,
         "ramp_up": ramp_up,
         "ramp_down": ramp_down,
         "total_losses": total_losses,

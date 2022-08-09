@@ -24,7 +24,7 @@ DEBUG = False
 lag = 1
 history = 4
 util_frac = 0.5
-max_ideal_queue = 2
+ideal_max_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -42,7 +42,7 @@ verifier_vars, definition_vars = get_cegis_vars(c, v, history)
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
-delay_bound = max_ideal_queue * c.C * (c.R + c.D)
+delay_bound = ideal_max_queue * c.C * (c.R + c.D)
 
 (desired, high_util, low_delay, ramp_up, ramp_down) = \
     desired_high_util_low_delay(c, v, first, util_frac, delay_bound)

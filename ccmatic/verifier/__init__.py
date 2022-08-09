@@ -481,6 +481,38 @@ def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
             total_losses)
 
 
+def desired_high_util_low_loss_low_delay(
+        c, v, first, util_frac, loss_rate, delay_bound):
+    cond_list = []
+    for t in range(first, c.T):
+        cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
+    # Queue seen by a new packet should not be more that delay_bound
+    low_delay = z3.And(*cond_list)
+
+    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
+
+    loss_list: List[z3.BoolRef] = []
+    for t in range(first, c.T):
+        loss_list.append(v.L[t] > v.L[t-1])
+    total_losses = z3.Sum(*loss_list)
+
+    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
+    # Check if we want something on queue.
+    ramp_down = v.c_f[0][-1] < v.c_f[0][first]
+    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+    # Bottleneck queue should decrese
+    # ramp_down = (
+    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    low_loss = total_losses <= loss_rate * ((c.T-1) - first)
+    desired = z3.And(
+        z3.Or(high_util, ramp_up),
+        z3.Or(low_loss, ramp_down),
+        z3.Or(low_delay, ramp_down))
+    return (desired, high_util, low_loss, low_delay, ramp_up, ramp_down,
+            total_losses)
+
+
 def maximize_gap(
     c: ModelConfig, v: Variables, ctx: z3.Context, verifier: MySolver
 ) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
