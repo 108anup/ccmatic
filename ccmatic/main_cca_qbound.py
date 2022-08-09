@@ -3,18 +3,20 @@ import logging
 from fractions import Fraction
 from typing import List
 
+import numpy as np
 import z3
 from ccac.config import ModelConfig
 from ccac.model import loss_detected
 from ccac.variables import VariableNames, Variables
 from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
-from pyz3_utils.my_solver import MySolver
 
-from .verifier import (desired_high_util_low_delay, desired_high_util_low_loss, get_cegis_vars, get_cex_df, get_gen_cex_df,
+from .verifier import (desired_high_util_low_delay, desired_high_util_low_loss,
+                       get_cegis_vars, get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
@@ -123,10 +125,11 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 
 
 assert first >= 1
-assert history > lag
+assert history >= lag
 assert lag == c.R
 assert c.R == 1
 
+# definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
 definition_constrs.append(last_decrease_f[0][0] == v.S_f[0][0])
 for t in range(1, first):
     definition_constrs.append(
@@ -135,6 +138,7 @@ for t in range(1, first):
     definition_constrs.append(
         z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
                    last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+    # Const last_decrease in history
     # definition_constrs.append(
     #     last_decrease_f[0][t] == v.S_f[0][t])
 
@@ -156,13 +160,22 @@ for t in range(first, c.T):
 
     loss_detected = exceed_queue_f[0][t]
 
-    assert first >= lag + 1
-    this_decrease = z3.And(loss_detected, v.S[t-1-lag] >= last_decrease_f[0][t-1])
+    # Decrease this time iff queue exceeded AND new qdelay measurement (i.e.,
+    # new packets received) AND in the previous cycle we had received all the
+    # packets sent since last decrease (S_f[n][t-lag-1] >=
+    # last_decrease[n][t-1])
+    # TODO: see if we want to replace the last statement
+    #  with (S_f[n][t-lag] > last_decrease[n][t-1])
+    this_decrease = z3.And(loss_detected,
+                           v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+                           v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1])
 
     definition_constrs.append(z3.Implies(
-        this_decrease, last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+        this_decrease,
+        last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
     definition_constrs.append(z3.Implies(
-        z3.Not(this_decrease), last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+        z3.Not(this_decrease),
+        last_decrease_f[0][t] == last_decrease_f[0][t-1]))
 
     acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
     rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
@@ -195,6 +208,33 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
+    qdelay = []
+    for t in range(c.T):
+        assert bool(counter_example.eval(v.qbound[t][0]))
+        for dt in range(c.T-1, -1, -1):
+            value = counter_example.eval(v.qbound[t][dt])
+            try:
+                bool_value = bool(value)
+            except z3.z3types.Z3Exception:
+                bool_value = True
+            if(bool_value):
+                qdelay.append(dt+1)
+                break
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+    df["last_decrease_f"] = np.array(
+        [counter_example.eval(x).as_fraction()
+         for x in last_decrease_f[0]]).astype(float)
+    df["this_decrease"] = [-1] + [
+        bool(counter_example.eval(z3.And(
+            exceed_queue_f[0][t],
+            v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+            v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1]
+        )))
+        for t in range(1, c.T)]
+    df["exceed_queue_f"] = [-1] + \
+        [bool(counter_example.eval(x)) for x in exceed_queue_f[0][1:]]
+
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,
