@@ -1,0 +1,1444 @@
+[08/10 15:28:54]  --------------------------------------------------------------------------------
+[08/10 15:28:54]  Iteration: 1 (0 solution, 0 counterexamples)
+[08/10 15:28:54]  Generator returned sat in 0.004806 secs.
+[08/10 15:28:54]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][8]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:28:54]  Improved number of small numbers from 113 to 113 out of a max of 113
+[08/10 15:28:54]  Verifer returned sat in 0.408797 secs.
+[08/10 15:28:54]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  wasted_t  arrival_0,t  cwnd_0,t  service_0,t  losts_0,t  queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0          100.0            0.0       0.0        100.0     100.0          0.0        0.1     99.9            99.9     9.0              0.0            -1             -1     -1
+1          100.1            0.0       0.0        100.1     100.0          0.0        0.1    100.0             0.0     9.0              0.0         False           True   True
+2          200.2          200.0       0.0        200.2     200.1        200.0        0.1      0.1             0.1     1.0              0.0         False           True  False
+3          400.2          200.2       0.0        400.2     200.1        200.2      100.0    100.0             0.2     1.0              0.0         False          False  False
+4         1102.8          300.3       0.0       1102.8     802.6        300.3      702.6     99.9             0.2     1.0              0.0         False          False   True
+5         3210.7          400.0       0.0       3210.7    2207.8        400.0     2710.5    100.2             0.2     2.0              0.0         False          False   True
+6         7928.1          500.3       0.0       7928.1    4817.6        500.3     7327.9     99.9             0.2     1.0              0.0         False          False   True
+7        18065.6          700.0       0.0      18065.6   10237.4        700.0    17365.4      0.2             0.2     1.0              0.0         False          False   True
+8        39341.6          700.0       0.0      39341.6   21276.2        700.0    38541.4    100.2             0.2     1.0              0.0         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=1/5.[0m
+[08/10 15:28:55]  --------------------------------------------------------------------------------
+[08/10 15:28:55]  Iteration: 2 (0 solution, 1 counterexamples)
+[08/10 15:28:55]  Generator returned sat in 0.213827 secs.
+[08/10 15:28:55]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 3/2(S_f[0][t-1]-S_f[0][t-4]) + -1)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:28:56]  Improved number of small numbers from 103 to 105 out of a max of 113
+[08/10 15:28:56]  Verifer returned sat in 0.772698 secs.
+[08/10 15:28:56]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t     cwnd_0,t  service_0,t  losts_0,t      queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0     563.753174     365.853271  428.425293   563.753174     0.099854   365.853271        0.1   197.799902      197.799663     5.0       365.853271            -1             -1     -1
+1     563.753174     366.053333  428.425293   563.753174   197.799805   366.053333        0.1   197.599840       97.799663     2.0       365.853271         False           True   True
+2     563.953333     563.753333  428.425470   563.953333   197.800000   563.753333        0.1     0.100000       -2.000000     1.0       365.853271         False          False   True
+3     665.953333     565.853333  428.425470   665.953333   102.100000   565.853333        0.1   100.000000        0.000000     1.0       665.853333         False          False   True
+4     768.153333     765.853271  428.425470   768.153333   202.200000   765.853271        0.1     2.200062        2.200000     1.0       665.853333         False          False   True
+5    1168.353271     768.153333  428.425470  1168.353271   402.400000   768.153333        0.1   400.099938      302.399938     1.0       665.853333         False          False   True
+6    1571.053333     865.853333  428.425470  1571.053333   802.800000   865.853333        0.1   705.100000      605.100000     2.0       665.853333         False          False   True
+7    2469.553333     965.853333  428.425470  2469.553333  1603.600000   965.853333        0.1  1503.600000     1403.600000     3.0       665.853333         False          False   True
+8    4171.153333    1065.853333  428.425470  4171.153333  3205.200000  1065.853333     1601.6  1503.700000     1403.700000     4.0       665.853333         False          False   True
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=14037/10.[0m
+[08/10 15:28:56]  --------------------------------------------------------------------------------
+[08/10 15:28:56]  Iteration: 3 (0 solution, 2 counterexamples)
+[08/10 15:28:57]  Generator returned sat in 0.135657 secs.
+[08/10 15:28:57]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+	else:
+		c_f[0][t] = max(0.01, 3/2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:28:57]  Improved gap from 0 to 100
+[08/10 15:28:57]  Improved number of small numbers from 98 to 98 out of a max of 114
+[08/10 15:28:57]  Verifer returned sat in 0.715927 secs.
+[08/10 15:28:57]  Counter example: 
+[93m   tot_arrival_t  tot_service_t   wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0     765.763333     764.913333  428.42547   765.763333  100.925000   764.913333    0.000000    0.850000          0.8500     1.0       764.913333            -1             -1    True
+1     865.838333     764.913333  428.42547   865.838333  100.925000   764.913333    0.025000  100.900000          0.9000     1.0       764.913333         False          False    True
+2     965.813333     864.988333  428.42547   965.813333  200.875000   864.988333    0.025000  100.800000          0.8750     2.0       764.913333         False          False    True
+3    1065.863333    1064.913333  428.42547  1065.863333  200.850000  1064.913333    0.050000    0.900000          0.9000     1.0      1065.813333          True           True   False
+4    1165.888333    1164.913333  428.42547  1165.888333  100.925000  1164.913333    0.075000    0.900000          0.9000     1.0      1065.813333         False          False    True
+5    1215.950833    1164.913333  428.42547  1215.950833   50.962500  1164.913333    0.075000   50.962500        -49.0375     1.0      1065.813333         False          False    True
+6    1839.282083    1264.913333  428.42547  1839.282083  674.293750  1264.913333  473.468750  100.900000          0.9000     1.0      1065.813333         False          False    True
+7    2076.028958    1396.514896  428.42547  2076.028958  337.646875  1396.514896  610.215625   69.298438          0.9000     1.0      1065.813333         False          False    True
+8    2176.053958    1465.813333  428.42547  2176.053958  169.323438  1465.813333  610.240625  100.000000          0.9000     2.0      1065.813333         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=9/10.[0m
+[08/10 15:28:58]  --------------------------------------------------------------------------------
+[08/10 15:28:58]  Iteration: 4 (0 solution, 3 counterexamples)
+[08/10 15:28:58]  Generator returned sat in 0.214803 secs.
+[08/10 15:28:58]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 3/2v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1)
+else:
+	c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:28:59]  Improved gap from 0 to 100
+[08/10 15:29:00]  Improved number of small numbers from 87 to 92 out of a max of 114
+[08/10 15:29:00]  Verifer returned sat in 1.081173 secs.
+[08/10 15:29:00]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0     864.922083     864.921387  328.416095   864.922083    0.002500   864.921387    0.000000    0.000697       -0.000625     5.0       864.921387            -1             -1     -1
+1     864.923096     864.922708  328.416095   864.923096    0.001709   864.922708    0.000000    0.000387      -99.999613     1.0       864.923096         False           True  False
+2    1064.923958     964.922708  328.416095  1064.923958  200.001250   964.922708    0.000000  100.001250        0.001250     1.0       864.923096         False          False  False
+3    1164.923333    1163.924271  328.416095  1164.923333  200.000625  1163.924271    0.000000    0.999062        0.000625     1.0      1164.923333         False          False  False
+4    1264.924583    1264.922708  328.416095  1264.924583  101.000313  1264.922708    0.000625    0.001250        0.001250     1.0      1164.923333         False          False  False
+5    1264.933333    1264.932083  328.416095  1264.933333    0.010000  1264.932083    0.000625    0.000625      -99.990000     1.0      1164.923333         False          False   True
+6    1565.957083    1464.922708  328.416095  1565.957083  301.024375  1464.922708  101.033125    0.001250        0.001250     1.0      1164.923333         False          False   True
+7    1565.965833    1464.922708  328.416095  1565.965833    0.010000  1464.922708  101.033125    0.010000      -99.990000     1.0      1164.923333         False          False   True
+8    1766.970833    1564.922852  328.416095  1766.970833  201.015000  1564.922852  102.046875  100.001107        0.001250     1.0      1164.923333         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=1/800.[0m
+[08/10 15:29:00]  --------------------------------------------------------------------------------
+[08/10 15:29:00]  Iteration: 5 (0 solution, 4 counterexamples)
+[08/10 15:29:01]  Generator returned sat in 0.272880 secs.
+[08/10 15:29:01]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:01]  Improved gap from 0 to 100
+[08/10 15:29:03]  Improved number of small numbers from 63 to 67 out of a max of 114
+[08/10 15:29:03]  Verifer returned sat in 1.942157 secs.
+[08/10 15:29:03]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t    cwnd_0,t  service_0,t    losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    1055.022949     964.922708  228.416095  1055.022949    0.099854   964.922708     0.000000   90.100241       90.100241     6.0       964.922708            -1             -1     -1
+1    1075.122708    1055.122708  228.416095  1075.122708  110.200000  1055.122708    10.000000   10.000000        0.200000     1.0       964.922708         False           True  False
+2    1175.222708    1065.222708  228.416095  1175.222708  110.100000  1065.222708    10.100000   99.900000        0.200000     1.0      1165.122708         False          False   True
+3    1275.122708    1264.922708  228.416095  1275.122708  199.800000  1264.922708    10.100000    0.100000        0.100000     1.0      1165.122708         False          False   True
+4    1976.922708    1264.922708  228.416095  1976.922708  701.900000  1264.922708   611.800000  100.200000        0.200000     1.0      1165.122708         False          False   True
+5    1981.122708    1369.222708  228.416095  1981.122708  104.400000  1369.222708   611.800000    0.100000      -95.600000     1.0      1165.122708         False          False   True
+6    2643.222708    1531.989375  228.416095  2643.222708  662.200000  1531.989375  1078.100000   33.133333        0.200000     1.0      1165.122708         False          False   True
+7    2743.122708    1664.922708  228.416095  2743.122708  133.033333  1664.922708  1078.100000    0.100000        0.100000     1.0      1165.122708         False          False   True
+8    3611.539375    1665.122803  228.416095  3611.539375  868.516667  1665.122803  1846.416667   99.999906        0.200000     1.0      1165.122708         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=True, ramp_down_bq=False, total_losses=3, buffer=1/5.[0m
+[08/10 15:29:03]  --------------------------------------------------------------------------------
+[08/10 15:29:03]  Iteration: 6 (0 solution, 5 counterexamples)
+[08/10 15:29:04]  Generator returned sat in 0.472110 secs.
+[08/10 15:29:04]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 3/2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][2]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:04]  Improved gap from 17/10 to 100
+[08/10 15:29:05]  Improved number of small numbers from 104 to 104 out of a max of 114
+[08/10 15:29:05]  Verifer returned sat in 0.806720 secs.
+[08/10 15:29:05]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t   arrival_0,t  cwnd_0,t  service_0,t  losts_0,t  queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    1031.989375     931.989375  228.416095   1031.989375      0.05   931.989375       0.05    99.95           99.95     6.0       931.989375            -1             -1     -1
+1    1032.089375    1031.989375  228.416095   1032.089375    100.05  1031.989375       0.05     0.05            0.05     1.0       931.989375         False           True   True
+2    1131.939375    1032.089375  228.416095   1131.939375     99.90  1032.089375       0.05    99.80           -0.10     1.0      1131.889375         False          False   True
+3    1132.039375    1131.989375  228.416095   1132.039375     99.90  1131.989375       0.05     0.00         -100.00     1.0      1131.889375         False          False   True
+4    1633.839375    1232.989375  228.416095   1633.839375    501.80  1232.989375       0.05   400.80          301.80     1.0      1131.889375         False          False   True
+5    2540.139375    1431.989375  228.416095   2540.139375   1307.10  1431.989375       0.05  1108.10         1108.10     2.0      1131.889375         False          False   True
+6    4648.089375    1531.989375  228.416095   4648.089375   3216.05  1531.989375       0.05  3116.05         3116.05     3.0      1131.889375         False          False   True
+7    7962.139375    1631.989375  228.416095   7962.139375   6430.10  1631.989375       0.05  6330.10         6330.10     4.0      7962.089375          True           True  False
+8   14490.239375    1731.989375  228.416095  14490.239375  12858.20  1731.989375    6428.10  6330.15         6330.15     4.0      7962.089375         False           True  False
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=126603/20.[0m
+[08/10 15:29:05]  --------------------------------------------------------------------------------
+[08/10 15:29:05]  Iteration: 7 (0 solution, 6 counterexamples)
+[08/10 15:29:06]  Generator returned sat in 0.606831 secs.
+[08/10 15:29:06]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:06]  Improved gap from 1/800 to 100
+[08/10 15:29:07]  Improved number of small numbers from 63 to 67 out of a max of 114
+[08/10 15:29:07]  Verifer returned sat in 1.166710 secs.
+[08/10 15:29:07]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t   cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    1031.983154    1031.980508  128.424962  1031.983154  100.00625  1031.980508    0.00125    0.001396        0.001396     3.0      1031.980508            -1             -1     -1
+1    1131.988008    1131.980508  128.424962  1131.988008  100.00625  1131.980508    0.00125    0.006250        0.006250     1.0      1031.980508         False           True   True
+2    1231.988008    1231.980508  128.424962  1231.988008  100.00625  1231.980508    0.00125    0.006250        0.006250     1.0      1031.980508         False          False   True
+3    1331.988008    1231.980508  128.424962  1331.988008  100.00625  1231.980508    0.00125  100.006250        0.006250     1.0      1031.980508         False          False   True
+4    1633.481758    1431.980508  128.424962  1633.481758  401.50000  1431.980508  201.49375    0.007500        0.007500     1.0      1031.980508         False          False   True
+5    1633.484258    1431.989258  128.424962  1633.484258    0.01000  1431.989258  201.49375    0.001250      -99.990000     1.0      1031.980508         False          False   True
+6    2035.000508    1631.980508  128.424962  2035.000508  401.51750  1631.980508  403.01250    0.007500        0.007500     1.0      1031.980508         False          False   True
+7    2035.003008    1631.989258  128.424962  2035.003008    0.01000  1631.989258  403.01250    0.001250      -99.990000     1.0      1031.980508         False          False   True
+8    2436.519258    1731.980713  128.424962  2436.519258  401.51750  1731.980713  604.53125  100.007295        0.007500     1.0      1031.980508         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=3/400.[0m
+[08/10 15:29:08]  --------------------------------------------------------------------------------
+[08/10 15:29:08]  Iteration: 8 (0 solution, 7 counterexamples)
+[08/10 15:29:08]  Generator returned sat in 0.402287 secs.
+[08/10 15:29:08]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+else:
+	c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:09]  Improved number of small numbers from 58 to 113 out of a max of 113
+[08/10 15:29:09]  Verifer returned sat in 0.415625 secs.
+[08/10 15:29:09]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    1836.561523    1031.980713  128.425049  1836.561523    0.049805  1031.980713  604.531006  200.049805      100.050049     2.0      1031.980713            -1             -1   False
+1    1836.561523    1231.930420  128.425049  1836.561523    0.049805  1231.930420  604.531006    0.100098        0.050049     2.0      1031.980713         False          False   False
+2    1836.561523    1231.980469  128.425049  1836.561523    0.050000  1231.980469  604.531006    0.050049      -99.949951     3.0      1031.980713         False          False   False
+3    2283.611572    1384.780518  128.425049  2283.611572  447.100098  1384.780518  604.531006  294.300049      247.100098     1.0      1031.980713         False          False   False
+4    2436.411621    1531.980469  128.425049  2436.411621  447.100098  1531.980469  604.531006  299.900146      299.900146     2.0      1031.980713         False          False   False
+5    2583.611572    1631.930420  128.425049  2583.611572  447.100098  1631.930420  604.531006  347.150146      347.100098     3.0      1031.980713         False          False   False
+6    2683.561523    1679.130615  128.425049  2683.561523  447.100098  1679.130615  604.531006  399.899902      347.050049     3.0      1031.980713         False          False   False
+7    2730.761719    1831.930664  128.425049  2730.761719  447.100098  1831.930664  604.531006  294.300049      294.250244     3.0      1031.980713         False          False   False
+8    2883.561768    1831.980469  128.425049  2883.561768  447.100098  1831.980469  604.531006  447.050293      347.050293     4.0      1031.980713         False          False   False
+high_util=True, low_loss=True, low_delay=False, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=0, buffer=710861/2048.[0m
+[08/10 15:29:10]  --------------------------------------------------------------------------------
+[08/10 15:29:10]  Iteration: 9 (0 solution, 8 counterexamples)
+[08/10 15:29:10]  Generator returned sat in 0.042018 secs.
+[08/10 15:29:10]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+else:
+	c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:10]  Improved gap from 1/100 to 48.4375
+[08/10 15:29:11]  Improved number of small numbers from 101 to 114 out of a max of 114
+[08/10 15:29:11]  Verifer returned sat in 0.776787 secs.
+[08/10 15:29:11]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    1837.011230    1234.055420   26.349854  1837.011230  299.999756  1234.055420  602.906006    0.049805        0.049805     9.0      1234.055420            -1             -1     -1
+1    2136.911377    1334.055420   26.349854  2136.911377  299.949951  1334.055420  602.906006  199.949951      199.949951     1.0      1534.005371         False           True  False
+2    2236.561279    1434.055420   26.349854  2236.561279  299.599854  1434.055420  602.906006  199.599854      199.599854     2.0      1633.655273         False          False  False
+3    2236.561279    1534.055420   26.349854  2236.561279   50.937500  1534.055420  602.906006   99.599854       99.599854     2.0      1633.655273         False          False  False
+4    2236.561279    1633.605225   26.349854  2236.561279   50.437500  1633.605225  602.906006    0.050049       -0.400146     3.0      1633.655273         False          False  False
+5    2286.448730    1634.055469   76.862549  2286.448730   49.937500  1634.055469  602.906006   49.487256        0.000000     1.0      1633.655273         False          False  False
+6    2286.448730    1683.542725  128.424805  2286.448730   49.437500  1683.542725  602.906006    0.000000      -48.437744     2.0      1633.655273         False          False  False
+7    2335.386230    1731.980469  179.987305  2335.386230   48.937500  1731.980469  602.906006    0.499756      -47.937744     1.0      1633.655273         False          False  False
+8    2383.323975    1780.417969  179.987305  2383.323975   48.437500  1780.417969  602.906006    0.000000     -100.000000     1.0      1633.655273         False          False  False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=0, buffer=200.[0m
+[08/10 15:29:11]  --------------------------------------------------------------------------------
+[08/10 15:29:11]  Iteration: 10 (0 solution, 9 counterexamples)
+[08/10 15:29:12]  Generator returned sat in 0.476911 secs.
+[08/10 15:29:12]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:13]  Improved gap from 1/300 to 0
+[08/10 15:29:13]  Improved number of small numbers from 61 to 71 out of a max of 114
+[08/10 15:29:13]  Verifer returned sat in 1.226058 secs.
+[08/10 15:29:13]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t   cwnd_0,t  service_0,t  losts_0,t    queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0      740.01167     640.011475   26.349854    740.01167  100.00000   640.011475    0.00125  99.998945       99.998750     1.0       640.011475            -1             -1     -1
+1      740.01167     640.011670   26.349854    740.01167   99.99875   640.011670    0.00125  99.998750       -0.001250     2.0       740.010420         False          False   True
+2      740.01417     740.011670  126.348604    740.01417  100.00125   740.011670    0.00125   0.001250        0.000000     1.0       740.010420         False           True  False
+3      840.01792     789.012695  126.348604    840.01792  100.00500   789.012695    0.00250  51.002725        0.002500     1.0       740.010420         False          False  False
+4      840.01792     840.015420  226.346104    840.01792   51.00250   840.015420    0.00250   0.000000        0.000000     2.0       740.010420         False          False   True
+5      840.02792     840.015420  326.336104    840.02792    0.01000   840.015420    0.00250   0.010000        0.000000     2.0       840.025420          True           True  False
+6      840.02792     840.025420  426.335938    840.02792    0.01000   840.025420    0.00250   0.000000       -0.000166     2.0       840.025420         False           True  False
+7      840.03792     840.034170  526.325928    840.03792    0.01000   840.034170    0.00250   0.001250       -0.000176     1.0       840.025420         False           True  False
+8      840.04667     840.036865  626.317139    840.04667    0.01000   840.036865    0.00250   0.007305       -0.000215     1.0       840.025420         False          False  False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=False, ramp_down_bq=True, total_losses=0, buffer=1/400.[0m
+[08/10 15:29:14]  --------------------------------------------------------------------------------
+[08/10 15:29:14]  Iteration: 11 (0 solution, 10 counterexamples)
+[08/10 15:29:14]  Generator returned sat in 0.094941 secs.
+[08/10 15:29:14]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 0)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][5]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:15]  Improved gap from 1/600 to 100
+[08/10 15:29:15]  Improved number of small numbers from 63 to 114 out of a max of 114
+[08/10 15:29:15]  Verifer returned sat in 0.397031 secs.
+[08/10 15:29:15]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0     340.017822     339.917725  326.343506   340.017822    0.100098   339.917725    0.000000    0.100098        0.000000     6.0       339.917725            -1             -1     -1
+1     340.117920     340.017822  326.343506   340.117920    0.200195   340.017822    0.000000    0.100098      -99.899902     2.0       339.917725         False           True  False
+2     540.017822     539.917969  326.343506   540.017822  200.000000   539.917969    0.000000    0.099854        0.000000     1.0       339.917725         False          False  False
+3     739.917969     540.117920  326.343506   739.917969  200.000000   540.117920   99.699951  100.100098        0.200195     1.0       339.917725         False          False  False
+4     840.018066     739.817871  326.343506   840.018066  200.200195   739.817871   99.800049    0.400146        0.200195     1.0       339.917725         False          False   True
+5    1239.417969     740.218018  326.343506  1239.417969  399.800049   740.218018  399.199951  100.000000        0.200195     2.0       339.917725         False          False   True
+6    1339.718018     840.317871  326.343506  1339.718018  200.300049   840.317871  399.500000   99.900146        0.200195     1.0       339.917725         False          False   True
+7    1540.017822     940.018066  326.343506  1540.017822  300.199951   940.018066  499.799805  100.199951        0.200195     2.0       339.917725         False          False   True
+8    1640.018066    1040.317871  326.343506  1640.018066  200.200195  1040.317871  499.800049   99.900146        0.200195     1.0       339.917725         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=205/1024.[0m
+[08/10 15:29:15]  --------------------------------------------------------------------------------
+[08/10 15:29:15]  Iteration: 12 (0 solution, 11 counterexamples)
+[08/10 15:29:16]  Generator returned sat in 0.368581 secs.
+[08/10 15:29:16]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+else:
+	c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][5]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:17]  Improved gap from 3/400 to 100
+[08/10 15:29:17]  Improved number of small numbers from 60 to 114 out of a max of 114
+[08/10 15:29:17]  Verifer returned sat in 1.038712 secs.
+[08/10 15:29:17]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    -195.645508    -595.695312  1262.006836  -195.645508  598.099854  -595.695312   0.000000  400.049805      400.000000     8.0      -595.695312            -1             -1     -1
+1       2.354736    -595.645508  1262.006836     2.354736  598.050049  -595.645508   0.000000  598.000244      498.000244     2.0         2.354736         False           True  False
+2      44.209717    -477.355957  1262.006836    44.209717  639.855225  -477.355957   0.000000  521.565674      439.855225     3.0         2.354736         False          False  False
+3     167.075195    -395.645264  1262.006836   167.075195  644.431152  -395.645264   0.000000  562.720459      462.720703     4.0         2.354736         False          False  False
+4     167.075195    -195.645508  1262.006836   167.075195  522.765625  -195.645508   0.000000  362.720703      362.720703     5.0         2.354736         False          False  False
+5     466.237305    -195.645264  1262.006836   466.237305  661.882812  -195.645264  63.832764  598.049805      498.050049     5.0         2.354736         False          False  False
+6     466.237305       2.354736  1262.006836   466.237305  332.441406     2.354736  63.832764  400.049805      398.050049     6.0         2.354736         False          False   True
+7     630.908203      44.259766  1262.006836   630.908203  564.720703    44.259766  63.832764  522.815674      462.720947     5.0         2.354736         False           True  False
+8     630.908203     204.354492  1262.006836   630.908203  522.765625   204.354492  63.832764  362.720947      362.720947     4.0         2.354736         False          False  False
+high_util=True, low_loss=True, low_delay=False, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=2040013/4096.[0m
+[08/10 15:29:18]  --------------------------------------------------------------------------------
+[08/10 15:29:18]  Iteration: 13 (0 solution, 12 counterexamples)
+[08/10 15:29:19]  Generator returned sat in 0.386825 secs.
+[08/10 15:29:19]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 3/2(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:19]  Improved gap from 0 to 100
+[08/10 15:29:20]  Improved number of small numbers from 75 to 91 out of a max of 114
+[08/10 15:29:20]  Verifer returned sat in 1.068094 secs.
+[08/10 15:29:20]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    -143.895264    -243.695557  1262.006836  -143.895264    0.100098  -243.695557    0.099854   99.700439       99.700342     1.0      -243.695557            -1             -1     -1
+1    -143.695557    -143.895264  1262.006836  -143.695557   99.900146  -143.895264    0.099854    0.099854       -0.099951     1.0      -243.695557         False          False   True
+2    -143.495605    -143.695312  1262.006836  -143.495605    0.299805  -143.695312    0.099854    0.099854      -99.900000     1.0      -143.595459         False          False   True
+3     245.604541     -39.995459  1262.006836   245.604541  389.200000   -39.995459  189.100000   96.500000        0.200000     1.0      -143.595459         False          False   True
+4     345.704541     156.304541  1262.006836   345.704541  196.600000   156.304541  189.200000    0.200000        0.200000     1.0      -143.595459         False          False   True
+5     445.804541     256.304541  1262.006836   445.804541  100.300000   256.304541  189.300000    0.200000        0.200000     1.0      -143.595459         False          False   True
+6     497.754541     256.304541  1262.006836   497.754541   52.150000   256.304541  189.300000   52.150000      -47.850000     1.0      -143.595459         False          False   True
+7     914.129541     356.304541  1262.006836   914.129541  468.525000   356.304541  457.625000  100.200000        0.200000     1.0      -143.595459         False          False   True
+8    1050.192041     456.304688  1262.006836  1050.192041  236.262500   456.304688  493.687500  100.199854        0.200000     2.0      -143.595459         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=1/5.[0m
+[08/10 15:29:20]  --------------------------------------------------------------------------------
+[08/10 15:29:20]  Iteration: 14 (0 solution, 13 counterexamples)
+[08/10 15:29:22]  Generator returned sat in 0.736063 secs.
+[08/10 15:29:22]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:22]  Improved gap from 0 to 100
+[08/10 15:29:22]  Improved number of small numbers from 62 to 114 out of a max of 114
+[08/10 15:29:22]  Verifer returned sat in 0.363437 secs.
+[08/10 15:29:22]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0     -53.995605    -154.295654  1661.206787   -53.995605  200.100098  -154.295654    0.100098  100.199951      100.199951     5.0      -154.295654            -1             -1     -1
+1      45.904541     -54.295654  1661.206787    45.904541  200.100098   -54.295654  100.000000    0.200195        0.200195     6.0      -154.295654         False           True   True
+2     145.804443     -54.295654  1661.206787   145.804443  100.100098   -54.295654  100.000000  100.100098        0.100098     6.0        45.804443          True           True   True
+3     145.804443      45.704346  1661.206787   145.804443  100.000000    45.704346  100.000000    0.100098      -99.899902     2.0        45.804443         False           True  False
+4     345.704346     245.704346  1661.206787   345.704346  200.000000   245.704346  100.000000    0.000000        0.000000     1.0        45.804443         False          False  False
+5     695.704346     245.704590  1661.206787   695.704346  350.000000   245.704590  349.799805  100.199951        0.200195     1.0        45.804443         False          False  False
+6     943.504395     346.004639  1661.206787   943.504395  348.000000   346.004639  497.599854   99.899902        0.200195     1.0        45.804443         False          False   True
+7    1189.604492     446.004639  1661.206787  1189.604492  346.000000   446.004639  643.699951   99.899902        0.200195     1.0        45.804443         False          False   True
+8    1433.704590     546.004639  1661.206787  1433.704590  344.000000   546.004639  787.800049   99.899902        0.200195     1.0        45.804443         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=205/1024.[0m
+[08/10 15:29:23]  --------------------------------------------------------------------------------
+[08/10 15:29:23]  Iteration: 15 (0 solution, 14 counterexamples)
+[08/10 15:29:23]  Generator returned sat in 0.397799 secs.
+[08/10 15:29:23]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:24]  Improved gap from 1/600 to 0
+[08/10 15:29:24]  Improved number of small numbers from 73 to 89 out of a max of 114
+[08/10 15:29:24]  Verifer returned sat in 0.937941 secs.
+[08/10 15:29:24]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0     -53.995850    -153.996582  1661.206787   -53.995850  100.001465  -153.996582   0.000732  100.000000       99.999857     6.0      -153.996582            -1             -1     -1
+1     -53.994873     -53.996582  1661.206787   -53.994873  100.000977   -53.996582   0.000732    0.000977        0.000833     2.0       -53.995605         False           True   True
+2     146.001709     -53.996338  1661.206787   146.001709  199.997559   -53.996338   0.000732  199.997314       99.997415     2.0       -53.995605         False           True  False
+3     342.002728     146.003561  1661.206787   342.002728  395.998333   146.003561  96.000833   99.998333       99.998333     1.0       -53.995605         False           True  False
+4     442.003561     244.003145  1661.206787   442.003561  199.999167   244.003145  96.001667  101.998750       99.998333     2.0       -53.995605         False          False   True
+5     442.004395     345.994395  1661.206787   442.004395  101.999583   345.994395  96.001667    0.008333       -0.000833     2.0       346.002728          True           True   True
+6     442.006061     346.003561  1761.205811   442.006061    0.010000   346.003561  96.001667    0.000833       -0.000143     1.0       346.002728         False           True  False
+7     442.015228     346.012728  1861.187744   442.015228    0.010000   346.012728  96.001667    0.000833       -0.009043     1.0       346.002728         False          False  False
+8     442.024395     346.022705  1861.187744   442.024395    0.010000   346.022705  96.001667    0.000023      -99.999876     1.0       346.002728         False          False  False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=59999/600.[0m
+[08/10 15:29:25]  --------------------------------------------------------------------------------
+[08/10 15:29:25]  Iteration: 16 (0 solution, 15 counterexamples)
+[08/10 15:29:28]  Generator returned sat in 2.047221 secs.
+[08/10 15:29:28]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:29]  Improved number of small numbers from 58 to 64 out of a max of 113
+[08/10 15:29:29]  Verifer returned sat in 1.078531 secs.
+[08/10 15:29:29]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t     cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    -409.062500    -409.262272  1816.47262  -409.062500  1621.999756  -409.262272      0.100    0.099772      -99.900228     2.0      -409.262272            -1             -1     -1
+1    1212.837728    -209.262272  1816.47262  1212.837728  1622.000000  -209.262272   1322.200   99.900000       99.900000     1.0      -409.262272         False          False   True
+2    2734.837728    -109.262272  1816.47262  2734.837728  1621.900000  -109.262272   2744.200   99.900000       99.900000     1.0        -9.362272         False          False   True
+3    4256.737728      -9.262272  1816.47262  4256.737728  1621.800000    -9.262272   4166.100   99.900000       99.900000     1.0        90.637728         False          False   True
+4    4966.237728      -9.162272  1816.47262  4966.237728   809.400000    -9.162272   4775.600  199.800000       99.900000     2.0        90.637728         False          False   True
+5    5169.637728     190.637728  1816.47262  5169.637728   403.200000   190.637728   4879.000  100.000000       99.900000     2.0        90.637728         False          False   True
+6    5269.737728     290.737549  1816.47262  5269.737728   200.100000   290.737549   4879.100   99.900179       99.900000     1.0        90.637728         False          False   True
+7    5269.737728     346.012728  1816.47262  5269.737728    98.550000   346.012728   4879.100   44.625000       -0.100000     2.0        90.637728         False          False   True
+8    6034.512728     390.737793  1816.47262  6034.512728   809.400000   390.737793   5443.875  199.899935       99.900000     1.0        90.637728         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=999/10.[0m
+[08/10 15:29:29]  --------------------------------------------------------------------------------
+[08/10 15:29:29]  Iteration: 17 (0 solution, 16 counterexamples)
+[08/10 15:29:30]  Generator returned sat in 0.136070 secs.
+[08/10 15:29:30]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:31]  Improved number of small numbers from 64 to 64 out of a max of 113
+[08/10 15:29:31]  Verifer returned sat in 1.203333 secs.
+[08/10 15:29:31]  Counter example: 
+[93m   tot_arrival_t  tot_service_t    wasted_t  arrival_0,t     cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    -409.062500    -409.262272  1816.47262  -409.062500  1621.999756  -409.262272      0.100    0.099772      -99.900228     2.0      -409.262272            -1             -1     -1
+1    1219.687728    -230.037272  1816.47262  1219.687728  1628.850000  -230.037272   1329.050  120.675000       99.900000     1.0      -409.262272         False          False   True
+2    2727.837728    -109.262272  1816.47262  2727.837728  1628.825000  -109.262272   2737.200   99.900000       99.900000     1.0        -9.362272         False          False   True
+3    4256.737728      -9.337272  1816.47262  4256.737728  1628.800000    -9.337272   4166.100   99.975000       99.900000     1.0        90.637728         False          False   True
+4    4969.162728      -9.262272  1816.47262  4969.162728   812.400000    -9.262272   4778.525  199.900000       99.900000     2.0        90.637728         False          False   True
+5    5173.462728     190.637728  1816.47262  5173.462728   404.200000   190.637728   4882.825  100.000000       99.900000     2.0        90.637728         False          False   True
+6    5273.562728     290.737549  1816.47262  5273.562728   200.100000   290.737549   4882.925   99.900179       99.900000     1.0        90.637728         False          False   True
+7    5273.562728     347.662728  1816.47262  5273.562728    98.050000   347.662728   4882.925   42.975000       -0.100000     2.0        90.637728         False          False   True
+8    6042.987728     390.737793  1816.47262  6042.987728   812.400000   390.737793   5452.350  199.899935       99.900000     1.0        90.637728         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=True, ramp_down_bq=False, total_losses=4, buffer=999/10.[0m
+[08/10 15:29:32]  --------------------------------------------------------------------------------
+[08/10 15:29:32]  Iteration: 18 (0 solution, 17 counterexamples)
+[08/10 15:29:33]  Generator returned sat in 0.899987 secs.
+[08/10 15:29:33]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:34]  Improved gap from 1/800 to 23.4375
+[08/10 15:29:35]  Improved number of small numbers from 39 to 49 out of a max of 114
+[08/10 15:29:35]  Verifer returned sat in 1.965778 secs.
+[08/10 15:29:35]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t    losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    4598.957520    3269.905273 -1737.212637  4598.957520  100.007568  3269.905273  1329.049805    0.002441       -0.002627     1.0      3269.905273            -1             -1     -1
+1    4698.960205    3269.910342 -1737.212637  4698.960205  100.005127  3269.910342  1329.049805  100.000059        0.000059     1.0      3369.910400         False          False   True
+2    4799.977646    3469.910342 -1737.212637  4799.977646  201.017500  3469.910342  1330.062305    0.005000        0.005000     1.0      3369.910400         False          False   True
+3    5000.987646    3470.897842 -1737.212637  5000.987646  201.015000  3470.897842  1431.072305   99.017500        0.005000     1.0      3569.915342         False          False   True
+4    5100.985146    3669.910342 -1737.212637  5100.985146  199.015000  3669.910342  1431.072305    0.002500        0.002500     1.0      3569.915342         False          False   True
+5    5200.990146    3695.347842 -1737.212637  5200.990146  100.007500  3695.347842  1431.074805   74.567500        0.005000     1.0      3569.915342         False          False   True
+6    5224.430146    3769.917842 -1660.657637  5224.430146   98.007500  3769.917842  1431.074805   23.437500        0.000000     1.0      3569.915342         False          False   True
+7    5250.496396    3793.355342 -1586.723887  5250.496396   49.503750  3793.355342  1431.074805   26.066250        0.000000     2.0      3569.915342         False          False   True
+8    5250.496396    3819.421592 -1586.723877  5250.496396    0.010000  3819.421592  1431.074805    0.000000      -99.999990     2.0      3819.421592          True           True  False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=1/200.[0m
+[08/10 15:29:36]  --------------------------------------------------------------------------------
+[08/10 15:29:36]  Iteration: 19 (0 solution, 18 counterexamples)
+[08/10 15:29:37]  Generator returned sat in 0.871180 secs.
+[08/10 15:29:37]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:39]  Improved gap from 1/20 to 15.625
+[08/10 15:29:40]  Improved number of small numbers from 59 to 85 out of a max of 114
+[08/10 15:29:40]  Verifer returned sat in 2.223061 secs.
+[08/10 15:29:40]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t    queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    4633.757812    4633.557861 -1905.962402  4633.757812   15.925049  4633.557861      0.000   0.199951       -0.099600     9.0      4633.557861            -1             -1     -1
+1    4649.382812    4633.857422 -1821.587637  4649.382812   15.824951  4633.857422      0.000  15.525391       -0.099834     1.0      4649.382812         False           True  False
+2    4649.582520    4649.482646 -1737.212637  4649.582520   15.725098  4649.482646      0.000   0.099873      -15.525127     1.0      4649.582520         False          False  False
+3    4765.407646    4765.107646 -1737.212637  4765.407646  115.925000  4765.107646      0.100   0.200000        0.200000     1.0      4649.582520         False          False  False
+4    4880.632646    4789.695312 -1737.212637  4880.632646  115.425000  4789.695312     15.325  75.612334        0.200000     1.0      4649.582520         False          False   True
+5    4919.945312    4865.407646 -1680.449951  4919.945312  114.925000  4865.407646     15.325  39.212666       -3.724648     1.0      4649.582520         False          False   True
+6    4939.195146    4908.345146 -1596.075137  4939.195146   58.462500  4908.345146     15.325  15.525000       -0.100000     1.0      4649.582520         False          False   True
+7    4953.901396    4923.970146 -1511.700137  4953.901396   30.231250  4923.970146     15.325  14.606250       -1.018750     1.0      4649.582520         False          False   True
+8    4955.410771    4939.595146 -1427.325195  4955.410771   16.115625  4939.595146     15.325   0.490625      -15.134434     1.0      4649.582520         False          False   True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=1/5.[0m
+[08/10 15:29:40]  --------------------------------------------------------------------------------
+[08/10 15:29:40]  Iteration: 20 (0 solution, 19 counterexamples)
+[08/10 15:29:41]  Generator returned sat in 0.153511 secs.
+[08/10 15:29:41]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:43]  Improved gap from 0 to 15.625
+[08/10 15:29:43]  Improved number of small numbers from 59 to 114 out of a max of 114
+[08/10 15:29:43]  Verifer returned sat in 2.161388 secs.
+[08/10 15:29:43]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    4385.026367    4184.926514 -1737.212646  4385.026367    0.100000  4184.926514   0.099854  200.000000      100.000000     6.0      4184.926514            -1             -1     -1
+1    4385.026367    4284.926514 -1737.212646  4385.026367  200.000000  4284.926514   0.099854  100.000000        0.000000     5.0      4184.926514         False           True   True
+2    4484.626465    4484.426514 -1737.212646  4484.626465  199.600098  4484.426514   0.099854    0.100098       -0.399902     1.0      4484.526611          True           True  False
+3    4603.526367    4584.926514 -1737.212646  4603.526367  119.000000  4584.926514   0.199951   18.399902       18.399902     1.0      4603.326416         False          False  False
+4    4703.626465    4684.926514 -1737.212646  4703.626465  118.500000  4684.926514   0.300049   18.399902       18.399902     1.0      4603.326416         False          False   True
+5    4803.226562    4759.601562 -1737.212646  4803.226562  118.000000  4759.601562   0.300049   43.324951       18.000000     1.0      4603.326416         False          False   True
+6    4819.401611    4803.026367 -1671.487549  4819.401611   59.500000  4803.026367   0.300049   16.075195       -0.099854     1.0      4603.326416         False          False   True
+7    4833.576416    4819.201416 -1587.112549  4833.576416   30.250000  4819.201416   0.300049   14.074951       -1.550049     1.0      4603.326416         False          False   True
+8    4835.126465    4834.826416 -1587.112549  4835.126465   15.625000  4834.826416   0.300049    0.000000     -100.000000     1.0      4603.326416         False          False   True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=37683/2048.[0m
+[08/10 15:29:44]  --------------------------------------------------------------------------------
+[08/10 15:29:44]  Iteration: 21 (0 solution, 20 counterexamples)
+[08/10 15:29:45]  Generator returned sat in 0.707272 secs.
+[08/10 15:29:45]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:46]  Improved gap from 0 to 100
+[08/10 15:29:46]  Improved number of small numbers from 57 to 114 out of a max of 114
+[08/10 15:29:46]  Verifer returned sat in 0.807187 secs.
+[08/10 15:29:46]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    4703.451416    4603.326172 -2055.612549  4703.451416    0.024902  4603.326172    0.099854  100.025391      100.025391     9.0      4603.326172            -1             -1     -1
+1    4703.451416    4703.301514 -2055.612549  4703.451416    0.025146  4703.301514    0.099854    0.050049        0.025391     9.0      4603.326172         False           True   True
+2    4703.451416    4703.326416 -2055.612549  4703.451416    0.025146  4703.326416    0.099854    0.025146      -99.974609     4.0      4603.326172          True           True  False
+3    5025.226562    4803.326172 -2055.612549  5025.226562  321.800293  4803.326172  119.850342  102.050049        2.050049     1.0      4603.326172          True           True  False
+4    5183.076660    4905.401367 -2055.612549  5183.076660  259.900146  4905.401367  177.700439   99.974854        2.050049     1.0      4603.326172         False          False   True
+5    5313.101807    5005.401123 -2055.612549  5313.101807  230.000000  5005.401123  207.725586   99.975098        2.050049     1.0      4603.326172         False          False   True
+6    5478.164062    5105.401123 -2055.612549  5478.164062  265.037354  5105.401123  272.787842   99.975098        2.050049     1.0      4603.326172         False          False   True
+7    5660.745117    5205.401367 -2055.612549  5660.745117  282.556152  5205.401367  355.368896   99.974854        2.050049     1.0      4603.326172         False          False   True
+8    5851.048340    5305.401367 -2055.612549  5851.048340  290.278076  5305.401367  445.672119   99.974854        2.050049     1.0      4603.326172         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=8397/4096.[0m
+[08/10 15:29:47]  --------------------------------------------------------------------------------
+[08/10 15:29:47]  Iteration: 22 (0 solution, 21 counterexamples)
+[08/10 15:29:48]  Generator returned sat in 0.605215 secs.
+[08/10 15:29:48]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][6]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:48]  Improved gap from 1/10 to 0
+[08/10 15:29:48]  Improved number of small numbers from 109 to 114 out of a max of 114
+[08/10 15:29:48]  Verifer returned sat in 0.428790 secs.
+[08/10 15:29:49]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5176.063965    4975.964111 -2055.612549  5176.063965  200.149902  4975.964111   0.000000  200.099854      100.099854     7.0      4975.964111            -1             -1     -1
+1    5176.114258    5175.964111 -2055.612549  5176.114258  200.150146  5175.964111   0.050049    0.100098        0.100098     4.0      4975.964111         False           True  False
+2    5276.164062    5275.964111 -2055.612549  5276.164062  100.149902  5275.964111   0.099854    0.100098        0.100098     1.0      5276.064209         False          False   True
+3    5377.714111    5375.964111 -2055.612549  5377.714111  101.650146  5375.964111   1.649902    0.100098        0.100098     1.0      5276.064209         False          False   True
+4    5477.764160    5376.114062 -2055.612549  5477.764160  100.150146  5376.114062   1.699951   99.950146        0.100098     1.0      5276.064209         False          False   True
+5    5477.764160    5475.964111 -1955.712646  5477.764160   98.650146  5475.964111   1.699951    0.100098        0.000000     2.0      5276.064209         False          False   True
+6    5478.164062    5476.114258 -1856.262451  5478.164062    0.500000  5476.114258   1.699951    0.349854       -0.149902     1.0      5276.064209         False          False   True
+7    5478.314209    5476.614258 -1756.262695  5478.314209    0.500000  5476.614258   1.699951    0.000000        0.000000     1.0      5276.064209         False          False   True
+8    5478.814209    5476.614258 -1656.762695  5478.814209    0.500000  5476.614258   1.699951    0.500000        0.000000     1.0      5276.064209         False          False   True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=205/2048.[0m
+[08/10 15:29:49]  --------------------------------------------------------------------------------
+[08/10 15:29:49]  Iteration: 23 (0 solution, 22 counterexamples)
+[08/10 15:29:51]  Generator returned sat in 1.352081 secs.
+[08/10 15:29:51]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][3]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:51]  Improved gap from 0 to 100
+[08/10 15:29:52]  Improved number of small numbers from 85 to 114 out of a max of 114
+[08/10 15:29:52]  Verifer returned sat in 0.487914 secs.
+[08/10 15:29:52]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t    losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5275.914062    5075.964111 -2055.612549  5275.914062    0.049805  5075.964111     0.000000  199.949951      199.949951     3.0      5075.964111            -1             -1    True
+1    5275.914062    5175.963867 -2055.612549  5275.914062  199.949951  5175.963867     0.000000   99.950195       99.949951     2.0      5075.964111         False          False    True
+2    5275.914062    5175.964111 -2055.612549  5275.914062   99.950195  5175.964111     0.000000   99.949951       -0.050049     3.0      5275.914062         False          False    True
+3    5443.880615    5275.964111 -2055.612549  5443.880615  267.916504  5275.964111     0.000000  167.916504       67.916504     1.0      5275.914062         False          False    True
+4    5945.880615    5443.930664 -2055.612549  5945.880615  669.916504  5443.930664   369.916504  132.033447      100.000000     1.0      5275.914062         False          False    True
+5    5945.880615    5475.964111 -2055.612549  5945.880615  131.983398  5475.964111   369.916504  100.000000        0.000000     2.0      5275.914062         False          False    True
+6    6579.864014    5610.597412 -2055.612549  6579.864014  733.983398  5610.597412   803.899902  165.366699      100.000000     1.0      5275.914062         False          False    True
+7    6579.864014    5775.964111 -2055.612549  6579.864014  165.316650  5775.964111   803.899902    0.000000        0.000000     2.0      5275.914062         False          False    True
+8    7411.247559    5775.964111 -2055.612549  7411.247559  831.383545  5775.964111  1435.283447  200.000000      100.000000     2.0      5275.914062         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=100.[0m
+[08/10 15:29:52]  --------------------------------------------------------------------------------
+[08/10 15:29:52]  Iteration: 24 (0 solution, 23 counterexamples)
+[08/10 15:29:56]  Generator returned sat in 3.374039 secs.
+[08/10 15:29:57]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][4]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:29:57]  Improved gap from 0 to 100
+[08/10 15:29:58]  Improved number of small numbers from 60 to 69 out of a max of 114
+[08/10 15:29:58]  Verifer returned sat in 1.355867 secs.
+[08/10 15:29:58]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5371.811514    5271.806641 -2351.454951  5371.811514  100.002686  5271.806641     0.0025  100.002373          0.0025     3.0      5271.806641            -1             -1     -1
+1    5371.811514    5371.806514 -2351.454951  5371.811514  100.000000  5371.806514     0.0025    0.002500        -99.9975     4.0      5371.809014         False          False   True
+2    5871.809014    5571.806396 -2351.454951  5871.809014  500.000000  5571.806396     0.0025  300.000117        300.0000     1.0      5371.809014         False          False   True
+3    5871.809014    5671.806514 -2351.454951  5871.809014  300.000000  5671.806514     0.0025  200.000000        200.0000     2.0      5871.806514         False          False   True
+4    5871.809014    5671.809014 -2351.454951  5871.809014    0.010000  5671.809014     0.0025  199.997500        100.0000     3.0      5871.806514         False          False   True
+5    5871.809014    5871.794189 -2351.454951  5871.809014    0.010000  5871.794189     0.0025    0.012324          0.0000     4.0      5871.806514         False          False   True
+6    5871.809014    5871.806514 -2351.454951  5871.809014    0.010000  5871.806514     0.0025    0.000000       -100.0000     5.0      5871.806514         False          False   True
+7    6073.829014    5971.806514 -2351.454951  6073.829014  202.020000  5971.806514     0.0025  102.020000          2.0200     1.0      5871.806514         False           True  False
+8    6677.846514    6073.828857 -2351.454951  6677.846514  706.037500  6073.828857   204.0150  400.002656        302.0250     1.0      5871.806514         False          False  False
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=12081/40.[0m
+[08/10 15:29:59]  --------------------------------------------------------------------------------
+[08/10 15:29:59]  Iteration: 25 (0 solution, 24 counterexamples)
+[08/10 15:30:00]  Generator returned sat in 0.528216 secs.
+[08/10 15:30:00]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 0)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:00]  Improved gap from 1/10 to 100
+[08/10 15:30:01]  Improved number of small numbers from 71 to 83 out of a max of 114
+[08/10 15:30:01]  Verifer returned sat in 1.037687 secs.
+[08/10 15:30:01]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5471.694092    5371.694189 -2351.454834  5471.694092  100.299805  5371.694189    0.000000   99.999902       99.899902     1.0      5371.694189            -1             -1   False
+1    5471.894189    5471.794189 -2351.454834  5471.894189  100.200000  5471.794189    0.000000    0.100000        0.100000     1.0      5471.894189         False          False   False
+2    5571.994189    5471.794189 -2351.454834  5571.994189  100.200000  5471.794189    0.000000  100.200000        0.200000     1.0      5471.894189         False          False   False
+3    5672.094189    5638.627523 -2351.454834  5672.094189  200.300000  5638.627523    0.100000   33.366667        0.200000     1.0      5471.894189         False          False   False
+4    5772.194189    5771.794189 -2351.454834  5772.194189  133.466667  5771.794189    0.200000    0.200000        0.200000     1.0      5471.894189         False          False    True
+5    5921.994189    5871.794189 -2351.454834  5921.994189  150.000000  5871.794189   50.000000    0.200000        0.200000     1.0      5471.894189         False          False    True
+6    6121.794189    5871.994189 -2351.454834  6121.794189  200.000000  5871.994189  149.800000  100.000000        0.200000     2.0      5471.894189         False          False    True
+7    6138.477523    5972.094189 -2351.454834  6138.477523  116.683333  5972.094189  149.800000   16.583333      -83.116667     1.0      5988.677523          True           True    True
+8    6581.335856    6071.794189 -2351.454834  6581.335856  459.441667  6071.794189  409.341667  100.200000        0.200000     1.0      5988.677523         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=1/5.[0m
+[08/10 15:30:02]  --------------------------------------------------------------------------------
+[08/10 15:30:02]  Iteration: 26 (0 solution, 25 counterexamples)
+[08/10 15:30:04]  Generator returned sat in 1.391257 secs.
+[08/10 15:30:04]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][6]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:04]  Improved gap from 0 to 100
+[08/10 15:30:04]  Improved number of small numbers from 68 to 114 out of a max of 114
+[08/10 15:30:04]  Verifer returned sat in 0.444502 secs.
+[08/10 15:30:04]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4551.404053    4351.454346 -2351.455078  4551.404053  199.999756  4351.454346    0.000000  199.949707       99.949707     2.0      4351.454346            -1             -1   False
+1    4551.404297    4451.454346 -2351.455078  4551.404297  199.949951  4451.454346    0.000000   99.949951       -0.050049     2.0      4551.404297         False          False   False
+2    4651.354248    4551.454346 -2351.455078  4651.354248  199.899902  4551.454346    0.000000   99.899902       -0.100098     1.0      4651.354248         False          False   False
+3    4908.504150    4680.729248 -2351.455078  4908.504150  357.049805  4680.729248    0.050049  227.724854      156.999756     1.0      4651.354248         False          False   False
+4    5008.554199    4822.179199 -2351.455078  5008.554199  327.774902  4822.179199    0.100098  186.274902      156.999756     2.0      4651.354248         False          False    True
+5    5191.504150    4951.454102 -2351.455078  5191.504150  369.224854  4951.454102   83.050049  157.000000      156.999756     2.0      4651.354248         False          False    True
+6    5433.003906    5029.454346 -2351.455078  5433.003906  398.499756  5029.454346  224.549805  178.999756      156.999756     2.0      4651.354248         False          False    True
+7    5601.229248    5151.454102 -2351.455078  5601.229248  347.225098  5151.454102  292.775146  157.000000      156.999756     2.0      4651.354248         False          False    True
+8    5772.004150    5151.454346 -2351.455078  5772.004150  327.774902  5151.454346  363.550049  256.999756      156.999756     3.0      4651.354248         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=643071/4096.[0m
+[08/10 15:30:05]  --------------------------------------------------------------------------------
+[08/10 15:30:05]  Iteration: 27 (0 solution, 26 counterexamples)
+[08/10 15:30:07]  Generator returned sat in 0.826780 secs.
+[08/10 15:30:07]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][2]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:08]  Improved number of small numbers from 74 to 76 out of a max of 113
+[08/10 15:30:08]  Verifer returned sat in 1.247716 secs.
+[08/10 15:30:08]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4551.403809    4351.504053 -2351.455078  4551.403809  199.999756  4351.504053    0.000000  199.899756       99.899756     2.0      4351.504053            -1             -1   False
+1    4551.404053    4488.504053 -2351.455078  4551.404053  199.900000  4488.504053    0.000000   62.900000       -0.100000     2.0      4551.404053         False          False   False
+2    4551.604053    4551.504053 -2351.455078  4551.604053   63.100000  4551.504053    0.000000    0.100000      -99.900000     1.0      4551.604053         False          False   False
+3    4751.804053    4686.037386 -2351.455078  4751.804053  200.300000  4686.037386    0.100000   65.666667        0.200000     1.0      4551.604053         False          False   False
+4    4851.904053    4798.370719 -2351.455078  4851.904053  165.766667  4798.370719    0.200000   53.333333        0.200000     1.0      4551.604053         False          False    True
+5    4952.004053    4951.504053 -2351.455078  4952.004053  153.433333  4951.504053    0.300000    0.200000        0.200000     1.0      4551.604053         False          False    True
+6    5150.304053    4997.481831 -2351.455078  5150.304053  198.500000  4997.481831   98.600000   54.222222        0.200000     1.0      4551.604053         False          False    True
+7    5250.304053    5051.704053 -2351.455078  5250.304053  154.222222  5051.704053   98.600000  100.000000        0.200000     2.0      4551.604053         False          False    True
+8    5966.915164    5151.504150 -2351.455078  5966.915164  816.611111  5151.504150  715.211111  100.199902        0.200000     2.0      4551.604053         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=1/5.[0m
+[08/10 15:30:08]  --------------------------------------------------------------------------------
+[08/10 15:30:08]  Iteration: 28 (0 solution, 27 counterexamples)
+[08/10 15:30:10]  Generator returned sat in 0.311023 secs.
+[08/10 15:30:10]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][2]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:10]  Improved gap from 1/40 to 100
+[08/10 15:30:11]  Improved number of small numbers from 68 to 72 out of a max of 114
+[08/10 15:30:11]  Verifer returned sat in 1.302449 secs.
+[08/10 15:30:11]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4506.767334    4406.867354 -2351.455078  4506.767334    0.100098  4406.867354        0.0   99.899980        -0.10002     2.0      4406.867354            -1             -1   False
+1    4606.967354    4506.867354 -2351.455078  4606.967354  200.100000  4506.867354        0.0  100.100000         0.10000     1.0      4406.867354         False          False   False
+2    4705.567354    4705.567354 -2351.455078  4705.567354  198.700000  4705.567354        0.0    0.000000        -1.30000     1.0      4705.567354         False          False   False
+3    4767.767354    4767.667354 -2351.455078  4767.767354   62.200000  4767.667354        0.0    0.100000       -39.10000     1.0      4767.767354         False          False   False
+4    4949.567354    4841.067354 -2351.455078  4949.567354  181.900000  4841.067354       42.5   66.000000         0.20000     1.0      4767.767354         False          False   False
+5    5049.667354    4907.167354 -2351.455078  5049.667354  166.100000  4907.167354       42.6   99.900000         0.20000     1.0      4767.767354         False          False    True
+6    5049.667354    5006.867354 -2351.455078  5049.667354   99.800000  5006.867354       42.6    0.200000       -99.80000     2.0      4767.767354         False          False    True
+7    5728.967354    5206.867354 -2351.455078  5728.967354  679.500000  5206.867354      521.9    0.200000         0.20000     1.0      4767.767354         False          False    True
+8    5910.667354    5306.867188 -2351.455078  5910.667354  181.900000  5306.867188      603.6    0.200166         0.20000     1.0      4767.767354         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=True, ramp_down_bq=False, total_losses=4, buffer=1/5.[0m
+[08/10 15:30:12]  --------------------------------------------------------------------------------
+[08/10 15:30:12]  Iteration: 29 (0 solution, 28 counterexamples)
+[08/10 15:30:13]  Generator returned sat in 0.613885 secs.
+[08/10 15:30:13]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][2]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:13]  Improved gap from 1/1600 to 100
+[08/10 15:30:14]  Improved number of small numbers from 96 to 114 out of a max of 114
+[08/10 15:30:14]  Verifer returned sat in 0.527587 secs.
+[08/10 15:30:14]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t    losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5149.057187    5048.957275 -2993.544922  5149.057187  100.100098  5048.957275     0.000000  100.099912        0.099912     6.0      5048.957275            -1             -1     -1
+1    5149.057187    5148.957275 -2993.544922  5149.057187   99.999756  5148.957275     0.000000    0.099912      -99.900088     6.0      5149.057187         False           True  False
+2    5398.157227    5348.857178 -2993.544922  5398.157227  249.199951  5348.857178     0.099854   49.200195       49.100098     1.0      5149.057187         False           True  False
+3    5398.157227    5348.957275 -2993.544922  5398.157227    0.100098  5348.957275     0.099854   49.100098      -50.899902     2.0      5398.057373         False          False   True
+4    5950.757324    5449.090576 -2993.544922  5950.757324  601.700195  5449.090576   352.699951  148.966797       49.100098     1.0      5398.057373         False          False   True
+5    5950.857178    5548.957275 -2993.544922  5950.857178  149.066650  5548.957275   352.699951   49.199951      -50.800049     2.0      5398.057373         False          False   True
+6    6601.490723    5648.957275 -2993.544922  6601.490723  699.833496  5648.957275   803.433350  149.100098       49.100098     1.0      5398.057373         False          False   True
+7    6601.490723    5748.957275 -2993.544922  6601.490723  149.000000  5748.957275   803.433350   49.100098      -50.899902     2.0      5398.057373         False          False   True
+8    7451.624023    5848.957275 -2993.544922  7451.624023  899.233398  5848.957275  1453.566650  149.100098       49.100098     1.0      5398.057373         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=100557/2048.[0m
+[08/10 15:30:14]  --------------------------------------------------------------------------------
+[08/10 15:30:14]  Iteration: 30 (0 solution, 29 counterexamples)
+[08/10 15:30:17]  Generator returned sat in 1.485405 secs.
+[08/10 15:30:17]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:18]  Improved number of small numbers from 79 to 86 out of a max of 113
+[08/10 15:30:18]  Verifer returned sat in 0.815090 secs.
+[08/10 15:30:18]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5249.057373    5048.957275 -2993.544922  5249.057373  200.100098  5048.957275    0.000000  200.100098      100.100098     6.0      5048.957275            -1             -1     -1
+1    5249.057373    5190.357275 -2993.544922  5249.057373  200.000000  5190.357275    0.000000   58.700098        0.100098     6.0      5249.057373         False           True  False
+2    5390.257275    5249.457275 -2993.544922  5390.257275  199.900000  5249.457275   41.100000   99.700000        0.200000     1.0      5349.157275         False           True  False
+3    5490.357275    5402.290609 -2993.544922  5490.357275  199.800000  5402.290609   41.200000   46.866667        0.200000     1.0      5449.157275         False          False   True
+4    5621.157275    5495.623942 -2993.544922  5621.157275  177.666667  5495.623942   72.000000   53.533333        0.200000     1.0      5449.157275         False          False   True
+5    5721.257275    5648.957275 -2993.544922  5721.257275  153.633333  5648.957275   72.100000    0.200000        0.200000     1.0      5449.157275         False          False   True
+6    5921.807275    5748.957275 -2993.544922  5921.807275  200.750000  5748.957275  172.650000    0.200000        0.200000     1.0      5449.157275         False          False   True
+7    6095.940609    5848.957275 -2993.544922  6095.940609  174.333333  5848.957275  246.783333    0.200000        0.200000     1.0      5449.157275         False          False   True
+8    6273.407275    5849.257080 -2993.544922  6273.407275  177.666667  5849.257080  324.250000   99.900195        0.200000     1.0      5449.157275         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=1/5.[0m
+[08/10 15:30:18]  --------------------------------------------------------------------------------
+[08/10 15:30:18]  Iteration: 31 (0 solution, 30 counterexamples)
+[08/10 15:30:19]  Generator returned sat in 0.169259 secs.
+[08/10 15:30:19]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:20]  Improved gap from 1/600 to 100
+[08/10 15:30:20]  Improved number of small numbers from 63 to 114 out of a max of 114
+[08/10 15:30:20]  Verifer returned sat in 0.572812 secs.
+[08/10 15:30:20]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5246.190918    5129.090820 -2976.611816  5246.190918  116.999756  5129.090820    0.000000  117.100098      117.100098     2.0       5129.09082            -1             -1     -1
+1    5246.190918    5129.090820 -2976.611816  5246.190918  116.999756  5129.090820    0.000000  117.100098       17.100098     2.0       5129.09082         False           True  False
+2    5246.390869    5246.290527 -2976.611816  5246.390869  117.300049  5246.290527    0.000000    0.100342      -82.699951     1.0       5129.09082         False           True  False
+3    5446.390625    5406.957520 -2976.611816  5446.390625  200.100098  5406.957520    0.099854   39.333252       17.199951     1.0       5129.09082         False          False  False
+4    5546.490723    5528.990723 -2976.611816  5546.490723  139.433350  5528.990723    0.199951   17.300049       17.199951     1.0       5129.09082         False          False   True
+5    5729.640625    5629.090820 -2976.611816  5729.640625  200.449951  5629.090820   83.349854   17.199951       17.199951     1.0       5129.09082         False          False   True
+6    5904.340820    5699.579590 -2976.611816  5904.340820  191.900146  5699.579590  158.050049   46.711182       17.199951     1.0       5129.09082         False          False   True
+7    6004.440674    5806.857422 -2976.611816  6004.440674  146.811035  5806.857422  158.149902   39.433350       17.199951     1.0       5129.09082         False          False   True
+8    6104.440674    5829.090820 -2976.611816  6104.440674  139.433350  5829.090820  158.149902  117.199951       17.199951     2.0       5129.09082         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=4, buffer=70451/4096.[0m
+[08/10 15:30:21]  --------------------------------------------------------------------------------
+[08/10 15:30:21]  Iteration: 32 (0 solution, 31 counterexamples)
+[08/10 15:30:28]  Generator returned sat in 5.834073 secs.
+[08/10 15:30:28]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:28]  Improved gap from 1/1200 to 0
+[08/10 15:30:29]  Improved number of small numbers from 61 to 82 out of a max of 114
+[08/10 15:30:29]  Verifer returned sat in 1.040966 secs.
+[08/10 15:30:29]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t    queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5046.300293    4946.303711 -2976.611816  5046.300293  100.001465  4946.303711   0.000000  99.996582       99.996432     1.0      4946.303711            -1             -1    True
+1    5046.305420    5046.302002 -2976.611816  5046.305420  100.001709  5046.302002   0.000000   0.003418        0.001559     1.0      4946.303711         False          False    True
+2    5046.305420    5046.303861 -2876.613483  5046.305420    0.001709  5046.303861   0.000000   0.001559       -0.000107     2.0      5046.305420         False          False    True
+3    5148.310527    5145.303861 -2876.613483  5148.310527  102.006667  5145.303861   2.001667   1.005000        0.003333     1.0      5046.305420         False           True   False
+4    5248.312194    5146.310527 -2876.613483  5248.312194  101.006667  5146.310527   2.003333  99.998333        0.003333     1.0      5046.305420         False          False    True
+5    5248.320527    5246.308861 -2776.625150  5248.320527  100.006667  5246.308861   2.003333   0.008333        0.000000     2.0      5046.305420         False          False    True
+6    5248.322194    5246.317194 -2676.626953  5248.322194    0.010000  5246.317194   2.003333   0.001667       -0.000137     2.0      5246.318861          True           True   False
+7    5248.330527    5246.320527 -2576.635254  5248.330527    0.010000  5246.320527   2.003333   0.006667       -0.000104     1.0      5246.318861         False           True   False
+8    5248.333861    5246.328857 -2476.638672  5248.333861    0.010000  5246.328857   2.003333   0.001670       -0.000189     1.0      5246.318861         False          False   False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=1, buffer=1/300.[0m
+[08/10 15:30:29]  --------------------------------------------------------------------------------
+[08/10 15:30:29]  Iteration: 33 (0 solution, 32 counterexamples)
+[08/10 15:30:38]  Generator returned sat in 7.745156 secs.
+[08/10 15:30:38]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+	else:
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][2]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:38]  Improved gap from 1/800 to 100
+[08/10 15:30:39]  Improved number of small numbers from 68 to 76 out of a max of 114
+[08/10 15:30:39]  Verifer returned sat in 0.994270 secs.
+[08/10 15:30:39]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4746.327148    4546.327298 -2576.635254  4746.327148    0.001250  4546.327298    0.00000  199.999850       199.99985     2.0      4546.327298            -1             -1    True
+1    4746.327148    4646.327298 -2576.635254  4746.327148    0.001250  4646.327298    0.00000   99.999850        99.99985     2.0      4546.327298         False          False    True
+2    4746.327148    4646.327298 -2576.635254  4746.327148   99.999756  4646.327298    0.00000   99.999850        -0.00015     2.0      4546.327298         False          False    True
+3    4746.329798    4746.328548 -2576.635254  4746.329798  100.002500  4746.328548    0.00000    0.001250       -99.99750     1.0      4546.327298         False          False    True
+4    5047.832298    4913.326048 -2576.635254  5047.832298  301.503750  4913.326048    1.50500  133.001250       100.00000     1.0      4546.327298         False          False    True
+5    5047.832298    4946.327298 -2576.635254  5047.832298    0.010000  4946.327298    1.50500  100.000000         0.00000     2.0      4546.327298         False          False    True
+6    5249.342298    5046.327298 -2576.635254  5249.342298  301.510000  5046.327298    3.01500  200.000000       100.00000     3.0      4546.327298         False          False    True
+7    5249.342298    5246.326048 -2576.635254  5249.342298    0.010000  5246.326048    3.01500    0.001250         0.00000     2.0      5246.327298          True           True    True
+8    5583.851048    5246.328613 -2576.635254  5583.851048  334.510000  5246.328613  137.52375  199.998685       100.00000     1.0      5246.327298         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=100.[0m
+[08/10 15:30:40]  --------------------------------------------------------------------------------
+[08/10 15:30:40]  Iteration: 34 (0 solution, 33 counterexamples)
+[08/10 15:30:44]  Generator returned sat in 2.842516 secs.
+[08/10 15:30:44]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][7]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:44]  Improved gap from 1/600 to 100
+[08/10 15:30:45]  Improved number of small numbers from 68 to 72 out of a max of 114
+[08/10 15:30:45]  Verifer returned sat in 1.175553 secs.
+[08/10 15:30:45]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4895.529785    4761.529798 -2576.635254  4895.529785    0.100098  4761.529798      0.000  133.999987       99.899987     4.0      4761.529798            -1             -1   False
+1    4895.629798    4795.629798 -2576.635254  4895.629798  134.100000  4795.629798      0.000  100.000000        0.000000     4.0      4761.529798         False          False   False
+2    5046.317298    4989.854798 -2576.635254  5046.317298  250.687500  4989.854798      0.000   56.462500       50.687500     1.0      4761.529798         False          False   False
+3    5146.517298    5086.854798 -2576.635254  5146.517298  156.662500  5086.854798      0.100   59.562500       50.787500     1.0      5146.417298         False          False   False
+4    5247.617298    5170.304798 -2576.635254  5247.617298  160.662500  5170.304798      1.200   76.112500       50.787500     1.0      5146.417298         False          False    True
+5    5356.842298    5295.629798 -2576.635254  5356.842298  185.337500  5295.629798     10.425   50.787500       50.787500     1.0      5146.417298         False          False    True
+6    5456.942298    5394.629798 -2576.635254  5456.942298  150.887500  5394.629798     10.525   51.787500       50.787500     1.0      5146.417298         False          False    True
+7    5557.042298    5495.629798 -2576.635254  5557.042298  151.887500  5495.629798     10.625   50.787500       50.787500     1.0      5146.417298         False          False    True
+8    5666.917298    5495.729736 -2576.635254  5666.917298  160.662500  5495.729736     20.500  150.687562       50.787500     2.0      5146.417298         False          False    True
+high_util=True, low_loss=False, low_delay=True, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=5, buffer=4063/80.[0m
+[08/10 15:30:46]  --------------------------------------------------------------------------------
+[08/10 15:30:46]  Iteration: 35 (0 solution, 34 counterexamples)
+[08/10 15:30:52]  Generator returned sat in 5.079440 secs.
+[08/10 15:30:52]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][7]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:52]  Improved number of small numbers from 79 to 113 out of a max of 113
+[08/10 15:30:52]  Verifer returned sat in 0.414270 secs.
+[08/10 15:30:52]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5095.429932    4895.429688 -2676.435303  5095.429932    0.100098  4895.429688    0.000000  200.000244      200.000000     4.0      4895.429688            -1             -1   False
+1    5495.729736    4895.429932 -2676.435303  5495.729736  600.300049  4895.429932  100.199951  500.099854      400.099854     4.0      4895.429688         False          False   False
+2    5595.829834    5095.429932 -2676.435303  5595.829834  600.199951  5095.429932  100.300049  400.099854      400.099854     4.0      5495.529785         False          False    True
+3    5696.429932    5095.429932 -2676.435303  5696.429932  500.699951  5095.429932  100.900146  500.099854      400.099854     4.0      5595.529785         False          False    True
+4    5696.429932    5295.429688 -2676.435303  5696.429932  499.199951  5295.429688  100.900146  300.100098      300.099854     4.0      5595.529785         False          False    True
+5    5896.529785    5296.729980 -2676.435303  5896.529785  500.199951  5296.729980  101.000000  498.799805      400.099854     5.0      5595.529785         False          False    True
+6    5896.529785    5395.429932 -2676.435303  5896.529785  498.699951  5395.429932  101.000000  400.099854      300.099854     6.0      5595.529785         False          False    True
+7    5996.129883    5595.429932 -2676.435303  5996.129883  499.699951  5595.429932  101.000000  299.699951      299.699951     5.0      5595.529785         False          False    True
+8    6197.129883    5595.629639 -2676.435303  6197.129883  500.699951  5595.629639  101.600098  499.900146      400.099854     4.0      5595.529785         False          False    True
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=2, buffer=1638809/4096.[0m
+[08/10 15:30:53]  --------------------------------------------------------------------------------
+[08/10 15:30:53]  Iteration: 36 (0 solution, 35 counterexamples)
+[08/10 15:30:56]  Generator returned sat in 1.753435 secs.
+[08/10 15:30:56]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][7]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:30:56]  Improved gap from 0 to 0
+[08/10 15:30:57]  Improved number of small numbers from 60 to 76 out of a max of 114
+[08/10 15:30:57]  Verifer returned sat in 1.074613 secs.
+[08/10 15:30:57]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5894.811279    5694.811084 -3575.816455  5894.811279    0.099854  5694.811084    0.00125  199.998945       99.998945     2.0      5694.811084            -1             -1     -1
+1    5994.812334    5894.811035 -3575.816455  5994.812334  300.000000  5894.811035    0.00125  100.000049      100.000000     1.0      5694.811084         False          False   True
+2    5994.812334    5994.811084 -3575.816455  5994.812334   99.999756  5994.811084    0.00125    0.000000        0.000000     2.0      5994.811084         False          False   True
+3    6294.824834    5994.811279 -3575.816455  6294.824834  300.012500  5994.811279    0.00250  300.011055      200.011250     1.0      5994.811084         False          False   True
+4    6294.824834    6144.824707 -3575.816455  6294.824834  299.512500  6144.824707    0.00250  149.997627      100.011250     2.0      5994.811084         False          False   True
+5    6294.824834    6294.809814 -3575.816455  6294.824834    0.010000  6294.809814    0.00250    0.012520        0.011250     3.0      5994.811084         False          False   True
+6    6294.824834    6294.811279 -3475.827705  6294.824834    0.010000  6294.811279    0.00250    0.011055        0.000000     4.0      5994.811084         False          False   True
+7    6294.824834    6294.822334 -3375.827881  6294.824834    0.010000  6294.822334    0.00250    0.000000       -0.000176     5.0      5994.811084         False          False   True
+8    6294.834834    6294.823730 -3275.837891  6294.834834    0.010000  6294.823730    0.00250    0.008604       -0.000186     1.0      5994.811084         False          False   True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=0, buffer=160009/800.[0m
+[08/10 15:30:58]  --------------------------------------------------------------------------------
+[08/10 15:30:58]  Iteration: 37 (0 solution, 36 counterexamples)
+[08/10 15:30:59]  Generator returned sat in 0.570484 secs.
+[08/10 15:30:59]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][4]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:00]  Improved gap from 0 to 0
+[08/10 15:31:01]  Improved number of small numbers from 59 to 69 out of a max of 114
+[08/10 15:31:01]  Verifer returned sat in 1.505073 secs.
+[08/10 15:31:01]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t    queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5845.805908    5745.807334 -3875.809326  5845.805908    0.099609  5745.807334   0.000000  99.998574       -0.001380     2.0      5745.807334            -1             -1   False
+1    5845.810667    5845.807373 -3775.812705  5845.810667  100.003333  5845.807373   0.000000   0.003294        0.000000     1.0      5745.807334         False          False   False
+2    5845.810667    5845.810667 -3675.812705  5845.810667    0.001465  5845.810667   0.000000   0.000000        0.000000     2.0      5845.810667         False          False   False
+3    5946.815667    5945.810667 -3675.812705  5946.815667  101.005000  5945.810667   1.001667   0.003333        0.003333     1.0      5845.810667         False          False   False
+4    6047.317334    6045.810667 -3675.812705  6047.317334  100.505000  6045.810667   1.503333   0.003333        0.003333     1.0      5845.810667         False          False    True
+5    6147.319001    6046.312334 -3675.812705  6147.319001  100.005000  6046.312334   1.505000  99.501667        0.003333     1.0      5845.810667         False          False    True
+6    6147.322334    6145.815667 -3575.819580  6147.322334   99.505000  6145.815667   1.505000   0.001667       -0.000208     1.0      5845.810667         False          False    True
+7    6147.330667    6145.819001 -3475.827881  6147.330667    0.010000  6145.819001   1.505000   0.006667       -0.000176     1.0      5845.810667         False          False    True
+8    6147.334001    6145.827393 -3475.827881  6147.334001    0.010000  6145.827393   1.505000   0.001608      -99.996842     1.0      5845.810667         False          False    True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=2, buffer=1/300.[0m
+[08/10 15:31:01]  --------------------------------------------------------------------------------
+[08/10 15:31:01]  Iteration: 38 (0 solution, 37 counterexamples)
+[08/10 15:31:05]  Generator returned sat in 2.633659 secs.
+[08/10 15:31:05]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:06]  Improved gap from 0 to 23.4375
+[08/10 15:31:07]  Improved number of small numbers from 59 to 114 out of a max of 114
+[08/10 15:31:07]  Verifer returned sat in 1.312513 secs.
+[08/10 15:31:07]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t   losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    4731.143311    4631.127686 -2661.160889  4731.143311  100.062256  4631.127686    0.000000  100.015625       99.984619     1.0      4631.127686            -1             -1   False
+1    4731.174561    4731.158691 -2661.160889  4731.174561  100.046875  4731.158691    0.000000    0.015869        0.015869     1.0      4731.174561         False          False   False
+2    4831.205566    4831.158691 -2661.160889  4831.205566  100.046875  4831.158691    0.015625    0.031250        0.031250     1.0      4731.174561         False          False   False
+3    5612.674316    4831.174316 -2661.160889  5612.674316  781.500000  4831.174316  681.484375  100.015625        0.031250     2.0      4731.174561         False          False    True
+4    5902.908691    5031.096191 -2661.160889  5902.908691  390.250000  5031.096191  871.718750    0.093750        0.031250     1.0      5031.189941          True           True    True
+5    6097.439941    5034.361816 -2661.160889  6097.439941  194.625000  5034.361816  966.250000   96.828125        0.031250     1.0      5031.189941         False          False    True
+6    6097.439941    5131.174316 -2584.614014  6097.439941   96.812500  5131.174316  966.250000    0.015625      -23.421875     2.0      5031.189941         False          False    True
+7    6147.330566    5154.612061 -2511.082764  6147.330566   49.906250  5154.612061  966.250000   26.468506        0.000000     1.0      5181.080566          True           True   False
+8    6147.330566    5181.080566 -2434.520264  6147.330566   26.453125  5181.080566  966.250000    0.000000      -23.437500     2.0      5181.080566         False          False   False
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=2, buffer=1/32.[0m
+[08/10 15:31:07]  --------------------------------------------------------------------------------
+[08/10 15:31:07]  Iteration: 39 (0 solution, 38 counterexamples)
+[08/10 15:31:13]  Generator returned sat in 4.128696 secs.
+[08/10 15:31:13]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+else:
+	c_f[0][t] = max(0.01, 3/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][4]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:13]  Improved gap from 1/600 to 100
+[08/10 15:31:14]  Improved number of small numbers from 82 to 106 out of a max of 114
+[08/10 15:31:14]  Verifer returned sat in 0.936048 secs.
+[08/10 15:31:14]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5909.025146    5455.080566 -3585.083008  5909.025146  453.944580  5455.080566   0.000000  453.944580      353.944580     4.0      5455.080566            -1             -1   False
+1    5909.025146    5655.080566 -3585.083008  5909.025146  453.844482  5655.080566   0.000000  253.944580      253.944580     2.0      5909.025146         False          False   False
+2    6108.825195    5754.980713 -3585.083008  6108.825195  453.744629  5754.980713   0.000000  353.844482      353.744629     3.0      6108.825195         False          False   False
+3    6108.825195    5755.080566 -3585.083008  6108.825195  235.762963  5755.080566   0.000000  353.744629      253.744629     4.0      6108.825195         False          False   False
+4    6108.825195    5955.080566 -3585.083008  6108.825195  353.644444  5955.080566   0.000000  153.744629      153.744629     3.0      6108.825195         False          False   False
+5    6485.547233    5955.180420 -3585.083008  6485.547233  530.466667  5955.180420  30.216667  500.150146      400.250000     4.0      6108.825195         False          False   False
+6    6485.547233    6055.230469 -3585.083008  6485.547233  266.733333  6055.230469  30.216667  400.100098      300.250000     5.0      6108.825195         False          False    True
+7    6485.547233    6155.080566 -3585.083008  6485.547233  400.100000  6155.080566  30.216667  300.250000      200.250000     3.0      6108.825195         False           True   False
+8    6785.447233    6355.080566 -3585.083008  6785.447233  600.150000  6355.080566  30.216667  400.150000      400.150000     4.0      6108.825195         False          False   False
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=1601/4.[0m
+[08/10 15:31:14]  --------------------------------------------------------------------------------
+[08/10 15:31:14]  Iteration: 40 (0 solution, 39 counterexamples)
+[08/10 15:31:41]  Generator returned sat in 25.399997 secs.
+[08/10 15:31:41]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+	else:
+		c_f[0][t] = max(0.01, 3/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][1]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:42]  Improved number of small numbers from 75 to 84 out of a max of 113
+[08/10 15:31:42]  Verifer returned sat in 1.006482 secs.
+[08/10 15:31:42]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5908.975098    5830.795654 -3585.083252  5908.975098   78.279541  5830.795654       0.05   78.129443       78.129337     1.0      5830.795654            -1             -1     -1
+1    5909.075146    5908.975146 -3585.083008  5909.075146   78.229492  5908.975146       0.05    0.050000      -21.770370     1.0      5909.025146         False          False   True
+2    5987.254639    5987.154776 -3585.083008  5987.254639   78.229492  5987.154776       0.05    0.049863      -43.590878     1.0      5909.025146         False          False   True
+3    6065.434406    6065.334406 -3585.083008  6065.434406   78.229630  6065.334406       0.05    0.050000      -65.411111     1.0      5909.025146         False          False   True
+4    6183.228850    6183.128850 -3585.083008  6183.228850  117.844444  6183.128850       0.05    0.050000      -47.616667     1.0      5909.025146         False          False   True
+5    6360.445517    6230.795517 -3585.083008  6360.445517  177.266667  6230.795517       0.05  129.600000       29.600000     1.0      5909.025146         False          False   True
+6    6497.245517    6430.795517 -3585.083008  6497.245517  266.400000  6430.795517       0.05   66.400000       66.400000     1.0      5909.025146         False          False   True
+7    6830.945517    6430.795517 -3585.083008  6830.945517  400.100000  6430.795517       0.10  400.050000      300.050000     1.0      5909.025146         False          False   True
+8    6830.945517    6530.795654 -3585.083008  6830.945517  202.050000  6530.795654       0.10  300.049863      200.050000     2.0      5909.025146         False          False   True
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=6001/20.[0m
+[08/10 15:31:43]  --------------------------------------------------------------------------------
+[08/10 15:31:43]  Iteration: 41 (0 solution, 40 counterexamples)
+[08/10 15:31:50]  Generator returned sat in 6.183046 secs.
+[08/10 15:31:50]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -3/2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][4]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:51]  Improved number of small numbers from 58 to 113 out of a max of 113
+[08/10 15:31:51]  Verifer returned sat in 0.368985 secs.
+[08/10 15:31:51]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5728.495361    5428.395508 -3182.682861  5728.495361  299.799805  5428.395508   0.099854  300.000000      300.000000     4.0      5428.395508            -1             -1     -1
+1    5728.495361    5428.495605 -3182.682861  5728.495361  299.799805  5428.495605   0.099854  299.899902      200.000000     4.0      5428.395508         False          False   True
+2    5728.495361    5528.395752 -3182.682861  5728.495361  299.800049  5528.395752   0.099854  199.999756      100.000000     5.0      5428.395508         False          False   True
+3    6028.095703    5728.395508 -3182.682861  6028.095703  499.600098  5728.395508   0.099854  299.600342      299.600342     4.0      5428.395508          True           True  False
+4    6228.595459    5828.395508 -3182.682861  6228.595459  500.100098  5828.395508   0.099854  400.100098      400.100098     2.0      5428.395508         False          False  False
+5    6329.095459    5828.395508 -3182.682861  6329.095459  500.600098  5828.395508   0.099854  500.600098      400.600098     2.0      5428.395508         False          False  False
+6    6329.595459    6028.395508 -3182.682861  6329.595459  501.100098  6028.395508   0.099854  301.100098      301.100098     3.0      5428.395508         False          False  False
+7    6530.095459    6128.395508 -3182.682861  6530.095459  501.600098  6128.395508   0.199951  401.500000      401.500000     4.0      5428.395508         False          False  False
+8    6628.695557    6228.395508 -3182.682861  6628.695557  500.100098  6228.395508   0.199951  400.100098      400.100098     5.0      5428.395508         False          False   True
+high_util=True, low_loss=True, low_delay=False, ramp_up=False, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=803/2.[0m
+[08/10 15:31:51]  --------------------------------------------------------------------------------
+[08/10 15:31:51]  Iteration: 42 (0 solution, 41 counterexamples)
+[08/10 15:31:53]  Generator returned sat in 0.409539 secs.
+[08/10 15:31:53]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -2)
+	else:
+		c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+else:
+	c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][4]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:31:53]  Improved gap from 0 to 100
+[08/10 15:31:54]  Improved number of small numbers from 87 to 114 out of a max of 114
+[08/10 15:31:54]  Verifer returned sat in 0.413702 secs.
+[08/10 15:31:54]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5528.345459    5428.395264 -3182.682861  5528.345459    0.050000  5428.395264   0.000000   99.950195       99.950195     9.0      5428.395264            -1             -1     -1
+1    5827.745361    5528.395264 -3182.682861  5827.745361  399.350098  5528.395264   0.000000  299.350098      299.350098     1.0      5428.395264         False           True  False
+2    5827.795410    5528.845459 -3182.682861  5827.795410  299.400146  5528.845459   0.000000  298.949951      199.400146     2.0      5827.795410         False          False  False
+3    6026.895508    5728.395264 -3182.682861  6026.895508  498.050049  5728.395264   0.000000  298.500244      298.500244     3.0      5827.795410         False          False  False
+4    6226.945312    5827.845459 -3182.682861  6226.945312  498.550049  5827.845459   0.000000  399.099854      398.550049     2.0      5827.795410         False          False  False
+5    6326.895508    5927.395264 -3182.682861  6326.895508  499.050049  5927.395264   0.000000  399.500244      398.500244     3.0      5827.795410         False          False  False
+6    6426.945312    6026.895264 -3182.682861  6426.945312  499.550049  6026.895264   0.000000  400.050049      398.550049     4.0      5827.795410         False          False  False
+7    6526.945312    6126.445312 -3182.682861  6526.945312  500.050049  6126.445312   0.000000  400.500000      398.550049     4.0      5827.795410         False          False  False
+8    6626.995361    6128.395264 -3182.682861  6626.995361  500.550049  6128.395264   0.050049  498.550049      398.550049     5.0      5827.795410         False          False  False
+high_util=True, low_loss=True, low_delay=False, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=1, buffer=1632461/4096.[0m
+[08/10 15:31:54]  --------------------------------------------------------------------------------
+[08/10 15:31:54]  Iteration: 43 (0 solution, 42 counterexamples)
+[08/10 15:32:01]  Generator returned sat in 5.742777 secs.
+[08/10 15:32:01]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][8]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:32:03]  Improved gap from 0 to 18.75
+[08/10 15:32:03]  Improved number of small numbers from 105 to 114 out of a max of 114
+[08/10 15:32:03]  Verifer returned sat in 1.578779 secs.
+[08/10 15:32:03]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t    cwnd_0,t  service_0,t  losts_0,t     queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f  mode_f
+0    5708.195068    5508.095459 -3362.383057  5708.195068    0.099854  5508.095459   0.000000  200.099609      100.099609     5.0      5508.095459            -1             -1   False
+1    5708.195068    5708.095459 -3362.383057  5708.195068  199.999756  5708.095459   0.000000    0.099609        0.099609     2.0      5508.095459         False          False   False
+2    5877.695312    5808.095215 -3362.383057  5877.695312  169.599854  5808.095215   0.000000   69.600098       69.599854     1.0      5877.695312         False          False   False
+3    6049.095215    5877.795410 -3362.383057  6049.095215  241.000000  5877.795410  31.199951  140.099854      109.799805     1.0      5877.695312         False          False   False
+4    6148.995361    5995.695068 -3362.383057  6148.995361  240.000000  5995.695068  31.199951  122.100342      109.699951     2.0      5877.695312         False          False    True
+5    6148.995361    6054.695312 -3362.383057  6148.995361  122.000000  6054.695312  31.199951   63.100098        9.699951     2.0      5877.695312         False          False    True
+6    6148.995361    6108.095459 -3281.133057  6148.995361   63.000000  6108.095459  31.199951    9.699951       -9.050049     3.0      5877.695312         False          False    True
+7    6172.795410    6126.845459 -3199.883057  6172.795410   33.500000  6126.845459  31.199951   14.750000       -4.000000     1.0      5877.695312         False          False    True
+8    6176.795410    6145.595459 -3118.633057  6176.795410   18.750000  6145.595459  31.199951    0.000000      -18.750000     1.0      5877.695312         False          False    True
+high_util=False, low_loss=True, low_delay=True, ramp_up=False, ramp_down_cwnd=True, ramp_down_q=True, ramp_down_bq=True, total_losses=0, buffer=112435/1024.[0m
+[08/10 15:32:04]  --------------------------------------------------------------------------------
+[08/10 15:32:04]  Iteration: 44 (0 solution, 43 counterexamples)
+[08/10 15:32:08]  Generator returned sat in 2.660681 secs.
+[08/10 15:32:08]  Candidate solution: 
+[1m[94mif(mode_f[0][t]):
+	if(Ld_f[0][t] > Ld_f[0][t-1]):
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1)
+	else:
+		c_f[0][t] = max(0.01, 1/2v.c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 2)
+else:
+	c_f[0][t] = max(0.01, 0v.c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1/2)
+
+if(Ld_f[0][t] > Ld_f[0][t-1]):
+	mode[0][t] = True
+elif(qbound[t-1][8]):
+	mode[0][t] = False
+else:
+	mode[0][t] = mode[0][t-1][0m
+[08/10 15:32:09]  Improved gap from 2/37 to 100
+[08/10 15:32:09]  Improved number of small numbers from 113 to 113 out of a max of 114
+[08/10 15:32:09]  Verifer returned sat in 1.413334 secs.
+[08/10 15:32:09]  Counter example: 
+[93m   tot_arrival_t  tot_service_t     wasted_t  arrival_0,t   cwnd_0,t  service_0,t  losts_0,t   queue_t  bottle_queue_t  qdelay  last_decrease_f this_decrease exceed_queue_f mode_f
+0    5829.210313    5632.510312 -3362.383057  5829.210313    0.20000  5632.510312    0.10000  196.6000            99.9     6.0      5632.510312            -1             -1     -1
+1    5829.210313    5729.210313 -3362.383057  5829.210313    0.10000  5729.210313    0.10000   99.9000            -0.1     7.0      5829.110312         False          False   True
+2    5929.310312    5829.210313 -3362.383057  5929.310312  200.00000  5829.210313    0.10000  100.0000             0.0     1.0      5829.110312         False          False   True
+3    5929.310312    5929.210313 -3362.383057  5929.310312   99.90000  5929.210313    0.10000    0.0000          -100.0     2.0      5929.210313         False          False   True
+4    6129.610312    6029.210313 -3362.383057  6129.610312  200.30000  6029.210313    0.20000  100.2000             0.2     1.0      5929.210313         False          False   True
+5    6129.610312    6129.210313 -3362.383057  6129.610312   99.15000  6129.210313    0.20000    0.2000           -99.8     2.0      5929.210313         False          False   True
+6    6330.985312    6229.522813 -3362.383057  6330.985312  201.57500  6229.522813    1.57500   99.8875             0.2     1.0      5929.210313         False          False   True
+7    6330.985312    6329.210313 -3362.383057  6330.985312   99.78750  6329.210313    1.57500    0.2000           -99.8     2.0      5929.210313         False          False   True
+8    6532.679063    6429.210313 -3362.383057  6532.679063  201.89375  6429.210313    3.26875  100.2000             0.2     1.0      5929.210313         False          False   True
+high_util=True, low_loss=False, low_delay=True, ramp_up=True, ramp_down_cwnd=False, ramp_down_q=False, ramp_down_bq=False, total_losses=3, buffer=1/5.[0m
+[08/10 15:32:10]  --------------------------------------------------------------------------------
+[08/10 15:32:10]  Iteration: 45 (0 solution, 44 counterexamples)

@@ -70,8 +70,12 @@ exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
                   for n in range(c.N)]  # definition variable
 last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
                    for n in range(c.N)]  # definition variable
+mode_f = np.array([[z3.Bool(f"Def__mode_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)])  # definition variable
 definition_vars.extend(flatten(exceed_queue_f))
 definition_vars.extend(flatten(last_decrease_f))
+definition_vars.extend(flatten(mode_f[:, 1:]))
+verifier_vars.extend(flatten(mode_f[:, :1]))
 
 if(dynamic_buffer):
     verifier_vars.append(c.buf_min)
@@ -90,7 +94,8 @@ first = history  # First cwnd idx decided by synthesized cca
 loss_rate = n_losses / ((c.T-1) - first)
 delay_bound = ideal_max_queue * c.C * (c.R + c.D)
 
-(desired, high_util, low_loss, low_delay, ramp_up, ramp_down, total_losses) = \
+(desired, high_util, low_loss, low_delay, ramp_up,
+ ramp_down_cwnd, ramp_down_q, ramp_down_bq, total_losses) = \
     desired_high_util_low_loss_low_delay(
         c, v, first, util_frac, loss_rate, delay_bound)
 assert isinstance(desired, z3.ExprRef)
@@ -99,22 +104,27 @@ assert isinstance(desired, z3.ExprRef)
 vn = VariableNames(v)
 lower_bound = 0.01
 coeffs = {
-    'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
-    'c_f[0]_delay': z3.Real('Gen__coeff_c_f[0]_delay'),
-    'c_f[0]_noloss': z3.Real('Gen__coeff_c_f[0]_noloss'),
-    'ack_f[0]_loss': z3.Real('Gen__coeff_ack_f[0]_loss'),
-    'ack_f[0]_delay': z3.Real('Gen__coeff_ack_f[0]_delay'),
-    'ack_f[0]_noloss': z3.Real('Gen__coeff_ack_f[0]_noloss')
+    'c_f[0]_mode0_if': z3.Real('Gen__coeff_c_f[0]_mode0_if'),
+    'c_f[0]_mode0_else': z3.Real('Gen__coeff_c_f[0]_mode0_else'),
+    'ack_f[0]_mode0_if': z3.Real('Gen__coeff_ack_f[0]_mode0_if'),
+    'ack_f[0]_mode0_else': z3.Real('Gen__coeff_ack_f[0]_mode0_else'),
+
+    'c_f[0]_mode1_if': z3.Real('Gen__coeff_c_f[0]_mode1_if'),
+    # 'c_f[0]_mode1_else': z3.Real('Gen__coeff_c_f[0]_mode1_else'),
+    'ack_f[0]_mode1_if': z3.Real('Gen__coeff_ack_f[0]_mode1_if'),
+    # 'ack_f[0]_mode1_else': z3.Real('Gen__coeff_ack_f[0]_mode1_else')
 }
 
 consts = {
-    'c_f[0]_loss': z3.Real('Gen__const_c_f[0]_loss'),
-    'c_f[0]_delay': z3.Real('Gen__const_c_f[0]_delay'),
-    'c_f[0]_noloss': z3.Real('Gen__const_c_f[0]_noloss')
+    'c_f[0]_mode0_if': z3.Real('Gen__const_c_f[0]_mode0_if'),
+    'c_f[0]_mode0_else': z3.Real('Gen__const_c_f[0]_mode0_else'),
+
+    'c_f[0]_mode1_if': z3.Real('Gen__const_c_f[0]_mode1_if'),
+    # 'c_f[0]_mode1_else': z3.Real('Gen__const_c_f[0]_mode1_else')
 }
 
 # This is in multiples of Rm
-qsize_thresh = z3.Real('Gen__const_qsize_thresh')
+qsize_thresh = z3.Real('Gen__const_qsize_thresh_mode_switch')
 # qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
 qsize_thresh_choices = [x for x in range(1, c.T)]
 assert isinstance(qsize_thresh, z3.ArithRef)
@@ -148,6 +158,7 @@ assert first >= 1
 assert history >= lag
 assert lag == c.R
 assert c.R == 1
+assert c.N == 1
 
 # definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
 definition_constrs.append(last_decrease_f[0][0] == v.S_f[0][0])
@@ -171,11 +182,23 @@ for t in range(lag, c.T):
             z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
 
+for t in range(1, c.T):
+    # mode selection
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    definition_constrs.append(
+        z3.If(loss_detected, mode_f[0][t],  # else
+              z3.If(exceed_queue_f[0][t], z3.Not(mode_f[0][t]),
+              mode_f[0][t] == mode_f[0][t-1])))
+    # True means mode0 otherwise mode1
+    # Check if we want this_decrease instead of exceed_queue_f
+
 for t in range(first, c.T):
     assert history > lag
     loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     delay_detected = exceed_queue_f[0][t]
+    acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
 
+    # When did decrease happen
     # TODO: see if we want to replace the last statement
     #  with (S_f[n][t-lag] > last_decrease[n][t-1])
     this_decrease = z3.And(delay_detected,
@@ -189,18 +212,24 @@ for t in range(first, c.T):
         z3.Not(this_decrease),
         last_decrease_f[0][t] == last_decrease_f[0][t-1]))
 
-    acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
-    rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-lag])
-                + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes)
-                + consts['c_f[0]_loss'])
-    rhs_delay = (get_product_ite(coeffs['c_f[0]_delay'], v.c_f[0][t-lag])
-                 + get_product_ite(coeffs['ack_f[0]_delay'], acked_bytes)
-                 + consts['c_f[0]_delay'])
-    rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-lag])
-                  + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes)
-                  + consts['c_f[0]_noloss'])
-    rhs = z3.If(loss_detected, rhs_loss, z3.If(
-        delay_detected, rhs_delay, rhs_noloss))
+    # mode 0
+    rhs_mode0_if = (
+        get_product_ite(coeffs['c_f[0]_mode0_if'], v.c_f[0][t-lag])
+        + get_product_ite(coeffs['ack_f[0]_mode0_if'], acked_bytes)
+        + consts['c_f[0]_mode0_if'])
+    rhs_mode0_else = (
+        get_product_ite(coeffs['c_f[0]_mode0_else'], v.c_f[0][t-lag])
+        + get_product_ite(coeffs['ack_f[0]_mode0_else'], acked_bytes)
+        + consts['c_f[0]_mode0_else'])
+
+    # mode 1
+    rhs_mode1_if = (
+        get_product_ite(coeffs['c_f[0]_mode1_if'], v.c_f[0][t-lag])
+        + get_product_ite(coeffs['ack_f[0]_mode1_if'], acked_bytes)
+        + consts['c_f[0]_mode1_if'])
+
+    rhs = z3.If(mode_f[0][t], z3.If(
+        loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
     assert isinstance(rhs, z3.ArithRef)
     definition_constrs.append(
         v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound)
@@ -213,7 +242,8 @@ definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
 assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
-                  flatten(list(consts.values())) + [qsize_thresh])
+                  flatten(list(consts.values())) +
+                  [qsize_thresh])
 
 
 # Method overrides
@@ -228,9 +258,10 @@ def get_val_list(model: z3.ModelRef, l: List) -> List:
             try:
                 val = bool(model.eval(x))
             except z3.z3types.Z3Exception:
-                # Ideally this should not happen
-                # This will mostly only happen in buggy cases.
-                assert False
+                # # Ideally this should not happen
+                # # This will mostly only happen in buggy cases.
+                # assert False
+                # Happens when mode_f[n][0] is don't care
                 val = -1
             ret.append(val)
         else:
@@ -267,6 +298,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         for t in range(1, c.T)])
     df["exceed_queue_f"] = [-1] + \
         get_val_list(counter_example, exceed_queue_f[0][1:])
+    df["mode_f"] = get_val_list(counter_example, mode_f[0])
 
     ret = "{}".format(df)
     conds = {
@@ -274,7 +306,9 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         "low_loss": low_loss,
         "low_delay": low_delay,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down,
+        "ramp_down_cwnd": ramp_down_cwnd,
+        "ramp_down_q": ramp_down_q,
+        "ramp_down_bq": ramp_down_bq,
         "total_losses": total_losses,
         # "measured_loss_rate": total_losses/((c.T-1) - first)
     }
@@ -297,27 +331,41 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
-    rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
-                f"v.c_f[0][t-{lag}]"
-                f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
-                f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
-                f" + {solution.eval(consts['c_f[0]_loss'])}")
-    rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
-                  f"v.c_f[0][t-{lag}]"
-                  f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
-                  f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
-                  f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    rhs_delay = (f"{solution.eval(coeffs['c_f[0]_delay'])}"
-                 f"v.c_f[0][t-{lag}]"
-                 f" + {solution.eval(coeffs['ack_f[0]_delay'])}"
-                 f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
-                 f" + {solution.eval(consts['c_f[0]_delay'])}")
-    ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
-           f"\tc_f[0][t] = max({lower_bound}, {rhs_loss})\n"
-           f"elif(qbound[t-1][{solution.eval(qsize_thresh)}]):\n"
-           f"\tc_f[0][t] = max({lower_bound}, {rhs_delay})\n"
+    rhs_mode0_if = (f"{solution.eval(coeffs['c_f[0]_mode0_if'])}"
+                    f"v.c_f[0][t-{lag}]"
+                    f" + {solution.eval(coeffs['ack_f[0]_mode0_if'])}"
+                    f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                    f" + {solution.eval(consts['c_f[0]_mode0_if'])}")
+    rhs_mode0_else = (f"{solution.eval(coeffs['c_f[0]_mode0_else'])}"
+                      f"v.c_f[0][t-{lag}]"
+                      f" + {solution.eval(coeffs['ack_f[0]_mode0_else'])}"
+                      f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                      f" + {solution.eval(consts['c_f[0]_mode0_else'])}")
+    rhs_mode1_if = (f"{solution.eval(coeffs['c_f[0]_mode1_if'])}"
+                    f"v.c_f[0][t-{lag}]"
+                    f" + {solution.eval(coeffs['ack_f[0]_mode1_if'])}"
+                    f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+                    f" + {solution.eval(consts['c_f[0]_mode1_if'])}")
+    # rhs_mode1_else = (f"{solution.eval(coeffs['c_f[0]_mode1_else'])}"
+    #                   f"v.c_f[0][t-{lag}]"
+    #                   f" + {solution.eval(coeffs['ack_f[0]_mode1_else'])}"
+    #                   f"(S_f[0][t-{lag}]-S_f[0][t-{history}])"
+    #                   f" + {solution.eval(consts['c_f[0]_mode1_else'])}")
+
+    ret = (f"if(mode_f[0][t]):\n"
+           f"\tif(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+           f"\t\tc_f[0][t] = max({lower_bound}, {rhs_mode0_if})\n"
+           f"\telse:\n"
+           f"\t\tc_f[0][t] = max({lower_bound}, {rhs_mode0_else})\n"
            f"else:\n"
-           f"\tc_f[0][t] = max({lower_bound}, {rhs_noloss})")
+           f"\tc_f[0][t] = max({lower_bound}, {rhs_mode1_if})\n\n"
+
+           f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+           f"\tmode[0][t] = True\n"
+           f"elif(qbound[t-1][{solution.eval(qsize_thresh)}]):\n"
+           f"\tmode[0][t] = False\n"
+           f"else:\n"
+           f"\tmode[0][t] = mode[0][t-1]")
     return ret
 
 
@@ -372,6 +420,7 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
         for t in range(1, c.T)])
     df["exceed_queue_f"] = [-1] + \
         get_val_list(solution, this_exceed_queue_f[1:])
+    df["mode_f"] = get_val_list(solution, _get_renamed(mode_f[0]))
 
     ret = "{}".format(df)
     conds = {

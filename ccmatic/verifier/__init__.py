@@ -497,20 +497,24 @@ def desired_high_util_low_loss_low_delay(
     total_losses = z3.Sum(*loss_list)
 
     ramp_up = v.c_f[0][-1] > v.c_f[0][first]
-    # Check if we want something on queue.
-    # ramp_down = v.c_f[0][-1] < v.c_f[0][first]
-    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+
+    ramp_down_cwnd = v.c_f[0][-1] < v.c_f[0][first]
+
+    ramp_down_q = (v.A[-1] - v.L[-1] - v.S[-1] <
+                   v.A[first] - v.L[first] - v.S[first])
+
     # Bottleneck queue should decrese
-    ramp_down = (
+    ramp_down_bq = (
         (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
         < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+
     low_loss = total_losses <= loss_rate * ((c.T-1) - first)
     desired = z3.And(
         z3.Or(high_util, ramp_up),
-        z3.Or(low_loss, ramp_down),
-        z3.Or(low_delay, ramp_down))
-    return (desired, high_util, low_loss, low_delay, ramp_up, ramp_down,
-            total_losses)
+        z3.Or(low_loss, ramp_down_cwnd, ramp_down_bq),
+        z3.Or(low_delay, ramp_down_cwnd, ramp_down_bq))
+    return (desired, high_util, low_loss, low_delay, ramp_up, ramp_down_cwnd,
+            ramp_down_q, ramp_down_bq, total_losses)
 
 
 def maximize_gap(

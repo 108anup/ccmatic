@@ -1,4 +1,7 @@
+from typing import List
+import numpy as np
 import z3
+from ccac.config import ModelConfig
 from ccmatic.common import flatten
 from ccmatic.verifier import (desired_high_util_low_delay, desired_high_util_low_loss, desired_high_util_low_loss_low_delay, get_cex_df,
                               setup_ccac, setup_ccac_definitions,
@@ -6,21 +9,32 @@ from ccmatic.verifier import (desired_high_util_low_delay, desired_high_util_low
 from cegis.util import unroll_assertions
 from pyz3_utils.my_solver import MySolver
 
-from ccac.variables import VariableNames
+from ccac.variables import VariableNames, Variables
 
 lag = 1
 history = 4
 use_loss = True
 deterministic_loss = True
 util_frac = 0.5
-n_losses = 2
+n_losses = 3
 dynamic_buffer = True
 buf_size = 1
-max_ideal_queue = 2
+max_ideal_queue = 8
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
-c, s, v = setup_ccac()
+# Config
+c = ModelConfig.default()
+c.compose = True
+c.cca = "paced"
+c.simplify = False
+c.calculate_qdel = False
+c.calculate_qbound = True
+c.C = 100
+c.T = 9
+
+s = MySolver()
+v = Variables(c, s)
 vn = VariableNames(v)
 if(deterministic_loss):
     c.deterministic_loss = True
@@ -39,6 +53,12 @@ sd = setup_ccac_definitions(c, v)
 se = setup_ccac_environment(c, v)
 ccac_definitions = z3.And(*sd.assertion_list)
 environment_assertions = se.assertion_list
+exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
+                  for n in range(c.N)]  # definition variable
+last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)]  # definition variable
+mode_f = np.array([[z3.Bool(f"Def__mode_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)])  # definition variable
 
 if(dynamic_buffer):
     # Buffer should have atleast one packet
@@ -62,14 +82,70 @@ delay_bound = max_ideal_queue * c.C * (c.R + c.D)
 # desired = z3.And(z3.Or(high_util, ramp_up), z3.Or(low_loss, ramp_down))
 # (desired, high_util, low_delay, ramp_up, ramp_down) = \
 #     desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
-(desired, high_util, low_loss, low_delay, ramp_up, ramp_down, total_losses) = \
+(desired, high_util, low_loss, low_delay, ramp_up,
+ ramp_down_cwnd, ramp_down_q, ramp_down_bq, total_losses) = \
     desired_high_util_low_loss_low_delay(
         c, v, first, util_frac, loss_rate, delay_bound)
 assert isinstance(desired, z3.ExprRef)
 
+lower_bound = 0.01
+qsize_thresh = 2
 definition_constrs = []
+
+assert first >= 1
+assert history >= lag
+assert lag == c.R
+assert c.R == 1
+
+# definition_constrs.append(last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
+definition_constrs.append(last_decrease_f[0][0] == v.S_f[0][0])
+for t in range(1, first):
+    definition_constrs.append(
+        z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
+                   last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(
+        z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+                   last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+    # Const last_decrease in history
+    # definition_constrs.append(
+    #     last_decrease_f[0][t] == v.S_f[0][t])
+
+for t in range(lag, c.T):
+    for dt in range(c.T):
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
+                       exceed_queue_f[0][t]))
+        definition_constrs.append(
+            z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
+                       z3.Not(exceed_queue_f[0][t])))
+
+for t in range(1, c.T):
+    # mode selection
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    definition_constrs.append(
+        z3.If(loss_detected, mode_f[0][t],  # else
+              z3.If(exceed_queue_f[0][t], z3.Not(mode_f[0][t]),
+              mode_f[0][t] == mode_f[0][t-1])))
+    # True means mode0 otherwise mode1
+    # Check if we want this_decrease instead of exceed_queue_f
+
 for t in range(first, c.T):
-    cond = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+    delay_detected = exceed_queue_f[0][t]
+    # When did decrease happen
+    # TODO: see if we want to replace the last statement
+    #  with (S_f[n][t-lag] > last_decrease[n][t-1])
+    this_decrease = z3.And(delay_detected,
+                           v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+                           v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1])
+
+    definition_constrs.append(z3.Implies(
+        this_decrease,
+        last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+    definition_constrs.append(z3.Implies(
+        z3.Not(this_decrease),
+        last_decrease_f[0][t] == last_decrease_f[0][t-1]))
+
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     # rhs_loss = v.c_f[0][t-lag] / 2
 
     # RoCC, AIMD hybrid
@@ -85,23 +161,78 @@ for t in range(first, c.T):
     rhs_loss = 0
     rhs_noloss = (v.S[t-1] - v.S[t-4])
 
-    rhs = z3.If(cond, rhs_loss, rhs_noloss)
+    # mode switch between MIMD and RoCC
+    rhs_mode0_if = 0.5 * v.c_f[0][t-lag] - 1/2
+    rhs_mode0_else = 1.5 * v.c_f[0][t-lag]
+    rhs_mode1_if = (v.S[t-1] - v.S[t-4])
+
+    rhs = z3.If(mode_f[0][t], z3.If(
+        loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
     assert isinstance(rhs, z3.ArithRef)
-    definition_constrs.append(v.c_f[0][t] == z3.If(rhs >= 0.01, rhs, 0.01))
+    definition_constrs.append(
+        v.c_f[0][t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
 
     # definition_constrs.append(v.c_f[0][t] == 4096)
     # definition_constrs.append(v.c_f[0][t] == 0.01)
 
 
+def get_val_list(model: z3.ModelRef, l: List) -> List:
+    ret = []
+    for x in l:
+        if(isinstance(x, z3.BoolRef)):
+            try:
+                val = bool(model.eval(x))
+            except z3.z3types.Z3Exception:
+                # # Ideally this should not happen
+                # # This will mostly only happen in buggy cases.
+                # assert False
+                # Happens when mode_f[n][0] is don't care
+                val = -1
+            ret.append(val)
+        else:
+            raise NotImplementedError
+    return ret
+
+
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    ret = "{}".format(df.astype(float))
+    qdelay = []
+    for t in range(c.T):
+        assert bool(counter_example.eval(v.qbound[t][0]))
+        for dt in range(c.T-1, -1, -1):
+            value = counter_example.eval(v.qbound[t][dt])
+            try:
+                bool_value = bool(value)
+            except z3.z3types.Z3Exception:
+                bool_value = True
+            if(bool_value):
+                qdelay.append(dt+1)
+                break
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+    df["last_decrease_f"] = np.array(
+        [counter_example.eval(x).as_fraction()
+         for x in last_decrease_f[0]]).astype(float)
+    df["this_decrease"] = [-1] + get_val_list(counter_example, [
+        counter_example.eval(z3.And(
+            exceed_queue_f[0][t],
+            v.S_f[0][t-lag] > v.S_f[0][t-lag-1],
+            v.S_f[0][t-1-lag] >= last_decrease_f[0][t-1]
+        ))
+        for t in range(1, c.T)])
+    df["exceed_queue_f"] = [-1] + \
+        get_val_list(counter_example, exceed_queue_f[0][1:])
+    df["mode_f"] = get_val_list(counter_example, mode_f[0])
+
+    ret = "{}".format(df)
     conds = {
         "high_util": high_util,
         "low_loss": low_loss,
         "low_delay": low_delay,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down,
+        "ramp_down_cwnd": ramp_down_cwnd,
+        "ramp_down_q": ramp_down_q,
+        "ramp_down_bq": ramp_down_bq,
         "total_losses": total_losses
     }
     if(dynamic_buffer):
@@ -113,6 +244,13 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
             "{}={}".format(cond_name, counter_example.eval(cond)))
     ret += "\n{}".format(", ".join(cond_list))
     # ret += " out of {} tsteps.".format(((c.T-1) - first))
+
+    qbound_vals = []
+    for qbound_list in v.qbound:
+        qbound_val_list = get_val_list(counter_example, qbound_list)
+        qbound_vals.append(qbound_val_list)
+    ret += "\n{}".format(np.array(qbound_vals))
+
     return ret
 
 
@@ -132,6 +270,8 @@ sat = verifier.check()
 if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
+
+# import ipdb; ipdb.set_trace()
 
 # else:
 #     # Unsat core
