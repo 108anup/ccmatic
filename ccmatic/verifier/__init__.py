@@ -498,12 +498,12 @@ def desired_high_util_low_loss_low_delay(
 
     ramp_up = v.c_f[0][-1] > v.c_f[0][first]
     # Check if we want something on queue.
-    ramp_down = v.c_f[0][-1] < v.c_f[0][first]
+    # ramp_down = v.c_f[0][-1] < v.c_f[0][first]
     # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
     # Bottleneck queue should decrese
-    # ramp_down = (
-    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    ramp_down = (
+        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+        < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
     low_loss = total_losses <= loss_rate * ((c.T-1) - first)
     desired = z3.And(
         z3.Or(high_util, ramp_up),
