@@ -1,5 +1,6 @@
 import numpy as np
 import z3
+from ccmatic.common import get_val_list
 from ccmatic.verifier import (desired_high_util_low_delay,
                               desired_high_util_low_loss, get_cex_df,
                               setup_ccac_definitions, setup_ccac_environment)
@@ -14,7 +15,7 @@ use_loss = False
 deterministic_loss = False
 util_frac = 0.5
 n_losses = 1
-ideal_max_queue = 4
+ideal_max_queue = 8
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -91,6 +92,37 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
             qdelay.append(c.T)
     assert len(qdelay) == c.T
     df["qdelay"] = np.array(qdelay).astype(float)
+
+    tot_cwnd = [
+        counter_example.eval(z3.Sum(*v.c_f[:, t])).as_fraction()
+        for t in range(c.T)]
+    df['tot_cwnd_t'] = tot_cwnd
+
+    single_rocc_cwnd = ([-1 for t in range(first)] +
+                        [counter_example.eval(v.S[t-1] - v.S[t-4]).as_fraction()
+                         for t in range(first, c.T)])
+    single_rocc_arrival = [counter_example.eval(
+        v.A[t]).as_fraction() for t in range(first)]
+    for t in range(first, c.T):
+        single_rocc_arrival.append(
+            max(single_rocc_arrival[t-1],
+                counter_example.eval(
+                    v.S[t-c.R] + (v.S[t-1] - v.S[t-4])).as_fraction())
+        )
+    df['single_rocc_arrival_t'] = single_rocc_arrival
+    df['single_rocc_cwnd_t'] = single_rocc_cwnd
+
+    df['diff_service_1,t'] = [-1] + [counter_example.eval(v.S_f[1][t] - v.S_f[1][t-1]).as_fraction() for t in range(1, c.T)]
+    df['diff_service_0,t'] = [-1] + [counter_example.eval(v.S_f[0][t] - v.S_f[0][t-1]).as_fraction() for t in range(1, c.T)]
+    df['diff_tot_service_t'] = [-1] + [counter_example.eval(v.S[t] - v.S[t-1]).as_fraction() for t in range(1, c.T)]
+
+    df['diff_arrival_1,t'] = [-1] + [counter_example.eval(v.A_f[1][t] - v.A_f[1][t-1]).as_fraction() for t in range(1, c.T)]
+    df['diff_arrival_0,t'] = [-1] + [counter_example.eval(v.A_f[0][t] - v.A_f[0][t-1]).as_fraction() for t in range(1, c.T)]
+    df['diff_tot_arrival_t'] = [-1] + [counter_example.eval(v.A[t] - v.A[t-1]).as_fraction() for t in range(1, c.T)]
+
+    df['queue_0,t'] = [counter_example.eval(v.A_f[0][t] - v.L_f[0][t] - v.S_f[0][t]).as_fraction() for t in range(c.T)]
+    df['queue_1,t'] = [counter_example.eval(v.A_f[1][t] - v.L_f[1][t] - v.S_f[1][t]).as_fraction() for t in range(c.T)]
+
     ret = "{}".format(df.astype(float))
     conds = {
         "high_util": high_util,
@@ -106,6 +138,18 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
         cond_list.append(
             "{}={}".format(cond_name, counter_example.eval(cond)))
     ret += "\n{}.".format(", ".join(cond_list))
+
+    # qbound_vals = []
+    # for qbound_list in v.qbound:
+    #     qbound_val_list = get_val_list(counter_example, qbound_list)
+    #     qbound_vals.append(qbound_val_list)
+    # ret += "\n{}".format(np.array(qbound_vals))
+
+    qdel_vals = []
+    for qdel_list in v.qdel:
+        qdel_val_list = get_val_list(counter_example, qdel_list)
+        qdel_vals.append(qdel_val_list)
+    ret += "\n{}".format(np.array(qdel_vals).astype(int))
     return ret
 
 

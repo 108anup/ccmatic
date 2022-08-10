@@ -13,7 +13,7 @@ from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
-from ccmatic.common import flatten
+from ccmatic.common import flatten, get_val_list
 
 from .verifier import (desired_high_util_low_loss,
                        desired_high_util_low_loss_low_delay, get_cegis_vars,
@@ -249,24 +249,6 @@ generator_vars = (flatten(list(coeffs.values())) +
 # Method overrides
 # These use function closures, hence have to be defined here.
 # Can use partial functions to use these elsewhere.
-
-
-def get_val_list(model: z3.ModelRef, l: List) -> List:
-    ret = []
-    for x in l:
-        if(isinstance(x, z3.BoolRef)):
-            try:
-                val = bool(model.eval(x))
-            except z3.z3types.Z3Exception:
-                # # Ideally this should not happen
-                # # This will mostly only happen in buggy cases.
-                # assert False
-                # Happens when mode_f[n][0] is don't care
-                val = -1
-            ret.append(val)
-        else:
-            raise NotImplementedError
-    return ret
 
 
 def get_counter_example_str(counter_example: z3.ModelRef,

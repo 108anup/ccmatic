@@ -273,15 +273,23 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
     for t in range(c.T):
         s.add(z3.Sum(*v.qdel[t]) <= 1)
 
+    # qdel[t][dt] is True iff queueing delay is >=dt but <dt+1
+    # If queuing delay at time t1 is dt1, then queuing delay at time t2=t1+1,
+    # cannot be more than dt1+1. I.e., qdel[t2][dt1+1+1] has to be false.
+    # Note qdel[t2][dt1+1] can be true as queueing delay at t1+1 can be dt1+1.
     for t1 in range(c.T-1):
         for dt1 in range(c.T):
             t2 = t1+1
             # dt2 starts from dt1+1+1
-            for dt2 in range(dt1+1+1, c.T):
-                s.add(z3.Implies(
-                    v.qdel[t1][dt1],
-                    z3.Not(v.qdel[t2][dt2])
-                ))
+            s.add(z3.Implies(
+                v.qdel[t1][dt1],
+                z3.And(*[z3.Not(v.qdel[t2][dt2])
+                         for dt2 in range(dt1+1+1, c.T)])
+            ))
+            s.add(z3.Implies(
+                v.qdel[t1][dt1],
+                z3.Or(*[v.qdel[t2][dt2] for dt2 in range(min(c.T, dt1+1+1))])
+            ))
 
 
 def setup_ccac():
