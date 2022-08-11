@@ -26,7 +26,7 @@ c.simplify = False
 c.calculate_qdel = False
 c.calculate_qbound = True
 c.C = 100
-c.T = 9
+c.T = 15
 
 s = MySolver()
 v = Variables(c, s)
@@ -117,9 +117,9 @@ for t in range(first, c.T):
     rhs_loss = v.c_f[0][t-lag] / 2
     rhs_noloss = v.c_f[0][t-lag] + 1
 
-    # RoCC
-    rhs_loss = (v.S[t-1] - v.S[t-4]) + 1
-    rhs_noloss = (v.S[t-1] - v.S[t-4]) + 1
+    # # RoCC
+    # rhs_loss = (v.S[t-1] - v.S[t-4]) + 1
+    # rhs_noloss = (v.S[t-1] - v.S[t-4]) + 1
 
     rhs = z3.If(this_decrease, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
