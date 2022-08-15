@@ -452,9 +452,9 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
     high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
     # If the cwnd0 is very low then CCA should increase cwnd
     ramp_up = z3.Or(*[v.c_f[n][-1] > v.c_f[n][first] for n in range(c.N)])
-    ramp_down = v.c_f[0][-1] < v.c_f[0][first]
+    # ramp_down = v.c_f[0][-1] < v.c_f[0][first]
     # If the queue is large to begin with then, CCA should cause queue to decrease.
-    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+    ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
 
     # Bottleneck queue should decrease
     # ramp_down = (
@@ -584,7 +584,66 @@ def maximize_gap(
     assert sat == orig_sat
     model = s.model()
 
-    logger.info("Improved gap from {} to {}".format(cur_min, best_gap))
+    logger.info("Improved gap from {} to {}".format(float(cur_min), best_gap))
+    return sat, model
+
+
+def worst_counter_example(
+    first: int, c: ModelConfig, v: Variables, ctx: z3.Context, verifier: MySolver
+) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
+    """
+    Adds constraints as a side effect to the verifier formulation
+    to get the counter example that causes generator to move the most.
+    """
+    s = verifier
+
+    orig_sat = s.check()
+    if str(orig_sat) != "sat":
+        return orig_sat, None
+
+    objective_rhs = 0
+    for t in range(c.T):
+        objective_rhs += v.A[t] - v.L[t] - v.S[t]
+        objective_rhs += v.C0 + c.C * t - v.W[t] - v.S[t]
+        if(t >= c.D):
+            objective_rhs += v.S[t] - (v.C0 + c.C * (t-c.D) - v.W[t-c.D])
+    objective_rhs += v.A[-1] - v.L[-1] - v.S[-1] - (v.A[first] - v.L[first] - v.S[first])
+    objective_rhs += -v.S[-1] + v.S[first]
+
+    orig_model = s.model()
+    cur_obj = get_raw_value(orig_model.eval(objective_rhs))
+
+    binary_search = BinarySearch(0, 1e5, c.C * c.D/64)
+    objective = z3.Real('objective', ctx=ctx)
+
+    s.add(objective <= objective_rhs)
+
+    while True:
+        pt = binary_search.next_pt()
+        if pt is None:
+            break
+
+        s.push()
+        s.add(objective >= pt)
+        sat = s.check()
+        s.pop()
+
+        if(str(sat) == 'sat'):
+            binary_search.register_pt(pt, 1)
+        elif str(sat) == "unknown":
+            binary_search.register_pt(pt, 2)
+        else:
+            assert str(sat) == "unsat", f"Unknown value: {str(sat)}"
+            binary_search.register_pt(pt, 3)
+
+    best_obj, _, _ = binary_search.get_bounds()
+    s.add(objective >= best_obj)
+
+    sat = s.check()
+    assert sat == orig_sat
+    model = s.model()
+
+    logger.info("Improved obj from {} to {}".format(float(cur_obj), best_obj))
     return sat, model
 
 
@@ -594,6 +653,17 @@ def run_verifier_incomplete(
     # This is meant to create a partial function by
     # getting c, v, ctx from closure.
     _, _ = maximize_gap(c, v, ctx, verifier)
+    sat, _, model = find_small_denom_soln(verifier, 4096)
+    return sat, model
+
+
+def run_verifier_incomplete_wce(
+    first: int, c: ModelConfig, v: Variables, ctx: z3.Context, verifier: MySolver
+) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
+    # This is meant to create a partial function by
+    # getting c, v, ctx from closure.
+    _, _ = maximize_gap(c, v, ctx, verifier)
+    _, _ = worst_counter_example(first, c, v, ctx, verifier)
     sat, _, model = find_small_denom_soln(verifier, 4096)
     return sat, model
 

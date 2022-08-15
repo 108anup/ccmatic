@@ -13,7 +13,7 @@ from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
 from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac,
+                       run_verifier_incomplete, run_verifier_incomplete_wce, setup_ccac,
                        setup_ccac_definitions, setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
@@ -208,7 +208,7 @@ try:
     cg.get_generator_view = get_generator_view
     cg.get_verifier_view = get_verifier_view
     run_verifier = functools.partial(
-        run_verifier_incomplete, c=c, v=v, ctx=ctx)
+        run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
     cg.run_verifier = run_verifier
     cg.run()
 
