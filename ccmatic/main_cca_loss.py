@@ -29,11 +29,11 @@ DEBUG = False
 lag = 1
 history = 4
 deterministic_loss = True
-util_frac = 0.5
-n_losses = 2
+util_frac = 0.8
+n_losses = 3
 dynamic_buffer = True
 buf_size = 1
-ideal_max_queue = 2
+ideal_max_queue = 3
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -131,7 +131,8 @@ assert isinstance(qsize_thresh, z3.ArithRef)
 
 # Search constr
 search_range_coeff = [Fraction(i, 2) for i in range(5)]
-search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
+# search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
+search_range_const = [-1, 0, 1]
 # search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())):
