@@ -29,11 +29,11 @@ DEBUG = False
 lag = 1
 history = 4
 deterministic_loss = True
-util_frac = 0.8
-n_losses = 3
+util_frac = 0.1
+n_losses = 4
 dynamic_buffer = True
 buf_size = 1
-ideal_max_queue = 3
+ideal_max_queue = 8
 
 # Verifier
 # Dummy variables used to create CCAC formulation only

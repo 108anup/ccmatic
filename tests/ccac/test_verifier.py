@@ -6,7 +6,7 @@ from ccmatic.common import flatten, get_val_list
 from ccmatic.verifier import (desired_high_util_low_delay, desired_high_util_low_loss, desired_high_util_low_loss_low_delay, get_cex_df,
                               setup_ccac, setup_ccac_definitions,
                               setup_ccac_environment)
-from cegis.util import unroll_assertions
+from cegis.util import optimize_var, unroll_assertions
 from pyz3_utils.my_solver import MySolver
 
 from ccac.variables import VariableNames, Variables
@@ -15,11 +15,11 @@ lag = 1
 history = 4
 use_loss = True
 deterministic_loss = True
-util_frac = 0.5
-n_losses = 3
+util_frac_val = 0.33
+n_losses_val = 4
 dynamic_buffer = True
 buf_size = 1
-max_ideal_queue = 8
+max_ideal_queue_val = 8
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -74,8 +74,13 @@ assert c.N == 1
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
+util_frac = z3.Real('util_frac')
+n_losses = z3.Real('n_losses')
+max_ideal_queue = z3.Real('max_ideal_queue')
+
 loss_rate = n_losses / ((c.T-1) - first)
 delay_bound = max_ideal_queue * c.C * (c.R + c.D)
+
 
 # (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
 #     desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
@@ -118,6 +123,10 @@ for t in range(lag, c.T):
         definition_constrs.append(
             z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                        z3.Not(exceed_queue_f[0][t])))
+
+
+# for t in range(c.T):
+#     definition_constrs.append(mode_f[0][t])
 
 for t in range(1, c.T):
     # mode selection
@@ -165,6 +174,17 @@ for t in range(first, c.T):
     rhs_mode0_if = 0.5 * v.c_f[0][t-lag] - 1/2
     rhs_mode0_else = 1.5 * v.c_f[0][t-lag]
     rhs_mode1_if = (v.S[t-1] - v.S[t-4])
+
+    # RoCC + AIMD, no mode switching needed
+    rhs_mode0_if = 0.5 * v.c_f[0][t-lag]
+    rhs_mode0_else = (v.S[t-1] - v.S[t-4])
+    rhs_mode1_if = (v.S[t-1] - v.S[t-4])
+
+    # ramp down bq, aggressive
+    rhs_mode0_if = 0
+    rhs_mode0_else = 0.5 * v.c_f[0][t-lag] + 2 * (v.S[t-1] - v.S[t-4])
+    rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
+
 
     rhs = z3.If(mode_f[0][t], z3.If(
         loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
@@ -246,6 +266,10 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*definition_constrs))
 verifier.add(z3.Not(desired))
+verifier.push()
+verifier.add(util_frac == util_frac_val)
+verifier.add(max_ideal_queue == max_ideal_queue_val)
+verifier.add(n_losses == n_losses_val)
 # verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
 sat = verifier.check()
@@ -269,3 +293,21 @@ if(str(sat) == "sat"):
 #     unsat_core = dummy.unsat_core()
 #     print(len(unsat_core))
 #     import ipdb; ipdb.set_trace()
+
+verifier.pop()
+
+optimization_list = [
+    (util_frac, 0.1, 1, 0.01, True, util_frac_val),
+    (max_ideal_queue, 1, 16, 1, False, max_ideal_queue_val),
+    (n_losses, 0, c.T-1-first, 1, False, n_losses_val),
+]
+
+for i, (variable, lo, hi, eps, maximize, val) in enumerate(optimization_list):
+    verifier.push()
+    for j in range(len(optimization_list)):
+        if(i != j):
+            print("Setting {} as {}".format(
+                optimization_list[j][0].decl().name(), optimization_list[j][-1]))
+            verifier.add(optimization_list[j][0] == optimization_list[j][-1])
+    print(optimize_var(verifier, variable, lo, hi, eps, maximize))
+    verifier.pop()

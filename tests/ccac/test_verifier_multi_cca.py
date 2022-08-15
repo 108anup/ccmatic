@@ -123,6 +123,13 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df['queue_0,t'] = [counter_example.eval(v.A_f[0][t] - v.L_f[0][t] - v.S_f[0][t]).as_fraction() for t in range(c.T)]
     df['queue_1,t'] = [counter_example.eval(v.A_f[1][t] - v.L_f[1][t] - v.S_f[1][t]).as_fraction() for t in range(c.T)]
 
+    df['cwnd_rocc,t'] = ([-1 for _ in range(first)]
+                         + [max(0.01, counter_example.eval(v.S[t-1] - v.S[t-4]).as_fraction()) for t in range(first, c.T)])
+    df['arrival_rocc,t'] = (
+        [counter_example.eval(v.A[t]).as_fraction() for t in range(first)] + [max(
+            counter_example.eval(v.A[t-1]).as_fraction(),
+            counter_example.eval(v.S[t-c.R] + df['cwnd_rocc,t'][t]).as_fraction()) for t in range(first, c.T)])
+
     ret = "{}".format(df.astype(float))
     conds = {
         "high_util": high_util,
