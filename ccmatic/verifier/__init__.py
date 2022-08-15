@@ -292,6 +292,23 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
             ))
 
 
+def fifo_service(c: ModelConfig, s: MySolver, v: Variables):
+    # If a flow sees service of more bytes than in queue at a particular time,
+    # then each flow should have seen service of all their bytes in the queue
+    # at that particular time.
+    for n1 in range(c.N):
+        for t1 in range(c.T):
+            for t2 in range(t1+1, c.T):
+                s.add(
+                    z3.Implies(
+                        v.S_f[n1][t2] - v.S_f[n1][t1] >
+                        v.A_f[n1][t1] - v.L_f[n1][t1] - v.S_f[n1][t1],
+                        z3.And(
+                            *[v.S_f[n2][t2] - v.S_f[n2][t1] >=
+                              v.A_f[n2][t1] - v.L_f[n2][t1] - v.S_f[n2][t1]
+                              for n2 in range(c.N)])))
+
+
 def setup_ccac():
     c = ModelConfig.default()
     c.compose = True
@@ -409,6 +426,7 @@ def setup_ccac_environment(c, v):
         # non-deterministically.
     if(c.N > 1):
         multi_flows(c, s, v)  # Flows should be serviced fairly
+        fifo_service(c, s, v)
     epsilon_alpha(c, s, v)  # Verifier only
 
     # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
@@ -454,12 +472,12 @@ def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
     ramp_up = z3.Or(*[v.c_f[n][-1] > v.c_f[n][first] for n in range(c.N)])
     # ramp_down = v.c_f[0][-1] < v.c_f[0][first]
     # If the queue is large to begin with then, CCA should cause queue to decrease.
-    ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
 
     # Bottleneck queue should decrease
-    # ramp_down = (
-    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    ramp_down = (
+        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+        < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
 
     desired = z3.And(
         z3.Or(high_util, ramp_up),
@@ -520,8 +538,8 @@ def desired_high_util_low_loss_low_delay(
     low_loss = total_losses <= loss_rate * ((c.T-1) - first)
     desired = z3.And(
         z3.Or(high_util, ramp_up),
-        z3.Or(low_loss, ramp_down_cwnd, ramp_down_bq),
-        z3.Or(low_delay, ramp_down_cwnd, ramp_down_bq))
+        z3.Or(low_loss, ramp_down_bq),
+        z3.Or(low_delay, ramp_down_bq))
     return (desired, high_util, low_loss, low_delay, ramp_up, ramp_down_cwnd,
             ramp_down_q, ramp_down_bq, total_losses)
 

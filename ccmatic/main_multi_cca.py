@@ -3,6 +3,7 @@ import logging
 from fractions import Fraction
 from typing import List
 
+import numpy as np
 import z3
 from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
@@ -13,9 +14,9 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac_definitions,
-                       setup_ccac_environment)
+from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df,
+                       get_gen_cex_df, run_verifier_incomplete,
+                       setup_ccac_definitions, setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -33,7 +34,6 @@ ideal_max_queue = 2
 # Verifier
 # Dummy variables used to create CCAC formulation only
 # Config
-# c, s, v = setup_ccac()
 c = ModelConfig.default()
 c.compose = True
 c.cca = "paced"
@@ -65,7 +65,10 @@ environment = z3.And(*se.assertion_list)
 verifier_vars, definition_vars = get_cegis_vars(c, v, history)
 exceed_queue_f = [[z3.Bool(f"Def__exceed_queue_{n},{t}") for t in range(c.T)]
                   for n in range(c.N)]  # definition variable
+last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
+                   for n in range(c.N)]  # definition variable
 definition_vars.extend(flatten(exceed_queue_f))
+definition_vars.extend(flatten(last_decrease_f))
 
 
 # Desired properties
@@ -122,31 +125,57 @@ def get_product_ite(coeff, rvar, cdomain=search_range):
 
 
 assert first >= 1
+assert history >= lag
+assert lag == c.R
+assert c.R == 1
+
 for n in range(c.N):
-    for t in range(first, c.T):
-        assert history > lag
-        assert lag == 1
-        assert c.R == 1
-        # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
-        # loss_detected = (v.A_f[n][t-1] - v.Ld_f[n][t] - v.S_f[n][t-1]
-        #                  >= qsize_thresh * c.C * (c.R + c.D))
+    # definition_constrs.append(last_decrease_f[n][0] == v.A_f[n][0] - v.L_f[n][0])
+    definition_constrs.append(last_decrease_f[n][0] == v.S_f[n][0])
+    for t in range(1, first):
+        definition_constrs.append(
+            z3.Implies(v.c_f[n][t] < v.c_f[n][t-1],
+                       last_decrease_f[n][t] == v.A_f[n][t] - v.L_f[n][t]))
+        definition_constrs.append(
+            z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+                       last_decrease_f[n][t] == last_decrease_f[n][t-1]))
+        # Const last_decrease in history
+        # definition_constrs.append(
+        #     last_decrease_f[n][t] == v.S_f[n][t])
+
+for n in range(c.N):
+    for t in range(lag, c.T):
         for dt in range(c.T):
             definition_constrs.append(
-                z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t][dt]),
+                z3.Implies(z3.And(dt == qsize_thresh, v.qbound[t-lag][dt]),
                            exceed_queue_f[n][t]))
             definition_constrs.append(
-                z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t][dt])),
+                z3.Implies(z3.And(dt == qsize_thresh, z3.Not(v.qbound[t-lag][dt])),
                            z3.Not(exceed_queue_f[n][t])))
+
+for n in range(c.N):
+    for t in range(first, c.T):
         loss_detected = exceed_queue_f[n][t]
+
         # Exceed queue really does not depend on n
         # Is this realisitic? All flows share the exact same view for
         # qbound and qdel?
+        this_decrease = z3.And(loss_detected,
+                               v.S_f[n][t-lag] > v.S_f[n][t-lag-1],
+                               v.S_f[n][t-1-lag] >= last_decrease_f[n][t-1])
 
-        acked_bytes = v.S_f[0][t-lag] - v.S_f[0][t-history]
-        rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[0][t-lag])
+        definition_constrs.append(z3.Implies(
+            this_decrease,
+            last_decrease_f[n][t] == v.A_f[n][t] - v.L_f[n][t]))
+        definition_constrs.append(z3.Implies(
+            z3.Not(this_decrease),
+            last_decrease_f[n][t] == last_decrease_f[n][t-1]))
+
+        acked_bytes = v.S_f[n][t-lag] - v.S_f[n][t-history]
+        rhs_loss = (get_product_ite(coeffs['c_f[n]_loss'], v.c_f[n][t-lag])
                     + get_product_ite(coeffs['ack_f[n]_loss'], acked_bytes)
                     + consts['c_f[n]_loss'])
-        rhs_noloss = (get_product_ite(coeffs['c_f[n]_noloss'], v.c_f[0][t-lag])
+        rhs_noloss = (get_product_ite(coeffs['c_f[n]_noloss'], v.c_f[n][t-lag])
                       + get_product_ite(coeffs['ack_f[n]_noloss'], acked_bytes)
                       + consts['c_f[n]_noloss'])
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
@@ -173,6 +202,21 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
+    qdelay = []
+    for t in range(c.T):
+        assert bool(counter_example.eval(v.qbound[t][0]))
+        for dt in range(c.T-1, -1, -1):
+            value = counter_example.eval(v.qbound[t][dt])
+            try:
+                bool_value = bool(value)
+            except z3.z3types.Z3Exception:
+                bool_value = True
+            if(bool_value):
+                qdelay.append(dt+1)
+                break
+    assert len(qdelay) == c.T
+    df["qdelay"] = np.array(qdelay).astype(float)
+
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,

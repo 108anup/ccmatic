@@ -15,9 +15,8 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, desired_high_util_low_loss,
-                       get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, setup_ccac,
+from .verifier import (desired_high_util_low_delay, get_cegis_vars,
+                       get_cex_df, get_gen_cex_df, run_verifier_incomplete,
                        setup_ccac_definitions, setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
