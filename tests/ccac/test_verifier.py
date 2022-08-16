@@ -1,4 +1,10 @@
-from typing import List
+import logging
+import pandas as pd
+from collections import namedtuple
+import math
+import pprint
+import queue
+from typing import List, NamedTuple
 import numpy as np
 import z3
 from ccac.config import ModelConfig
@@ -6,7 +12,8 @@ from ccmatic.common import flatten, get_val_list
 from ccmatic.verifier import (desired_high_util_low_delay, desired_high_util_low_loss, desired_high_util_low_loss_low_delay, get_cex_df,
                               setup_ccac, setup_ccac_definitions,
                               setup_ccac_environment)
-from cegis.util import optimize_var, unroll_assertions
+from cegis.util import Metric, optimize_multi_var, optimize_var, unroll_assertions
+from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 from ccac.variables import VariableNames, Variables
@@ -185,6 +192,10 @@ for t in range(first, c.T):
     rhs_mode0_else = 0.5 * v.c_f[0][t-lag] + 2 * (v.S[t-1] - v.S[t-4])
     rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
 
+    rhs_mode0_if = 0
+    rhs_mode0_else = 1.5 * (v.S[t-1] - v.S[t-4])
+    rhs_mode1_if = 1.5 * (v.S[t-1] - v.S[t-4])
+
 
     rhs = z3.If(mode_f[0][t], z3.If(
         loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
@@ -296,18 +307,35 @@ if(str(sat) == "sat"):
 
 verifier.pop()
 
+GlobalConfig().logging_levels['cegis'] = logging.INFO
+logger = logging.getLogger('cegis')
+GlobalConfig().default_logger_setup(logger)
+
 optimization_list = [
-    (util_frac, 0.1, 1, 0.01, True, util_frac_val),
-    (max_ideal_queue, 1, 16, 1, False, max_ideal_queue_val),
-    (n_losses, 0, c.T-1-first, 1, False, n_losses_val),
+    Metric(util_frac, 0.1, 1, 0.01, True),
+    Metric(max_ideal_queue, 1, 16, 0.01, False),
+    Metric(n_losses, 0, c.T-1-first, 1, False),
 ]
 
-for i, (variable, lo, hi, eps, maximize, val) in enumerate(optimization_list):
-    verifier.push()
-    for j in range(len(optimization_list)):
-        if(i != j):
-            print("Setting {} as {}".format(
-                optimization_list[j][0].decl().name(), optimization_list[j][-1]))
-            verifier.add(optimization_list[j][0] == optimization_list[j][-1])
-    print(optimize_var(verifier, variable, lo, hi, eps, maximize))
-    verifier.pop()
+ret = optimize_multi_var(verifier, optimization_list)
+df = pd.DataFrame(ret)
+sort_columns = [x.name() for x in optimization_list]
+sort_order = [x.maximize for x in optimization_list]
+df = df.sort_values(by=sort_columns, ascending=sort_order)
+print(df)
+
+# for i, (variable, lo, hi, eps, maximize, val) in enumerate(optimization_list):
+#     verifier.push()
+#     for j in range(len(optimization_list)):
+#         if(i != j):
+#             print("Setting {} as {}".format(
+#                 optimization_list[j][0].decl().name(), optimization_list[j][-1]))
+#             verifier.add(optimization_list[j][0] == optimization_list[j][-1])
+#     optimal_bounds = optimize_var(verifier, variable, lo, hi, eps, maximize)
+#     # print(optimal_bounds)
+#     if(maximize):
+#         optimal_value = math.floor(optimal_bounds[0]/eps) * eps
+#     else:
+#         optimal_value = math.ceil(optimal_bounds[-1]/eps) * eps
+#     print(optimal_value)
+#     verifier.pop()
