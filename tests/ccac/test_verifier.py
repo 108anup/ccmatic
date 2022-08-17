@@ -23,10 +23,10 @@ history = 4
 use_loss = True
 deterministic_loss = True
 util_frac_val = 0.33
-n_losses_val = 4
+n_losses_val = 3
 dynamic_buffer = True
 buf_size = 1
-max_ideal_queue_val = 8
+max_ideal_queue_val = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only

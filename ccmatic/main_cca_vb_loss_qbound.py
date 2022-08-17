@@ -29,11 +29,11 @@ DEBUG = False
 lag = 1
 history = 4
 deterministic_loss = True
-util_frac = 0.33
+util_frac = 0.5
 n_losses = 3
 dynamic_buffer = True
 buf_size = 1
-ideal_max_queue = 4
+ideal_max_queue = 2
 
 # Verifier
 # Dummy variables used to create CCAC formulation only
@@ -90,7 +90,8 @@ first = history  # First cwnd idx decided by synthesized cca
 loss_rate = n_losses / ((c.T-1) - first)
 delay_bound = ideal_max_queue * c.C * (c.R + c.D)
 
-(desired, high_util, low_loss, low_delay, ramp_up, ramp_down, total_losses) = \
+(desired, high_util, low_loss, low_delay, ramp_up,
+ ramp_down_cwnd, ramp_down_q, ramp_down_bq, total_losses) = \
     desired_high_util_low_loss_low_delay(
         c, v, first, util_frac, loss_rate, delay_bound)
 assert isinstance(desired, z3.ExprRef)
@@ -274,7 +275,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         "low_loss": low_loss,
         "low_delay": low_delay,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down,
+        "ramp_down": ramp_down_bq,
         "total_losses": total_losses,
         # "measured_loss_rate": total_losses/((c.T-1) - first)
     }
@@ -379,7 +380,7 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
         "low_loss": low_loss,
         "low_delay": low_delay,
         "ramp_up": ramp_up,
-        "ramp_down": ramp_down,
+        "ramp_down": ramp_down_bq,
         "total_losses": total_losses,
         # "measured_loss_rate": total_losses/((c.T-1) - first)
     }
