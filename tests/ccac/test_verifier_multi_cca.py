@@ -25,7 +25,7 @@ c.cca = "paced"
 c.simplify = False
 c.calculate_qdel = True
 c.C = 100
-c.T = 9
+c.T = 15
 c.N = 2
 
 s = MySolver()
@@ -170,6 +170,24 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*definition_constrs))
 verifier.add(z3.Not(desired))
+
+# Check performant trace
+# verifier.add(desired)
+
+# Periodic counter example
+for t in range(first):
+    last = c.T-first
+    for n in range(c.N):
+        verifier.add(v.c_f[n][t] == v.c_f[n][last+t])
+        verifier.add(v.A_f[n][t] - v.L_f[n][t] - v.S_f[n][t]
+                     == v.A_f[n][last+t] - v.L_f[n][last+t] - v.S_f[n][last+t])
+    verifier.add(
+        v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t]) ==
+        v.A[last+t] - v.L[last+t] - (v.C0 + c.C * (last+t) - v.W[last+t]))
+
+    # verifier.add(v.c_f[n][0] == v.c_f[n][c.T-1])
+    # verifier.add(v.A_f[n][c.T-1] - v.L_f[n][c.T-1] - v.S_f[n][c.T-1]
+    #              == v.A_f[n][0] - v.L_f[n][0] - v.S_f[n][0])
 # verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
 sat = verifier.check()

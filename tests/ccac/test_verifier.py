@@ -196,6 +196,10 @@ for t in range(first, c.T):
     rhs_mode0_else = 1.5 * (v.S[t-1] - v.S[t-4])
     rhs_mode1_if = 1.5 * (v.S[t-1] - v.S[t-4])
 
+    # rhs_mode0_if = 0
+    # rhs_mode0_else = 2 * (v.S[t-1] - v.S[t-4])
+    # rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
+
 
     rhs = z3.If(mode_f[0][t], z3.If(
         loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
@@ -277,6 +281,11 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*definition_constrs))
 verifier.add(z3.Not(desired))
+
+# How do the good traces look like:
+# verifier.add(desired)
+# verifier.add(v.L[c.T-2] > v.L[first])
+
 verifier.push()
 verifier.add(util_frac == util_frac_val)
 verifier.add(max_ideal_queue == max_ideal_queue_val)
