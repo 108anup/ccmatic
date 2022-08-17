@@ -6,9 +6,13 @@ python>=3, z3, numpy, pandas, all dependencies of ccac.
 Uses repositories: pyz3_utils, cegis, and ccac.
 
 ## Run
+Files `ccmatic/main_*` differ in environment/template. The desired properties are configurable.
 ```
-python -m ccmatic.main_cca_lossess  # Syntheisze CCA for inf buffer case
-python -m ccmatic.main_cca_loss  # Synthesize CCA that handles loss
+python -m ccmatic.main_cca_lossess  # Infinite buffer. No loss/delay signals.
+python -m ccmatic.main_multi_cca_lossless  # Infinite buffer with possibly multiple flows. Delay signal.
+python -m ccmatic.main_cca_vb_loss  # Finite (possibly variable buffer). Loss signal.
+python -m ccmatic.main_cca_vb_loss_qbound  # Finite (possibly variable buffer). Loss signal, delay signal.
+python -m ccmatic.main_cca_vb_modeswitch  # Finite (possibly variable buffer). Loss/delay signal to switch between two modes, loss signal in one mode.
 ```
 
 ## Play around

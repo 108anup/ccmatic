@@ -14,8 +14,8 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen
 from ccmatic.common import flatten
 
-from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df,
-                       get_gen_cex_df, run_verifier_incomplete,
+from .verifier import (desired_high_util_low_delay, get_cegis_vars,
+                       get_cex_df, get_gen_cex_df, run_verifier_incomplete,
                        setup_ccac_definitions, setup_ccac_environment)
 
 logger = logging.getLogger('cca_gen')
@@ -69,7 +69,6 @@ last_decrease_f = [[z3.Real(f"Def__last_decrease_{n},{t}") for t in range(c.T)]
                    for n in range(c.N)]  # definition variable
 definition_vars.extend(flatten(exceed_queue_f))
 definition_vars.extend(flatten(last_decrease_f))
-
 
 # Desired properties
 first = history  # First cwnd idx decided by synthesized cca
@@ -137,7 +136,7 @@ for n in range(c.N):
             z3.Implies(v.c_f[n][t] < v.c_f[n][t-1],
                        last_decrease_f[n][t] == v.A_f[n][t] - v.L_f[n][t]))
         definition_constrs.append(
-            z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+            z3.Implies(v.c_f[n][t] >= v.c_f[n][t-1],
                        last_decrease_f[n][t] == last_decrease_f[n][t-1]))
         # Const last_decrease in history
         # definition_constrs.append(
@@ -155,11 +154,23 @@ for n in range(c.N):
 
 for n in range(c.N):
     for t in range(first, c.T):
-        loss_detected = exceed_queue_f[n][t]
+        # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+
+        # This is meaningless as c.C * (c.R + c.D) is unknown...
+        # loss_detected = (v.A_f[0][t-lag] - v.Ld_f[0][t]
+        #                  - v.S_f[0][t-lag] >= qsize_thresh * c.C * (c.R + c.D))
 
         # Exceed queue really does not depend on n
         # Is this realisitic? All flows share the exact same view for
         # qbound and qdel?
+        loss_detected = exceed_queue_f[n][t]
+
+        # Decrease this time iff queue exceeded AND new qdelay measurement (i.e.,
+        # new packets received) AND in the previous cycle we had received all the
+        # packets sent since last decrease (S_f[n][t-lag-1] >=
+        # last_decrease[n][t-1])
+        # TODO: see if we want to replace the last statement
+        #  with (S_f[n][t-lag] > last_decrease[n][t-1])
         this_decrease = z3.And(loss_detected,
                                v.S_f[n][t-lag] > v.S_f[n][t-lag-1],
                                v.S_f[n][t-1-lag] >= last_decrease_f[n][t-1])
@@ -217,6 +228,20 @@ def get_counter_example_str(counter_example: z3.ModelRef,
     assert len(qdelay) == c.T
     df["qdelay"] = np.array(qdelay).astype(float)
 
+    for n in range(c.N):
+        df[f"last_decrease_f_{n},t"] = np.array(
+            [counter_example.eval(x).as_fraction()
+             for x in last_decrease_f[n]]).astype(float)
+        df[f"this_decrease_f_{n},t"] = [-1] + [
+            bool(counter_example.eval(z3.And(
+                exceed_queue_f[n][t],
+                v.S_f[n][t-lag] > v.S_f[n][t-lag-1],
+                v.S_f[n][t-1-lag] >= last_decrease_f[n][t-1]
+            )))
+            for t in range(1, c.T)]
+        df[f"exceed_queue_f_{n},t"] = [-1] + \
+            [bool(counter_example.eval(x)) for x in exceed_queue_f[n][1:]]
+
     ret = "{}".format(df)
     conds = {
         "high_util": high_util,
@@ -259,7 +284,8 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
+    df = get_gen_cex_df(solution, v, vn, n_cex, c)
+    gen_view_str = "{}".format(df)
     return gen_view_str
 
 
