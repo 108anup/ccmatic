@@ -192,13 +192,18 @@ for t in range(first, c.T):
     rhs_mode0_else = 0.5 * v.c_f[0][t-lag] + 2 * (v.S[t-1] - v.S[t-4])
     rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
 
+    # Multiple of RoCC on no loss and 0 on loss.
     rhs_mode0_if = 0
     rhs_mode0_else = 1.5 * (v.S[t-1] - v.S[t-4])
     rhs_mode1_if = 1.5 * (v.S[t-1] - v.S[t-4])
 
-    # rhs_mode0_if = 0
-    # rhs_mode0_else = 2 * (v.S[t-1] - v.S[t-4])
-    # rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
+    rhs_mode0_if = 0
+    rhs_mode0_else = 2 * (v.S[t-1] - v.S[t-4])
+    rhs_mode1_if = 2 * (v.S[t-1] - v.S[t-4])
+
+    rhs_mode0_if = 0
+    rhs_mode0_else = 1 * (v.S[t-1] - v.S[t-4])
+    rhs_mode1_if = 1 * (v.S[t-1] - v.S[t-4])
 
 
     rhs = z3.If(mode_f[0][t], z3.If(
@@ -321,9 +326,9 @@ logger = logging.getLogger('cegis')
 GlobalConfig().default_logger_setup(logger)
 
 optimization_list = [
-    Metric(util_frac, 0.1, 1, 0.01, True),
-    Metric(max_ideal_queue, 1, 16, 0.01, False),
-    Metric(n_losses, 0, c.T-1-first, 1, False),
+    Metric(util_frac, 0.1, 1, 0.001, True),
+    Metric(max_ideal_queue, 1, 16, 0.001, False),
+    Metric(n_losses, 0, c.T-1-first, 0.001, False),
 ]
 
 ret = optimize_multi_var(verifier, optimization_list)
