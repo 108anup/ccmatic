@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from typing import List, Union
 
+from cegis import NAME_TEMPLATE
+
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -63,3 +65,21 @@ def get_val_list(model: z3.ModelRef, l: List) -> List:
         else:
             raise NotImplementedError
     return ret
+
+
+def get_product_ite(discrete_var, cts_var, discrete_domain):
+    term_list = []
+    for val in discrete_domain:
+        term_list.append(z3.If(discrete_var == val, val * cts_var, 0))
+    return z3.Sum(*term_list)
+
+
+def get_renamed_vars(var_list, n_cex):
+    renamed_var_list = []
+    name_template = NAME_TEMPLATE + str(n_cex)
+    for def_var in var_list:
+        renamed_var = z3.Const(
+            name_template.format(def_var.decl().name()), def_var.sort())
+        renamed_var_list.append(renamed_var)
+    return renamed_var_list
+

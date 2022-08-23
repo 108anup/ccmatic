@@ -1,8 +1,24 @@
-from typing import List, Dict
-
-import z3
-
 from cegis import Cegis
+
+
+class CegisConfig:
+    # template
+    history: int = 4
+    template_queue_bound: bool = True
+    template_loss_oracle: bool = True  # Use ECN marks
+    template_mode_switching: bool = False
+    template_cca_lower_bound: float = 0.01
+
+    # desired
+    desired_util_f: float = 0.5
+    desired_queue_bound_multiplier: float = 2
+    desired_loss_bound: float = 3
+
+    # environment
+    deterministic_loss: bool = True
+    dynamic_buffer: bool = False
+    buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
+    N: int = 1
 
 
 class CegisCCAGen(Cegis):

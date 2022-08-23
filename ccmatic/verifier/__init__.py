@@ -9,7 +9,8 @@ from ccac.model import (ModelConfig, calculate_qbound, calculate_qdel, cca_aimd,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
 from ccac.variables import VariableNames, Variables
-from ccmatic.common import flatten, get_name_for_list
+from ccmatic.cegis import CegisConfig
+from ccmatic.common import flatten, get_name_for_list, get_renamed_vars, get_val_list
 from cegis import NAME_TEMPLATE
 from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
@@ -234,6 +235,35 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
                 z3.Not(v.qbound[t+1][dt+1])))
 
 
+def last_decrease_defs(c: ModelConfig, s: MySolver, v: Variables):
+
+    # s.add(v.last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
+    s.add(v.last_decrease_f[0][0] == v.S_f[0][0])
+
+    for t in range(1, c.T):
+        # Const last_decrease in history
+        # definition_constrs.append(
+        #     last_decrease_f[0][t] == v.S_f[0][t])
+
+        s.add(
+            z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
+                       v.last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
+        s.add(
+            z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
+                       v.last_decrease_f[0][t] == v.last_decrease_f[0][t-1]))
+
+
+def exceed_queue_defs(c: ModelConfig, s: MySolver, v: Variables):
+    for t in range(c.R, c.T):
+        for dt in range(c.T):
+            s.add(z3.Implies(
+                z3.And(dt == v.qsize_thresh, v.qbound[t-c.R][dt]),
+                v.exceed_queue_f[0][t]))
+            s.add(z3.Implies(
+                z3.And(dt == v.qsize_thresh, z3.Not(v.qbound[t-c.R][dt])),
+                z3.Not(v.exceed_queue_f[0][t])))
+
+
 def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
     # qdel[t][dt<t] is deterministic
     # qdel[t][dt>=t] is non-deterministic (including,
@@ -323,13 +353,13 @@ def setup_ccac():
     v = Variables(c, s)
 
     # s.add(z3.And(v.S[0] <= 1000, v.S[0] >= -1000))
-
     return c, s, v
 
 
 def get_cegis_vars(
-    c: ModelConfig, v: Variables, history: int
+    cc: CegisConfig, c: ModelConfig, v: Variables
 ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
+    history = cc.history
 
     conditional_vvars = []
     if(not c.compose):
@@ -384,6 +414,10 @@ def get_cegis_vars(
             [v.A_f[:, history:], v.A, v.c_f[:, history:], v.Ld_f[:, c.R:],
              v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
+    if(c.calculate_qbound):
+        definition_vars.extend(flatten(v.exceed_queue_f))
+        definition_vars.extend(flatten(v.last_decrease_f))
+
     return verifier_vars, definition_vars
 
 
@@ -403,11 +437,58 @@ def setup_ccac_definitions(c, v):
         calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
     if(c.calculate_qbound):
         calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
+        last_decrease_defs(c, s, v)
+        exceed_queue_defs(c, s, v)
     cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
     assert c.cca == "paced"
     cca_paced(c, s, v)  # Defs to compute rate.
 
     return s
+
+
+def setup_ccac_for_cegis(cc: CegisConfig):
+    c = ModelConfig.default()
+    c.compose = True
+    c.cca = "paced"
+    c.simplify = False
+    c.C = 100
+    c.T = 9
+
+    # Signals
+    c.loss_oracle = cc.template_loss_oracle
+
+    # environment
+    c.deterministic_loss = cc.deterministic_loss
+    if(cc.dynamic_buffer):
+        c.buf_max = z3.Real('buf_size')
+    else:
+        c.buf_max = cc.buffer_size_multiplier * c.C * (c.R + c.D)
+    c.buf_min = c.buf_max
+    c.N = cc.N
+
+    if(cc.template_queue_bound):
+        c.calculate_qbound = True
+    if(c.N > 1):
+        c.calculate_qdel = True
+    return c
+
+
+def setup_cegis_basic(cc: CegisConfig):
+    c = setup_ccac_for_cegis(cc)
+    s = MySolver()
+    v = Variables(c, s)
+
+    ccac_domain = z3.And(*s.assertion_list)
+    sd = setup_ccac_definitions(c, v)
+    se = setup_ccac_environment(c, v)
+    ccac_definitions = z3.And(*sd.assertion_list)
+    environment = z3.And(*se.assertion_list)
+
+    verifier_vars, definition_vars = get_cegis_vars(cc, c, v)
+
+    return (c, s, v,
+            ccac_domain, ccac_definitions, environment,
+            verifier_vars, definition_vars)
 
 
 def setup_ccac_environment(c, v):
@@ -438,10 +519,18 @@ def setup_ccac_environment(c, v):
 
     # Avoid weird cases where single packet is larger than BDP.
     s.add(v.alpha < 1/5)  # Verifier only
+
+    # Buffer should at least have one packet
+    if(isinstance(c.buf_min, z3.ExprRef)):
+        s.add(c.buf_min > v.alpha)
+
+        # Buffer taken from discrete choices
+        # s.add(z3.Or(c.buf_min == c.C * (c.R + c.D),
+        #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
     return s
 
 
-def setup_ccac_full(cca="copa"):
+def setup_ccac(cca="copa"):
     c = ModelConfig.default()
     c.compose = True
     c.cca = cca
@@ -461,88 +550,46 @@ def setup_ccac_full(cca="copa"):
     return c, s, v
 
 
-def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
+def get_all_desired(
+        cc: CegisConfig, c: ModelConfig, v: Variables):
+    first = cc.history
+
     cond_list = []
     for t in range(first, c.T):
-        cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
-    # Queue seen by a new packet should not be more that delay_bound
-    low_delay = z3.And(*cond_list)
-    # Serviced should be at least util_frac that could have been serviced
-    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
-    # If the cwnd0 is very low then CCA should increase cwnd
-    ramp_up = z3.Or(*[v.c_f[n][-1] > v.c_f[n][first] for n in range(c.N)])
-    # ramp_down = v.c_f[0][-1] < v.c_f[0][first]
-    # If the queue is large to begin with then, CCA should cause queue to decrease.
-    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+        # Queue seen by a new packet should not be
+        # more than desired_queue_bound
+        cond_list.append(
+            v.A[t] - v.L[t] - v.S[t] <=
+            cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
+    bounded_queue = z3.And(*cond_list)
 
-    # Bottleneck queue should decrease
-    ramp_down = (
-        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-        < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
-
-    desired = z3.And(
-        z3.Or(high_util, ramp_up),
-        z3.Or(low_delay, ramp_down))
-    return desired, high_util, low_delay, ramp_up, ramp_down
-
-
-def desired_high_util_low_loss(c, v, first, util_frac, loss_rate):
-    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
+    fefficient = (
+        v.S[-1] - v.S[first] >= cc.desired_util_f * c.C * (c.T-1-first-c.D))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
         loss_list.append(v.L[t] > v.L[t-1])
     total_losses = z3.Sum(*loss_list)
+    bounded_loss = total_losses <= cc.desired_loss_bound
 
-    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
-    ramp_down = v.c_f[0][-1] < v.c_f[0][first] # Check if we want something on queue.
-    # ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
-    # Bottleneck queue should decrese
-    # ramp_down = (
-    #     (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-    #     < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
-    low_loss = total_losses <= loss_rate * ((c.T-1) - first)
-    desired = z3.And(
-        z3.Or(high_util, ramp_up),
-        z3.Or(low_loss, ramp_down))
-    return (desired, high_util, low_loss, ramp_up, ramp_down,
-            total_losses)
-
-
-def desired_high_util_low_loss_low_delay(
-        c, v, first, util_frac, loss_rate, delay_bound):
-    cond_list = []
-    for t in range(first, c.T):
-        cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
-    # Queue seen by a new packet should not be more that delay_bound
-    low_delay = z3.And(*cond_list)
-
-    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
-
-    loss_list: List[z3.BoolRef] = []
-    for t in range(first, c.T):
-        loss_list.append(v.L[t] > v.L[t-1])
-    total_losses = z3.Sum(*loss_list)
-
-    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
-
+    # Induction invariants
+    ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
     ramp_down_cwnd = v.c_f[0][-1] < v.c_f[0][first]
-
     ramp_down_q = (v.A[-1] - v.L[-1] - v.S[-1] <
                    v.A[first] - v.L[first] - v.S[first])
-
-    # Bottleneck queue should decrese
     ramp_down_bq = (
         (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
         < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
 
-    low_loss = total_losses <= loss_rate * ((c.T-1) - first)
     desired = z3.And(
-        z3.Or(high_util, ramp_up),
-        z3.Or(low_loss, ramp_down_bq),
-        z3.Or(low_delay, ramp_down_bq))
-    return (desired, high_util, low_loss, low_delay, ramp_up, ramp_down_cwnd,
-            ramp_down_q, ramp_down_bq, total_losses)
+        z3.Or(fefficient, ramp_up_cwnd),
+        z3.Or(bounded_queue, ramp_down_bq),
+        z3.Or(bounded_loss, ramp_down_bq))
+    assert isinstance(desired, z3.ExprRef)
+
+    return (desired, fefficient, bounded_queue, bounded_loss,
+            ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
+            total_losses)
 
 
 def maximize_gap(
@@ -729,6 +776,35 @@ def get_cex_df(
                 v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
             )))
     df["bottle_queue_t"] = bottle_queue_t
+
+    if(c.calculate_qbound):
+        qdelay = []
+        for t in range(c.T):
+            assert bool(counter_example.eval(v.qbound[t][0]))
+            for dt in range(c.T-1, -1, -1):
+                value = counter_example.eval(v.qbound[t][dt])
+                try:
+                    bool_value = bool(value)
+                except z3.z3types.Z3Exception:
+                    bool_value = True
+                if(bool_value):
+                    qdelay.append(dt+1)
+                    break
+        assert len(qdelay) == c.T
+        df["qdelay"] = np.array(qdelay).astype(float)
+        df["last_decrease_f"] = np.array(
+            [counter_example.eval(x).as_fraction()
+             for x in v.last_decrease_f[0]]).astype(float)
+        df["exceed_queue_f"] = [-1] + \
+            get_val_list(counter_example, v.exceed_queue_f[0][1:])
+
+        # qbound_vals = []
+        # for qbound_list in v.qbound:
+        #     qbound_val_list = get_val_list(counter_example, qbound_list)
+        #     qbound_vals.append(qbound_val_list)
+        # ret += "\n{}".format(np.array(qbound_vals))
+        # ret += "\n{}".format(counter_example.eval(qsize_thresh))
+
     return df.astype(float)
 
 
@@ -764,4 +840,36 @@ def get_gen_cex_df(
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })
     df = pd.DataFrame(cex_dict).astype(float)
+
+    if(c.calculate_qbound):
+        qdelay = []
+        for t in range(c.T):
+            g_qbound_t = get_renamed_vars(v.qbound[t], n_cex)
+            assert bool(solution.eval(g_qbound_t[0]))
+            for dt in range(c.T-1, -1, -1):
+                value = solution.eval(g_qbound_t[dt])
+                try:
+                    bool_value = bool(value)
+                except z3.z3types.Z3Exception:
+                    bool_value = True
+                if(bool_value):
+                    qdelay.append(dt+1)
+                    break
+        assert len(qdelay) == c.T
+        df["qdelay"] = np.array(qdelay).astype(float)
+
+        g_last_decrease_f = get_renamed_vars(v.last_decrease_f[0], n_cex)
+        df["last_decrease_f"] = np.array(
+            [solution.eval(x).as_fraction()
+             for x in g_last_decrease_f]).astype(float)
+
+        g_exceed_queue_f = get_renamed_vars(v.exceed_queue_f[0], n_cex)
+        df["exceed_queue_f"] = [-1] + \
+            get_val_list(solution, g_exceed_queue_f[1:])
+
+        # qbound_vals = []
+        # for qbound_list in v.qbound:
+        #     qbound_val_list = get_val_list(solution, _get_renamed(qbound_list))
+        #     qbound_vals.append(qbound_val_list)
+        # ret += "\n{}".format(np.array(qbound_vals))
     return df
