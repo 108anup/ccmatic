@@ -5,50 +5,38 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
-from cegis.util import get_raw_value, tcolor
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen
-from ccmatic.common import flatten
+from ccmatic.cegis import CegisCCAGen, CegisConfig
+from ccmatic.common import flatten, get_product_ite
+from cegis.util import get_raw_value
 
-from .verifier import (desired_high_util_low_delay, get_cegis_vars, get_cex_df, get_gen_cex_df,
-                       run_verifier_incomplete, run_verifier_incomplete_wce, setup_ccac,
-                       setup_ccac_definitions, setup_ccac_environment)
+from .verifier import (get_all_desired, get_cex_df,
+                       get_desired_property_string, get_gen_cex_df,
+                       run_verifier_incomplete, run_verifier_incomplete_wce,
+                       setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 
 DEBUG = False
-lag = 1
-history = 4
-util_frac = 0.5
-ideal_max_queue = 2
+cc = CegisConfig()
+cc.desired_util_f = 0.33
+cc.desired_queue_bound_multiplier = 2
+cc.desired_loss_bound = 3
+(c, s, v,
+ ccac_domain, ccac_definitions, environment,
+ verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-# Verifier
-# Dummy variables used to create CCAC formulation only
-c, s, v = setup_ccac()
-c.loss_oracle = True
-# Consider the no loss case for simplicity
-c.buf_min = None
-c.buf_max = None
-ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v)
-se = setup_ccac_environment(c, v)
-ccac_definitions = z3.And(*sd.assertion_list)
-environment = z3.And(*se.assertion_list)
-verifier_vars, definition_vars = get_cegis_vars(c, v, history)
+(desired, fefficient, bounded_queue, bounded_loss,
+ ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
+ total_losses) = get_all_desired(cc, c, v)
 
-# Desired properties
-first = history  # First cwnd idx decided by synthesized cca
-delay_bound = ideal_max_queue * c.C * (c.R + c.D)
-
-(desired, high_util, low_delay, ramp_up, ramp_down) = \
-    desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
-assert isinstance(desired, z3.ExprRef)
-
-# Generator definitions
+# ----------------------------------------------------------------
+# TEMPLATE
+# Generator search space
 vn = VariableNames(v)
 rhs_var_symbols = ['S_f[0]']
 # rhs_var_symbols = ['c_f[0]', 'S_f[0]']
@@ -56,14 +44,14 @@ lhs_var_symbols = ['c_f[0]']
 lvar_lower_bounds = {
     'c_f[0]': 0.01
 }
-n_coeffs = len(rhs_var_symbols) * history
+n_coeffs = len(rhs_var_symbols) * cc.history
 n_const = 1
 
 # Coeff for determining rhs var, of lhs var, at shift t
 coeffs = {
     lvar: [
         [z3.Real('Gen__coeff_{}_{}_{}'.format(lvar, rvar, h))
-         for h in range(history)]
+         for h in range(cc.history)]
         for rvar in rhs_var_symbols
     ] for lvar in lhs_var_symbols
 }
@@ -85,28 +73,23 @@ assert(isinstance(search_constraints, z3.ExprRef))
 definition_constrs = []
 
 
-def get_product_ite(coeff, rvar):
-    term_list = []
-    for val in search_range:
-        term_list.append(z3.If(coeff == val, val * rvar, 0))
-    return z3.Sum(*term_list)
-
-
 def get_expr(lvar_symbol, t) -> z3.ArithRef:
     term_list = []
     for rvar_idx in range(len(rhs_var_symbols)):
         rvar_symbol = rhs_var_symbols[rvar_idx]
-        for h in range(history):
+        for h in range(cc.history):
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
-            time_idx = t - lag - h
+            time_idx = t - c.R - h
             rvar = eval('v.{}'.format(rvar_symbol))
-            this_term = get_product_ite(this_coeff, rvar[time_idx])
+            this_term = get_product_ite(
+                this_coeff, rvar[time_idx], search_range)
             term_list.append(this_term)
     expr = z3.Sum(*term_list) + consts[lvar_symbol]
     assert isinstance(expr, z3.ArithRef)
     return expr
 
 
+first = cc.history
 for lvar_symbol in lhs_var_symbols:
     lower_bound = lvar_lower_bounds[lvar_symbol]
     for t in range(first, c.T):
@@ -133,18 +116,11 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    ret = "{}".format(df)
-    conds = {
-        "high_util": high_util,
-        "low_delay": low_delay,
-        "ramp_up": ramp_up,
-        "ramp_down": ramp_down
-    }
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, counter_example.eval(cond)))
-    ret += "\n{}.".format(", ".join(cond_list))
+    desired_string = get_desired_property_string(
+        cc, c, fefficient, bounded_queue, bounded_loss,
+        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
+        total_losses, counter_example)
+    ret = "{}\n{}.".format(df, desired_string)
     return ret
 
 
@@ -155,7 +131,7 @@ def get_solution_str(solution: z3.ModelRef,
     rhs_expr = ""
     for rvar_idx in range(len(rhs_var_symbols)):
         rvar_symbol = rhs_var_symbols[rvar_idx]
-        for h in range(history):
+        for h in range(cc.history):
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
             this_coeff_val = get_raw_value(solution.eval(this_coeff))
             if(this_coeff_val != 0):
@@ -208,7 +184,9 @@ try:
     cg.get_generator_view = get_generator_view
     cg.get_verifier_view = get_verifier_view
     run_verifier = functools.partial(
-        run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
+        run_verifier_incomplete, c=c, v=v, ctx=ctx)
+    # run_verifier = functools.partial(
+    #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
     cg.run_verifier = run_verifier
     cg.run()
 

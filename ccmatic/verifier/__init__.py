@@ -873,3 +873,29 @@ def get_gen_cex_df(
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
     return df
+
+
+def get_desired_property_string(
+        cc: CegisConfig, c: ModelConfig,
+        fefficient, bounded_queue, bounded_loss,
+        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
+        total_losses,
+        model: z3.ModelRef):
+    conds = {
+        "fefficient": fefficient,
+        "bounded_queue": bounded_queue,
+        "bounded_loss": bounded_loss,
+        "ramp_up_cwnd": ramp_up_cwnd,
+        "ramp_down_bq": ramp_down_bq,
+        "ramp_down_q": ramp_down_q,
+        "ramp_down_cwnd": ramp_down_cwnd,
+        "total_losses": total_losses,
+    }
+    if(cc.dynamic_buffer):
+        conds["buffer"] = c.buf_min
+    cond_list = []
+    for cond_name, cond in conds.items():
+        cond_list.append(
+            "{}={}".format(cond_name, model.eval(cond)))
+    ret = ", ".join(cond_list)
+    return ret

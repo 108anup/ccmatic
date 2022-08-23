@@ -12,7 +12,7 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten, get_product_ite, get_renamed_vars, get_val_list
 
-from .verifier import (get_all_desired, get_cex_df, get_gen_cex_df,
+from .verifier import (get_all_desired, get_cex_df, get_desired_property_string, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -136,23 +136,11 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         for t in range(1, c.T)])
     ret = "{}".format(df)
 
-    conds = {
-        "fefficient": fefficient,
-        "bounded_queue": bounded_queue,
-        "bounded_loss": bounded_loss,
-        "ramp_up_cwnd": ramp_up_cwnd,
-        "ramp_down_bq": ramp_down_bq,
-        "ramp_down_q": ramp_down_q,
-        "ramp_down_cwnd": ramp_down_cwnd,
-        "total_losses": total_losses,
-    }
-    if(cc.dynamic_buffer):
-        conds["buffer"] = c.buf_min
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, counter_example.eval(cond)))
-    ret += "\n{}.".format(", ".join(cond_list))
+    desired_string = get_desired_property_string(
+        cc, c, fefficient, bounded_queue, bounded_loss,
+        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
+        total_losses, counter_example)
+    ret = "{}\n{}.".format(df, desired_string)
     return ret
 
 
@@ -204,23 +192,6 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
         for t in range(1, c.T)])
 
     ret = "{}".format(df)
-    conds = {
-        "fefficient": fefficient,
-        "bounded_queue": bounded_queue,
-        "bounded_loss": bounded_loss,
-        "ramp_up_cwnd": ramp_up_cwnd,
-        "ramp_down_bq": ramp_down_bq,
-        "ramp_down_q": ramp_down_q,
-        "ramp_down_cwnd": ramp_down_cwnd,
-        "total_losses": total_losses,
-    }
-    if(cc.dynamic_buffer):
-        conds["buffer"] = c.buf_min
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, solution.eval(cond)))
-    ret += "\n{}.".format(", ".join(cond_list))
     return ret
 
 
