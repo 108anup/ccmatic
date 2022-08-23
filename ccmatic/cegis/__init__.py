@@ -1,23 +1,29 @@
+from typing import Union
+
+import z3
+
 from cegis import Cegis
 
 
 class CegisConfig:
     # template
     history: int = 4
-    template_queue_bound: bool = True
-    template_loss_oracle: bool = True  # Use ECN marks
-    template_mode_switching: bool = False
     template_cca_lower_bound: float = 0.01
+    template_queue_bound: bool = False
+    template_mode_switching: bool = False
+    template_loss_oracle: bool = True  # Use ECN marks
 
     # desired
-    desired_util_f: float = 0.5
-    desired_queue_bound_multiplier: float = 2
-    desired_loss_bound: float = 3
+    desired_util_f: Union[float, z3.ExprRef]
+    desired_queue_bound_multiplier: Union[float, z3.ExprRef]
+    desired_loss_bound: Union[float, z3.ExprRef]
 
     # environment
-    deterministic_loss: bool = True
-    dynamic_buffer: bool = False
+    infinite_buffer: bool = False
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
+    dynamic_buffer: bool = False
+
+    deterministic_loss: bool = True
     N: int = 1
 
 

@@ -10,9 +10,11 @@ from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig
-from ccmatic.common import flatten, get_product_ite, get_renamed_vars, get_val_list
+from ccmatic.common import (flatten, get_product_ite, get_renamed_vars,
+                            get_val_list)
 
-from .verifier import (get_all_desired, get_cex_df, get_desired_property_string, get_gen_cex_df,
+from .verifier import (get_all_desired, get_cex_df,
+                       get_desired_property_string, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -84,19 +86,19 @@ for t in range(first, c.T):
     assert cc.history > c.R
     acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
     rhs_loss = (
-        get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-1],
+        get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-c.R],
                         search_range_coeff)
         + get_product_ite(coeffs['ack_f[0]_loss'],
                           acked_bytes, search_range_coeff)
         + consts['c_f[0]_loss'])
     rhs_delay = (
-        get_product_ite(coeffs['c_f[0]_delay'], v.c_f[0][t-1],
+        get_product_ite(coeffs['c_f[0]_delay'], v.c_f[0][t-c.R],
                         search_range_coeff)
         + get_product_ite(coeffs['ack_f[0]_delay'],
                           acked_bytes, search_range_coeff)
         + consts['c_f[0]_delay'])
     rhs_noloss = (
-        get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-1],
+        get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-c.R],
                         search_range_coeff)
         + get_product_ite(coeffs['ack_f[0]_noloss'],
                           acked_bytes, search_range_coeff)
@@ -147,17 +149,17 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
     rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
-                f"v.c_f[0][t-{1}]"
+                f"v.c_f[0][t-{c.R}]"
                 f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
                 f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
                 f" + {solution.eval(consts['c_f[0]_loss'])}")
     rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
-                  f"v.c_f[0][t-{1}]"
+                  f"v.c_f[0][t-{c.R}]"
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}")
     rhs_delay = (f"{solution.eval(coeffs['c_f[0]_delay'])}"
-                 f"v.c_f[0][t-{1}]"
+                 f"v.c_f[0][t-{c.R}]"
                  f" + {solution.eval(coeffs['ack_f[0]_delay'])}"
                  f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
                  f" + {solution.eval(consts['c_f[0]_delay'])}")

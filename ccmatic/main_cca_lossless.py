@@ -23,7 +23,6 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.history = 4
 cc.infinite_buffer = True
 cc.desired_util_f = 0.66
 cc.desired_queue_bound_multiplier = 2

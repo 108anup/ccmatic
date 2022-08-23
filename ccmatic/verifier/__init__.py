@@ -127,7 +127,8 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
     assert c.deterministic_loss
     assert c.buf_max == c.buf_min
 
-    s.add(v.A[0] - v.L[0] <= v.C0 + c.C * 0 - v.W[0] + c.buf_min)
+    if c.buf_min is not None:
+        s.add(v.A[0] - v.L[0] <= v.C0 + c.C * 0 - v.W[0] + c.buf_min)
     for t in range(1, c.T):
         if c.buf_min is None:  # no loss case
             s.add(v.L[t] == v.L[0])
@@ -459,7 +460,9 @@ def setup_ccac_for_cegis(cc: CegisConfig):
 
     # environment
     c.deterministic_loss = cc.deterministic_loss
-    if(cc.dynamic_buffer):
+    if(cc.infinite_buffer):
+        c.buf_max = None
+    elif(cc.dynamic_buffer):
         c.buf_max = z3.Real('buf_size')
     else:
         c.buf_max = cc.buffer_size_multiplier * c.C * (c.R + c.D)

@@ -16,6 +16,7 @@ from ccac.variables import VariableNames
 cc = CegisConfig()
 cc.history = 4
 cc.infinite_buffer = True
+cc.template_queue_bound = True
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_loss_bound = z3.Real('desired_loss_bound')
@@ -30,8 +31,17 @@ cc.desired_loss_bound = z3.Real('desired_loss_bound')
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
 template_definitions = []
+template_definitions.append(v.qsize_thresh == 1)
 for t in range(first, c.T):
-    rhs = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
+    delay_detected = v.exceed_queue_f[0][t]
+    this_decrease = z3.And(delay_detected,
+                           v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
+                           v.S_f[0][t-1-c.R] >= v.last_decrease_f[0][t-1])
+    rhs_delay = (
+        1/2 * v.c_f[0][t-c.R]
+        + 1/2 * (v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]))
+    rhs_nodelay = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
+    rhs = z3.If(this_decrease, rhs_delay, rhs_nodelay)
     assert isinstance(rhs, z3.ArithRef)
     template_definitions.append(
         v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
