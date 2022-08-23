@@ -419,6 +419,9 @@ def get_cegis_vars(
         definition_vars.extend(flatten(v.exceed_queue_f))
         definition_vars.extend(flatten(v.last_decrease_f))
 
+    if(isinstance(c.buf_min, z3.ExprRef)):
+        verifier_vars.append(c.buf_min)
+
     return verifier_vars, definition_vars
 
 
