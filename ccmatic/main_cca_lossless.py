@@ -12,8 +12,8 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten, get_product_ite
 from cegis.util import get_raw_value
 
-from .verifier import (get_all_desired, get_cex_df,
-                       get_desired_property_string, get_gen_cex_df,
+from .verifier import (SteadyStateVariable, get_all_desired, get_cex_df, get_desired_in_ss,
+                       get_desired_property_string, get_desired_ss_string, get_gen_cex_df, get_steady_state_conditions,
                        run_verifier_incomplete, run_verifier_incomplete_wce,
                        setup_cegis_basic)
 
@@ -24,20 +24,63 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 cc = CegisConfig()
 cc.infinite_buffer = True
-cc.desired_util_f = 0.66
+cc.desired_util_f = 0.33
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_bound = 0
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
- ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_all_desired(cc, c, v)
+(desired_ss, fefficient, bounded_queue, bounded_loss,
+ total_losses) = get_desired_in_ss(cc, c, v)
+
+steady_state_variables: List[SteadyStateVariable] = [
+    SteadyStateVariable(
+        'cwnd',
+        v.c_f[0][cc.history],
+        v.c_f[0][c.T-1],
+        z3.Int('SSThresh_cwnd_lo'),
+        z3.Int('SSThresh_cwnd_hi')),
+    SteadyStateVariable(
+        'queue',
+        v.A_f[0][cc.history] - v.L_f[0][cc.history] - v.S_f[0][cc.history],
+        v.A_f[0][c.T-1] - v.L_f[0][c.T-1] - v.S_f[0][c.T-1],
+        z3.Int('SSThresh_queue_lo'),
+        z3.Int('SSThresh_queue_hi'))
+]
+sv_dict = {sv.name: sv for sv in steady_state_variables}
+steady_state_exists = get_steady_state_conditions(
+    cc, c, v, steady_state_variables)
+
+desired = z3.And(steady_state_exists,
+                 z3.Implies(z3.And(*[sv.init_inside()
+                            for sv in steady_state_variables]), desired_ss))
 
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
+domain_clauses = []
+
+# Steady state search
+for sv in steady_state_variables:
+    domain_clauses.append(sv.lo >= 0)
+    domain_clauses.append(sv.hi >= 0)
+    domain_clauses.append(sv.hi >= sv.lo)
+
+domain_clauses.extend([
+    sv_dict['cwnd'].lo == c.C * (c.R),
+    sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D) + 2,
+    sv_dict['queue'].lo == 0,
+    sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+])
+
+# domain_clauses.extend([
+#     sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
+#     sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+#     sv_dict['queue'].lo == 0,
+#     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+# ])
+
 vn = VariableNames(v)
 rhs_var_symbols = ['S_f[0]']
 # rhs_var_symbols = ['c_f[0]', 'S_f[0]']
@@ -64,14 +107,13 @@ consts = {
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
 search_range = [-1, 0, 1]
-domain_clauses = []
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
-# Definitions (Template)
-definition_constrs = []
+# Generator definitions
+template_definitions = []
 
 
 def get_expr(lvar_symbol, t) -> z3.ArithRef:
@@ -96,17 +138,20 @@ for lvar_symbol in lhs_var_symbols:
     for t in range(first, c.T):
         lvar = eval('v.{}'.format(lvar_symbol))
         rhs = get_expr(lvar_symbol, t)
-        definition_constrs.append(
+        template_definitions.append(
             lvar[t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
 
 # CCmatic inputs
 ctx = z3.main_ctx()
 specification = z3.Implies(environment, desired)
-definitions = z3.And(ccac_domain, ccac_definitions, *definition_constrs)
+definitions = z3.And(ccac_domain, ccac_definitions, *template_definitions)
 assert(isinstance(definitions, z3.ExprRef))
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
+for sv in steady_state_variables:
+    generator_vars.append(sv.lo)
+    generator_vars.append(sv.hi)
 
 
 # Method overrides
@@ -117,10 +162,9 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    desired_string = get_desired_property_string(
+    desired_string = get_desired_ss_string(
         cc, c, fefficient, bounded_queue, bounded_loss,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+        total_losses, steady_state_variables, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 
@@ -143,6 +187,9 @@ def get_solution_str(solution: z3.ModelRef,
     rhs_expr += "+ {}".format(this_const_val)
     ret = "{}[t] = max({}, {})".format(
         lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
+    for sv in steady_state_variables:
+        ret += "\n{}: [{}, {}]".format(
+            sv.name, solution.eval(sv.lo), solution.eval(sv.hi))
     return ret
 
 

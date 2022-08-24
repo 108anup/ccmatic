@@ -14,9 +14,9 @@ class CegisConfig:
     template_loss_oracle: bool = True  # Use ECN marks
 
     # desired
-    desired_util_f: Union[float, z3.ExprRef]
-    desired_queue_bound_multiplier: Union[float, z3.ExprRef]
-    desired_loss_bound: Union[float, z3.ExprRef]
+    desired_util_f: Union[float, z3.ArithRef]
+    desired_queue_bound_multiplier: Union[float, z3.ArithRef]
+    desired_loss_bound: Union[float, z3.ArithRef]
 
     # environment
     infinite_buffer: bool = False

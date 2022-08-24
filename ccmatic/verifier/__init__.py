@@ -1,3 +1,5 @@
+import itertools
+from dataclasses import dataclass
 import logging
 from typing import List, Optional, Tuple
 
@@ -55,6 +57,60 @@ GlobalConfig().default_logger_setup(logger)
 # * Time per iteration concerns
 # 1. For definition variables that solely depend on verifier variables. Can keep
 #    those in verifier variables, and corresponding assertions in specification.
+
+
+@dataclass
+class SteadyStateVariable:
+    name: str
+    initial: z3.ArithRef
+    final: z3.ArithRef
+    lo: z3.ArithRef
+    hi: z3.ArithRef
+
+    def init_outside(self) -> z3.BoolRef:
+        ret = z3.Or(self.initial < self.lo, self.initial > self.hi)
+        assert isinstance(ret, z3.BoolRef)
+        return ret
+
+    def final_outside(self) -> z3.BoolRef:
+        ret = z3.Or(self.final < self.lo, self.final > self.hi)
+        assert isinstance(ret, z3.BoolRef)
+        return ret
+
+    def init_inside(self) -> z3.BoolRef:
+        ret = z3.Not(self.init_outside())
+        assert isinstance(ret, z3.BoolRef)
+        return ret
+
+    def final_inside(self) -> z3.BoolRef:
+        ret = z3.Not(self.final_outside())
+        assert isinstance(ret, z3.BoolRef)
+        return ret
+
+    def does_not_degrage(self) -> z3.BoolRef:
+        ret = z3.And(
+            z3.Implies(self.initial < self.lo,
+                       z3.And(self.final >= self.initial,
+                              self.final <= self.hi)),
+            z3.Implies(self.initial > self.hi,
+                       z3.And(self.final <= self.initial,
+                              self.final >= self.lo)),
+            z3.Implies(self.init_inside(), self.final_inside())
+        )
+        assert isinstance(ret, z3.BoolRef)
+        return ret
+
+    def strictly_improves(self) -> z3.BoolRef:
+        ret = z3.And(
+            z3.Implies(self.initial < self.lo,
+                       z3.And(self.final > self.initial,
+                              self.final <= self.hi)),
+            z3.Implies(self.initial > self.hi,
+                       z3.And(self.final < self.initial,
+                              self.final >= self.lo))
+        )
+        assert isinstance(ret, z3.BoolRef)
+        return ret
 
 
 def monotone_env(c, s, v):
@@ -568,23 +624,8 @@ def get_all_desired(
         cc: CegisConfig, c: ModelConfig, v: Variables):
     first = cc.history
 
-    cond_list = []
-    for t in range(first, c.T):
-        # Queue seen by a new packet should not be
-        # more than desired_queue_bound
-        cond_list.append(
-            v.A[t] - v.L[t] - v.S[t] <=
-            cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
-    bounded_queue = z3.And(*cond_list)
-
-    fefficient = (
-        v.S[-1] - v.S[first] >= cc.desired_util_f * c.C * (c.T-1-first-c.D))
-
-    loss_list: List[z3.BoolRef] = []
-    for t in range(first, c.T):
-        loss_list.append(v.L[t] > v.L[t-1])
-    total_losses = z3.Sum(*loss_list)
-    bounded_loss = total_losses <= cc.desired_loss_bound
+    (_, fefficient, bounded_queue, bounded_loss,
+     total_losses) = get_desired_in_ss(cc, c, v)
 
     # Induction invariants
     ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
@@ -604,6 +645,68 @@ def get_all_desired(
     return (desired, fefficient, bounded_queue, bounded_loss,
             ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
             total_losses)
+
+
+def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
+    first = cc.history
+    cond_list = []
+    for t in range(first, c.T):
+        # Queue seen by a new packet should not be
+        # more than desired_queue_bound
+        cond_list.append(
+            v.A[t] - v.L[t] - v.S[t] <=
+            cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
+    bounded_queue = z3.And(*cond_list)
+
+    fefficient = (
+        v.S[-1] - v.S[first] >= cc.desired_util_f * c.C * (c.T-1-first-c.D))
+
+    loss_list: List[z3.BoolRef] = []
+    for t in range(first, c.T):
+        loss_list.append(v.L[t] > v.L[t-1])
+    total_losses = z3.Sum(*loss_list)
+    bounded_loss = total_losses <= cc.desired_loss_bound
+
+    desired_ss = z3.And(fefficient, bounded_queue, bounded_loss)
+    return desired_ss, fefficient, bounded_queue, bounded_loss, total_losses
+
+
+def get_steady_state_conditions(
+        cc: CegisConfig, c: ModelConfig, v: Variables,
+        steady_state_variables: List[SteadyStateVariable]):
+    assertions = []
+
+    # # Initial in SS implies Final in SS
+    # for sv in steady_state_variables:
+    #     assertions.append(z3.Implies(
+    #         z3.And(sv.initial >= sv.lo, sv.initial <= sv.hi),
+    #         z3.And(sv.final >= sv.lo, sv.final <= sv.hi)))
+
+    # At least one outside
+    #     IMPLIES
+    #         none should degrade AND
+    #         atleast one that is outside must move towards inside
+    assertions.append(z3.Implies(
+        z3.Or(*[sv.init_outside() for sv in steady_state_variables]),
+        z3.And(
+            z3.And(*[sv.does_not_degrage()
+                     for sv in steady_state_variables]),
+            z3.Or(*[z3.And(sv.init_outside(), sv.strictly_improves())
+                    for sv in steady_state_variables])
+        ))
+    )
+
+    # All inside
+    #    IMPLIES
+    #         All remain inside
+    assertions.append(z3.Implies(
+        z3.And(*[sv.init_inside() for sv in steady_state_variables]),
+        z3.And(*[sv.final_inside() for sv in steady_state_variables]),
+    ))
+
+    ret = z3.And(*assertions)
+    assert isinstance(ret, z3.BoolRef)
+    return ret
 
 
 def maximize_gap(
@@ -687,7 +790,8 @@ def worst_counter_example(
         objective_rhs += v.C0 + c.C * t - v.W[t] - v.S[t]
         if(t >= c.D):
             objective_rhs += v.S[t] - (v.C0 + c.C * (t-c.D) - v.W[t-c.D])
-    objective_rhs += v.A[-1] - v.L[-1] - v.S[-1] - (v.A[first] - v.L[first] - v.S[first])
+    objective_rhs += v.A[-1] - v.L[-1] - v.S[-1] - \
+        (v.A[first] - v.L[first] - v.S[first])
     objective_rhs += -v.S[-1] + v.S[first]
 
     orig_model = s.model()
@@ -809,7 +913,7 @@ def get_cex_df(
         for n in range(c.N):
             df[f"last_decrease_f_{n},t"] = np.array(
                 [counter_example.eval(x).as_fraction()
-                for x in v.last_decrease_f[n]]).astype(float)
+                 for x in v.last_decrease_f[n]]).astype(float)
             df[f"exceed_queue_f_{n},t"] = [-1] + \
                 get_val_list(counter_example, v.exceed_queue_f[n][1:])
 
@@ -913,4 +1017,28 @@ def get_desired_property_string(
         cond_list.append(
             "{}={}".format(cond_name, model.eval(cond)))
     ret = ", ".join(cond_list)
+    return ret
+
+
+def get_desired_ss_string(
+        cc: CegisConfig, c: ModelConfig,
+        fefficient, bounded_queue, bounded_loss,
+        total_losses, steady_state_variables: List[SteadyStateVariable],
+        model: z3.ModelRef):
+    conds = {
+        "fefficient": fefficient,
+        "bounded_queue": bounded_queue,
+        "bounded_loss": bounded_loss,
+        "total_losses": total_losses,
+    }
+    if(cc.dynamic_buffer):
+        conds["buffer"] = c.buf_min
+    cond_list = []
+    for cond_name, cond in conds.items():
+        cond_list.append(
+            "{}={}".format(cond_name, model.eval(cond)))
+    ret = ", ".join(cond_list)
+    for sv in steady_state_variables:
+        ret += "\n{}: [{}, {}]".format(
+            sv.name, model.eval(sv.lo), model.eval(sv.hi))
     return ret
