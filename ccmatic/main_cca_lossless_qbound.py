@@ -3,10 +3,8 @@ import logging
 from fractions import Fraction
 from typing import List
 
-import numpy as np
 import z3
-from ccac.config import ModelConfig
-from ccac.variables import VariableNames, Variables
+from ccac.variables import VariableNames
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -30,6 +28,7 @@ cc.template_queue_bound = True
 cc.desired_util_f = 0.66
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_bound = 0
+cc.N = 2
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -43,15 +42,15 @@ cc.desired_loss_bound = 0
 # Generator search space
 vn = VariableNames(v)
 coeffs = {
-    'c_f[0]_delay': z3.Real('Gen__coeff_c_f[0]_delay'),
-    'c_f[0]_nodelay': z3.Real('Gen__coeff_c_f[0]_nodelay'),
-    'ack_f[0]_delay': z3.Real('Gen__coeff_ack_f[0]_delay'),
-    'ack_f[0]_nodelay': z3.Real('Gen__coeff_ack_f[0]_nodelay')
+    'c_f[n]_delay': z3.Real('Gen__coeff_c_f[n]_delay'),
+    'c_f[n]_nodelay': z3.Real('Gen__coeff_c_f[n]_nodelay'),
+    'ack_f[n]_delay': z3.Real('Gen__coeff_ack_f[n]_delay'),
+    'ack_f[n]_nodelay': z3.Real('Gen__coeff_ack_f[n]_nodelay')
 }
 
 consts = {
-    'c_f[0]_delay': z3.Real('Gen__const_c_f[0]_delay'),
-    'c_f[0]_nodelay': z3.Real('Gen__const_c_f[0]_nodelay'),
+    'c_f[n]_delay': z3.Real('Gen__const_c_f[n]_delay'),
+    'c_f[n]_nodelay': z3.Real('Gen__const_c_f[n]_nodelay'),
 }
 
 # qsize_thresh_choices = [Fraction(i, 8) for i in range(2 * 8 + 1)]
@@ -71,42 +70,45 @@ assert(isinstance(search_constraints, z3.ExprRef))
 # Generator definitions
 template_definitions = []
 first = cc.history
-for t in range(first, c.T):
-    # loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
+for n in range(c.N):
+    for t in range(first, c.T):
+        # loss_detected = v.Ld_f[n][t] > v.Ld_f[n][t-1]
 
-    # This is meaningless as c.C * (c.R + c.D) is unknown...
-    # delay_detected = (v.A_f[0][t-c.R] - v.Ld_f[0][t]
-    #                  - v.S_f[0][t-c.R] >= qsize_thresh * c.C * (c.R + c.D))
+        # This is meaningless as c.C * (c.R + c.D) is unknown...
+        # delay_detected = (v.A_f[n][t-c.R] - v.Ld_f[n][t] - v.S_f[n][t-c.R]
+        #                   >= v.qsize_thresh * c.C * (c.R + c.D))
 
-    delay_detected = v.exceed_queue_f[0][t]
+        delay_detected = v.exceed_queue_f[n][t]
 
-    # Decrease this time iff queue exceeded AND new qdelay measurement (i.e.,
-    # new packets received) AND in the previous cycle we had received all the
-    # packets sent since last decrease (S_f[n][t-c.R-1] >=
-    # last_decrease[n][t-1])
-    # TODO: see if we want to replace the last statement
-    #  with (S_f[n][t-c.R] > last_decrease[n][t-1])
-    this_decrease = z3.And(delay_detected,
-                           v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
-                           v.S_f[0][t-1-c.R] >= v.last_decrease_f[0][t-1])
+        # Decrease this time iff queue exceeded AND new qdelay measurement
+        # (i.e., new packets received) AND in the previous cycle we had received
+        # all the packets sent since last decrease (S_f[n][t-c.R-1] >=
+        # last_decrease[n][t-1])
+        # TODO: see if we want to replace the last
+        #  statement with (S_f[n][t-c.R] > last_decrease[n][t-1])
+        this_decrease = z3.And(delay_detected,
+                               v.S_f[n][t-c.R] > v.S_f[n][t-c.R-1],
+                               v.S_f[n][t-1-c.R] >= v.last_decrease_f[n][t-1])
 
-    acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
-    rhs_delay = (get_product_ite(coeffs['c_f[0]_delay'], v.c_f[0][t-c.R],
-                                 search_range)
-                 + get_product_ite(coeffs['ack_f[0]_delay'], acked_bytes,
-                                   search_range)
-                 + consts['c_f[0]_delay'])
-    rhs_nodelay = (get_product_ite(coeffs['c_f[0]_nodelay'], v.c_f[0][t-c.R],
-                                   search_range)
-                   + get_product_ite(coeffs['ack_f[0]_nodelay'], acked_bytes,
-                                     search_range)
-                   + consts['c_f[0]_nodelay'])
-    rhs = z3.If(this_decrease, rhs_delay, rhs_nodelay)
-    assert isinstance(rhs, z3.ArithRef)
-    template_definitions.append(
-        v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
-                             rhs, cc.template_cca_lower_bound)
-    )
+        acked_bytes = v.S_f[n][t-c.R] - v.S_f[n][t-cc.history]
+        rhs_delay = (
+            get_product_ite(
+                coeffs['c_f[n]_delay'], v.c_f[n][t-c.R], search_range)
+            + get_product_ite(
+                coeffs['ack_f[n]_delay'], acked_bytes, search_range)
+            + consts['c_f[n]_delay'])
+        rhs_nodelay = (
+            get_product_ite(
+                coeffs['c_f[n]_nodelay'], v.c_f[n][t-c.R], search_range)
+            + get_product_ite(
+                coeffs['ack_f[n]_nodelay'], acked_bytes, search_range)
+            + consts['c_f[n]_nodelay'])
+        rhs = z3.If(this_decrease, rhs_delay, rhs_nodelay)
+        assert isinstance(rhs, z3.ArithRef)
+        template_definitions.append(
+            v.c_f[n][t] == z3.If(rhs >= cc.template_cca_lower_bound,
+                                 rhs, cc.template_cca_lower_bound)
+        )
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -126,13 +128,14 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    df["this_decrease"] = [-1] + get_val_list(counter_example, [
-        counter_example.eval(z3.And(
-            v.exceed_queue_f[0][t],
-            v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
-            v.S_f[0][t-1-c.R] >= v.last_decrease_f[0][t-1]
-        ))
-        for t in range(1, c.T)])
+    for n in range(c.N):
+        df[f"this_decrease_f_{n}"] = [-1] + get_val_list(counter_example, [
+            counter_example.eval(z3.And(
+                v.exceed_queue_f[n][t],
+                v.S_f[n][t-c.R] > v.S_f[n][t-c.R-1],
+                v.S_f[n][t-1-c.R] >= v.last_decrease_f[n][t-1]
+            ))
+            for t in range(1, c.T)])
     ret = "{}".format(df)
 
     desired_string = get_desired_property_string(
@@ -145,20 +148,20 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
-    rhs_delay = (f"{solution.eval(coeffs['c_f[0]_delay'])}"
-                 f"c_f[0][t-{c.R}]"
-                 f" + {solution.eval(coeffs['ack_f[0]_delay'])}"
-                 f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
-                 f" + {solution.eval(consts['c_f[0]_delay'])}")
-    rhs_nodelay = (f"{solution.eval(coeffs['c_f[0]_nodelay'])}"
-                   f"c_f[0][t-{c.R}]"
-                   f" + {solution.eval(coeffs['ack_f[0]_nodelay'])}"
-                   f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
-                   f" + {solution.eval(consts['c_f[0]_nodelay'])}")
+    rhs_delay = (f"{solution.eval(coeffs['c_f[n]_delay'])}"
+                 f"c_f[n][t-{c.R}]"
+                 f" + {solution.eval(coeffs['ack_f[n]_delay'])}"
+                 f"(S_f[n][t-{c.R}]-S_f[n][t-{cc.history}])"
+                 f" + {solution.eval(consts['c_f[n]_delay'])}")
+    rhs_nodelay = (f"{solution.eval(coeffs['c_f[n]_nodelay'])}"
+                   f"c_f[n][t-{c.R}]"
+                   f" + {solution.eval(coeffs['ack_f[n]_nodelay'])}"
+                   f"(S_f[n][t-{c.R}]-S_f[n][t-{cc.history}])"
+                   f" + {solution.eval(consts['c_f[n]_nodelay'])}")
     ret = (f"if(qbound[t-1][{solution.eval(v.qsize_thresh)}]):\n"
-           f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_delay})\n"
+           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_delay})\n"
            f"else:\n"
-           f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_nodelay})")
+           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_nodelay})")
     return ret
 
 
@@ -172,16 +175,17 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
     df = get_gen_cex_df(solution, v, vn, n_cex, c)
 
-    g_last_decrease_f = get_renamed_vars(v.last_decrease_f[0], n_cex)
-    g_exceed_queue_f = get_renamed_vars(v.exceed_queue_f[0], n_cex)
-    g_S_f = get_renamed_vars(v.S_f[0], n_cex)
-    df["this_decrease"] = [-1] + get_val_list(solution, [
-        solution.eval(z3.And(
-            g_exceed_queue_f[t],
-            g_S_f[t-c.R] > g_S_f[t-c.R-1],
-            g_S_f[t-1-c.R] >= g_last_decrease_f[t-1]
-        ))
-        for t in range(1, c.T)])
+    for n in range(c.N):
+        g_last_decrease_f = get_renamed_vars(v.last_decrease_f[n], n_cex)
+        g_exceed_queue_f = get_renamed_vars(v.exceed_queue_f[n], n_cex)
+        g_S_f = get_renamed_vars(v.S_f[0], n_cex)
+        df[f"this_decrease_f_{n}"] = [-1] + get_val_list(solution, [
+            solution.eval(z3.And(
+                g_exceed_queue_f[t],
+                g_S_f[t-c.R] > g_S_f[t-c.R-1],
+                g_S_f[t-1-c.R] >= g_last_decrease_f[t-1]
+            ))
+            for t in range(1, c.T)])
 
     ret = "{}".format(df)
     return ret

@@ -1,156 +1,107 @@
 import numpy as np
 import z3
+from ccmatic.cegis import CegisConfig
 from ccmatic.common import get_val_list
-from ccmatic.verifier import (desired_high_util_low_delay,
-                              desired_high_util_low_loss, get_cex_df,
-                              setup_ccac_definitions, setup_ccac_environment)
+from ccmatic.verifier import (get_all_desired, get_cex_df,
+                              get_desired_property_string, setup_cegis_basic)
+from cegis.util import Metric
 from pyz3_utils.my_solver import MySolver
 
-from ccac.config import ModelConfig
-from ccac.variables import VariableNames, Variables
+from ccac.variables import VariableNames
 
-lag = 1
-history = 4
-use_loss = False
-deterministic_loss = False
-util_frac = 0.5
-n_losses = 1
-ideal_max_queue = 8
+cc = CegisConfig()
+cc.history = 4
+cc.infinite_buffer = True
+cc.template_queue_bound = False
+cc.N = 2
+cc.T = 15
 
-# Verifier
-# Dummy variables used to create CCAC formulation only
-c = ModelConfig.default()
-c.compose = True
-c.cca = "paced"
-c.simplify = False
-c.calculate_qdel = True
-c.C = 100
-c.T = 15
-c.N = 2
+cc.desired_util_f = z3.Real('desired_util_f')
+cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
+cc.desired_loss_bound = z3.Real('desired_loss_bound')
+(c, s, v,
+ ccac_domain, ccac_definitions, environment,
+ verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-s = MySolver()
-v = Variables(c, s)
+(desired, fefficient, bounded_queue, bounded_loss,
+ ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
+ total_losses) = get_all_desired(cc, c, v)
+
 vn = VariableNames(v)
-if(deterministic_loss):
-    c.deterministic_loss = True
-c.loss_oracle = True
-# No loss
-if(use_loss):
-    c.buf_min = c.C * (c.R + c.D)
-    c.buf_max = c.buf_min
-else:
-    c.buf_max = None
-    c.buf_min = None
-ccac_domain = z3.And(*s.assertion_list)
-sd = setup_ccac_definitions(c, v)
-se = setup_ccac_environment(c, v)
-ccac_definitions = z3.And(*sd.assertion_list)
-environment = z3.And(*se.assertion_list)
-
-# Desired properties
-first = history  # First cwnd idx decided by synthesized cca
-loss_rate = n_losses / ((c.T-1) - first)
-delay_bound = ideal_max_queue * c.C * (c.R + c.D)
-
-if(use_loss):
-    (desired, high_util, low_loss, ramp_up, ramp_down, total_losses) = \
-        desired_high_util_low_loss(c, v, first, util_frac, loss_rate)
-    desired = z3.And(z3.Or(high_util, ramp_up), z3.Or(low_loss, ramp_down))
-else:
-    (desired, high_util, low_delay, ramp_up, ramp_down) = \
-        desired_high_util_low_delay(c, v, first, util_frac, delay_bound)
-assert isinstance(desired, z3.ExprRef)
-
-definition_constrs = []
+first = cc.history  # First cwnd idx decided by synthesized cca
+template_definitions = []
 for n in range(c.N):
     for t in range(first, c.T):
+        acked_bytes = v.S_f[n][t-c.R] - v.S_f[n][t-cc.history]
+
         cond = True
-        rhs_loss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1/2
+
+        rhs_loss = acked_bytes + 1/2
+        rhs_noloss = acked_bytes + 1/2
+
         # rhs_loss = v.c_f[n][t-1] / 2
-        rhs_noloss = v.S_f[n][t-1] - v.S_f[n][t-4] + 1/2
         # rhs_noloss = v.c_f[n][t-lag] + 1
+
         rhs = z3.If(cond, rhs_loss, rhs_noloss)
         assert isinstance(rhs, z3.ArithRef)
-        definition_constrs.append(v.c_f[n][t] == z3.If(rhs >= 0.01, rhs, 0.01))
+        template_definitions.append(
+            v.c_f[n][t] == z3.If(rhs >= cc.template_cca_lower_bound,
+                                 rhs, cc.template_cca_lower_bound))
 
-        # definition_constrs.append(v.c_f[n][t] == c.C/c.N)
-        # definition_constrs.append(v.c_f[n][t] == 4096)
-        # definition_constrs.append(v.c_f[n][t] == 0.01)
+        # template_definitions.append(v.c_f[n][t] == c.C/c.N)
+        # template_definitions.append(v.c_f[n][t] == 4096)
+        # template_definitions.append(v.c_f[n][t] == cc.template_cca_lower_bound)
 
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    qdelay = []
-    for t in range(c.T):
-        added = False
-        for dt in range(c.T):
-            if(bool(counter_example.eval(v.qdel[t][dt]))):
-                qdelay.append(dt)
-                added = True
-                break
-        if(not added):
-            qdelay.append(c.T)
-    assert len(qdelay) == c.T
-    df["qdelay"] = np.array(qdelay).astype(float)
 
     tot_cwnd = [
         counter_example.eval(z3.Sum(*v.c_f[:, t])).as_fraction()
         for t in range(c.T)]
     df['tot_cwnd_t'] = tot_cwnd
 
-    single_rocc_cwnd = ([-1 for t in range(first)] +
-                        [counter_example.eval(v.S[t-1] - v.S[t-4]).as_fraction()
-                         for t in range(first, c.T)])
-    single_rocc_arrival = [counter_example.eval(
+    rocc_cwnd = ([-1 for t in range(first)] +
+                 [max(
+                     cc.template_cca_lower_bound,
+                     counter_example.eval(v.S[t-1] - v.S[t-4]).as_fraction())
+                  for t in range(first, c.T)])
+    rocc_arrival = [counter_example.eval(
         v.A[t]).as_fraction() for t in range(first)]
     for t in range(first, c.T):
-        single_rocc_arrival.append(
-            max(single_rocc_arrival[t-1],
-                counter_example.eval(
-                    v.S[t-c.R] + (v.S[t-1] - v.S[t-4])).as_fraction())
-        )
-    df['single_rocc_arrival_t'] = single_rocc_arrival
-    df['single_rocc_cwnd_t'] = single_rocc_cwnd
+        rocc_arrival.append(max(
+            rocc_arrival[t-1],
+            counter_example.eval(v.S[t-c.R] + rocc_cwnd[t]).as_fraction()))
+    df['arrival_rocc_t'] = rocc_arrival
+    df['cwnd_rocc_t'] = rocc_cwnd
 
-    df['diff_service_1,t'] = [-1] + [counter_example.eval(v.S_f[1][t] - v.S_f[1][t-1]).as_fraction() for t in range(1, c.T)]
-    df['diff_service_0,t'] = [-1] + [counter_example.eval(v.S_f[0][t] - v.S_f[0][t-1]).as_fraction() for t in range(1, c.T)]
-    df['diff_tot_service_t'] = [-1] + [counter_example.eval(v.S[t] - v.S[t-1]).as_fraction() for t in range(1, c.T)]
+    for n in range(c.N):
+        df[f'diff_service_{n},t'] = [-1] + \
+            [counter_example.eval(v.S_f[n][t] - v.S_f[n][t-1]).as_fraction()
+             for t in range(1, c.T)]
+    df['diff_tot_service_t'] = [-1] + \
+        [counter_example.eval(v.S[t] - v.S[t-1]).as_fraction()
+         for t in range(1, c.T)]
 
-    df['diff_arrival_1,t'] = [-1] + [counter_example.eval(v.A_f[1][t] - v.A_f[1][t-1]).as_fraction() for t in range(1, c.T)]
-    df['diff_arrival_0,t'] = [-1] + [counter_example.eval(v.A_f[0][t] - v.A_f[0][t-1]).as_fraction() for t in range(1, c.T)]
-    df['diff_tot_arrival_t'] = [-1] + [counter_example.eval(v.A[t] - v.A[t-1]).as_fraction() for t in range(1, c.T)]
+    for n in range(c.N):
+        df[f'diff_arrival_{n},t'] = [-1] + \
+            [counter_example.eval(v.A_f[n][t] - v.A_f[n][t-1]).as_fraction()
+             for t in range(1, c.T)]
+    df['diff_tot_arrival_t'] = [-1] + \
+        [counter_example.eval(v.A[t] - v.A[t-1]).as_fraction()
+         for t in range(1, c.T)]
 
-    df['queue_0,t'] = [counter_example.eval(v.A_f[0][t] - v.L_f[0][t] - v.S_f[0][t]).as_fraction() for t in range(c.T)]
-    df['queue_1,t'] = [counter_example.eval(v.A_f[1][t] - v.L_f[1][t] - v.S_f[1][t]).as_fraction() for t in range(c.T)]
+    for n in range(c.N):
+        df[f'queue_{n},t'] = [
+            counter_example.eval(
+                v.A_f[n][t] - v.L_f[n][t] - v.S_f[n][t]).as_fraction()
+            for t in range(c.T)]
 
-    df['cwnd_rocc,t'] = ([-1 for _ in range(first)]
-                         + [max(0.01, counter_example.eval(v.S[t-1] - v.S[t-4]).as_fraction()) for t in range(first, c.T)])
-    df['arrival_rocc,t'] = (
-        [counter_example.eval(v.A[t]).as_fraction() for t in range(first)] + [max(
-            counter_example.eval(v.A[t-1]).as_fraction(),
-            counter_example.eval(v.S[t-c.R] + df['cwnd_rocc,t'][t]).as_fraction()) for t in range(first, c.T)])
-
-    ret = "{}".format(df.astype(float))
-    conds = {
-        "high_util": high_util,
-        "low_delay": low_delay,
-        # "low_loss": low_loss,
-        "ramp_up": ramp_up,
-        "ramp_down": ramp_down,
-        # "total_losses": total_losses,
-        # "measured_loss_rate": total_losses/((c.T-1) - first)
-    }
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, counter_example.eval(cond)))
-    ret += "\n{}.".format(", ".join(cond_list))
-
-    # qbound_vals = []
-    # for qbound_list in v.qbound:
-    #     qbound_val_list = get_val_list(counter_example, qbound_list)
-    #     qbound_vals.append(qbound_val_list)
-    # ret += "\n{}".format(np.array(qbound_vals))
+    desired_string = get_desired_property_string(
+        cc, c, fefficient, bounded_queue, bounded_loss,
+        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
+        total_losses, counter_example)
+    ret = "{}\n{}.".format(df.astype(float), desired_string)
 
     qdel_vals = []
     for qdel_list in v.qdel:
@@ -160,15 +111,18 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     return ret
 
 
-print("Using c.buf_max={}.".format(c.buf_max))
-print("Allowed losses:", loss_rate * ((c.T-1) - first))
+optimization_list = [
+    Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
+    Metric(cc.desired_queue_bound_multiplier, 1, 8, 0.001, False),
+    Metric(cc.desired_loss_bound, 0, 0, 0.001, False),
+]
 
 verifier = MySolver()
 verifier.warn_undeclared = False
 verifier.add(ccac_domain)
 verifier.add(ccac_definitions)
 verifier.add(environment)
-verifier.add(z3.And(*definition_constrs))
+verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
 
 # Check performant trace
@@ -190,6 +144,13 @@ for t in range(first):
     #              == v.A_f[n][0] - v.L_f[n][0] - v.S_f[n][0])
 # verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
+verifier.push()
+for metric in optimization_list:
+    if(metric.maximize):
+        verifier.add(metric.z3ExprRef == metric.lo)
+    else:
+        verifier.add(metric.z3ExprRef == metric.hi)
+
 sat = verifier.check()
 if(str(sat) == "sat"):
     model = verifier.model()
@@ -209,3 +170,6 @@ if(str(sat) == "sat"):
 #     unsat_core = dummy.unsat_core()
 #     print(len(unsat_core))
 #     import ipdb; ipdb.set_trace()
+
+verifier.pop()
+print("Done")

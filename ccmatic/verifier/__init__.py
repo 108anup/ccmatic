@@ -238,31 +238,33 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
 
 def last_decrease_defs(c: ModelConfig, s: MySolver, v: Variables):
 
-    # s.add(v.last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
-    s.add(v.last_decrease_f[0][0] == v.S_f[0][0])
+    for n in range(c.N):
+        # s.add(v.last_decrease_f[0][0] == v.A_f[0][0] - v.L_f[0][0])
+        s.add(v.last_decrease_f[n][0] == v.S_f[n][0])
 
-    for t in range(1, c.T):
-        # Const last_decrease in history
-        # definition_constrs.append(
-        #     last_decrease_f[0][t] == v.S_f[0][t])
+        for t in range(1, c.T):
+            # Const last_decrease in history
+            # definition_constrs.append(
+            #     last_decrease_f[0][t] == v.S_f[0][t])
 
-        s.add(
-            z3.Implies(v.c_f[0][t] < v.c_f[0][t-1],
-                       v.last_decrease_f[0][t] == v.A_f[0][t] - v.L_f[0][t]))
-        s.add(
-            z3.Implies(v.c_f[0][t] >= v.c_f[0][t-1],
-                       v.last_decrease_f[0][t] == v.last_decrease_f[0][t-1]))
+            s.add(
+                z3.Implies(v.c_f[n][t] < v.c_f[n][t-1],
+                           v.last_decrease_f[n][t] == v.A_f[n][t] - v.L_f[n][t]))
+            s.add(
+                z3.Implies(v.c_f[n][t] >= v.c_f[n][t-1],
+                           v.last_decrease_f[n][t] == v.last_decrease_f[n][t-1]))
 
 
 def exceed_queue_defs(c: ModelConfig, s: MySolver, v: Variables):
-    for t in range(c.R, c.T):
-        for dt in range(c.T):
-            s.add(z3.Implies(
-                z3.And(dt == v.qsize_thresh, v.qbound[t-c.R][dt]),
-                v.exceed_queue_f[0][t]))
-            s.add(z3.Implies(
-                z3.And(dt == v.qsize_thresh, z3.Not(v.qbound[t-c.R][dt])),
-                z3.Not(v.exceed_queue_f[0][t])))
+    for n in range(c.N):
+        for t in range(c.R, c.T):
+            for dt in range(c.T):
+                s.add(z3.Implies(
+                    z3.And(dt == v.qsize_thresh, v.qbound[t-c.R][dt]),
+                    v.exceed_queue_f[n][t]))
+                s.add(z3.Implies(
+                    z3.And(dt == v.qsize_thresh, z3.Not(v.qbound[t-c.R][dt])),
+                    z3.Not(v.exceed_queue_f[n][t])))
 
 
 def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
@@ -460,7 +462,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.cca = "paced"
     c.simplify = False
     c.C = 100
-    c.T = 9
+    c.T = cc.T
 
     # Signals
     c.loss_oracle = cc.template_loss_oracle
@@ -803,12 +805,13 @@ def get_cex_df(
                     qdelay.append(dt+1)
                     break
         assert len(qdelay) == c.T
-        df["qdelay"] = np.array(qdelay).astype(float)
-        df["last_decrease_f"] = np.array(
-            [counter_example.eval(x).as_fraction()
-             for x in v.last_decrease_f[0]]).astype(float)
-        df["exceed_queue_f"] = [-1] + \
-            get_val_list(counter_example, v.exceed_queue_f[0][1:])
+        df["qdelay_t"] = np.array(qdelay).astype(float)
+        for n in range(c.N):
+            df[f"last_decrease_f_{n},t"] = np.array(
+                [counter_example.eval(x).as_fraction()
+                for x in v.last_decrease_f[n]]).astype(float)
+            df[f"exceed_queue_f_{n},t"] = [-1] + \
+                get_val_list(counter_example, v.exceed_queue_f[n][1:])
 
         # qbound_vals = []
         # for qbound_list in v.qbound:

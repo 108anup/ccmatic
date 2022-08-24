@@ -25,6 +25,7 @@ class CegisConfig:
 
     deterministic_loss: bool = True
     N: int = 1
+    T: int = 9
 
 
 class CegisCCAGen(Cegis):
