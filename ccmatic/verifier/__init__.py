@@ -536,7 +536,7 @@ def setup_ccac_environment(c, v):
     return s
 
 
-def setup_ccac(cca="copa"):
+def setup_ccac_full(cca="copa"):
     c = ModelConfig.default()
     c.compose = True
     c.cca = cca
