@@ -23,6 +23,11 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
+cc.infinite_buffer = False
+cc.dynamic_buffer = True
+cc.buffer_size_multiplier = 1
+cc.template_queue_bound = True
+
 cc.desired_util_f = 0.33
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_bound = 3
@@ -60,6 +65,7 @@ assert isinstance(v.qsize_thresh, z3.ArithRef)
 # Search constr
 search_range_coeff = [Fraction(i, 2) for i in range(5)]
 search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
+search_range_const = [0]
 # search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())):

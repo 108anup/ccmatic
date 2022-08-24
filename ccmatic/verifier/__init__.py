@@ -422,6 +422,10 @@ def get_cegis_vars(
     if(isinstance(c.buf_min, z3.ExprRef)):
         verifier_vars.append(c.buf_min)
 
+    if(c.mode_switch):
+        definition_vars.extend(flatten(v.mode_f[:, 1:]))
+        verifier_vars.extend(flatten(v.mode_f[:, :1]))
+
     return verifier_vars, definition_vars
 
 
@@ -476,6 +480,8 @@ def setup_ccac_for_cegis(cc: CegisConfig):
         c.calculate_qbound = True
     if(c.N > 1):
         c.calculate_qdel = True
+    c.mode_switch = cc.template_mode_switching
+
     return c
 
 
