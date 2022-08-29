@@ -24,19 +24,21 @@ DEBUG = False
 cc = CegisConfig()
 cc.infinite_buffer = False
 cc.dynamic_buffer = False
-cc.buffer_size_multiplier = 0.1
+cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 
-cc.desired_util_f = 0.349
-cc.desired_queue_bound_multiplier = 1
-cc.desired_loss_bound = 3
+cc.desired_util_f = 0.8
+cc.desired_queue_bound_multiplier = 1.5
+cc.desired_loss_count_bound = 2
+cc.desired_loss_amount_bound_multiplier = 1
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
+(desired, fefficient, bounded_queue,
+ bounded_loss_count, bounded_loss_amount,
  ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_all_desired(cc, c, v)
+ loss_count, loss_amount) = get_all_desired(cc, c, v)
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -56,7 +58,8 @@ consts = {
 
 # Search constr
 search_range_coeff = [Fraction(i, 2) for i in range(5)]
-search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
+# search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
+search_range_const = [0, 1]
 # search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())):
@@ -108,9 +111,10 @@ def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
     desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
+        cc, c, fefficient, bounded_queue,
+        bounded_loss_count, bounded_loss_amount,
         ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+        loss_count, loss_amount, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 

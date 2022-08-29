@@ -31,7 +31,7 @@ cc.template_mode_switching = True
 
 cc.desired_util_f = 0.33
 cc.desired_queue_bound_multiplier = 2
-cc.desired_loss_bound = 3
+cc.desired_loss_count_bound = 3
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)

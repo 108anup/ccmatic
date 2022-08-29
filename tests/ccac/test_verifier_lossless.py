@@ -18,7 +18,7 @@ cc.history = 4
 cc.infinite_buffer = True
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
-cc.desired_loss_bound = z3.Real('desired_loss_bound')
+cc.desired_loss_count_bound = z3.Real('desired_loss_bound')
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -54,7 +54,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 optimization_list = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
-    Metric(cc.desired_loss_bound, 0, 3, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
 ]
 
 verifier = MySolver()

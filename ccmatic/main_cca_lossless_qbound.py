@@ -27,7 +27,7 @@ cc.infinite_buffer = True
 cc.template_queue_bound = True
 cc.desired_util_f = 0.66
 cc.desired_queue_bound_multiplier = 2
-cc.desired_loss_bound = 0
+cc.desired_loss_count_bound = 0
 cc.N = 2
 (c, s, v,
  ccac_domain, ccac_definitions, environment,

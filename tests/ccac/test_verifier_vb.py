@@ -15,21 +15,23 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.infinite_buffer = False
-cc.dynamic_buffer = True
-cc.buffer_size_multiplier = 0.1
-cc.template_queue_bound = True
-cc.template_mode_switching = True
+cc.dynamic_buffer = False
+cc.buffer_size_multiplier = 1
+cc.template_queue_bound = False
+cc.template_mode_switching = False
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
-cc.desired_loss_bound = z3.Real('desired_loss_bound')
+cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
+cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
+(desired, fefficient, bounded_queue,
+ bounded_loss_count, bounded_loss_amount,
  ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_all_desired(cc, c, v)
+ loss_count, loss_amount) = get_all_desired(cc, c, v)
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
@@ -72,10 +74,6 @@ for t in range(first, c.T):
         rhs = z3.If(loss_detected, rhs_loss, z3.If(
             delay_detected, rhs_delay, rhs_noloss))
     else:
-        # AIMD
-        # rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        # rhs_noloss = v.c_f[0][t-c.R] + 1
-
         rhs_loss = 0
         rhs_noloss = 1/2 * v.c_f[0][t-c.R] + 1/2 * (acked_bytes)
 
@@ -84,6 +82,13 @@ for t in range(first, c.T):
 
         rhs_loss = 0
         rhs_noloss = acked_bytes
+
+        # AIMD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = v.c_f[0][t-c.R] + 1
+
+        rhs_loss = 1/2 * v.c_f[0][t-c.R] + 1
+        rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
@@ -99,17 +104,19 @@ for t in range(first, c.T):
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
     desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
+        cc, c, fefficient, bounded_queue,
+        bounded_loss_count, bounded_loss_amount,
         ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+        loss_count, loss_amount, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 
 
 optimization_list = [
-    Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
+    Metric(cc.desired_util_f, 0.5, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
-    Metric(cc.desired_loss_bound, 0, 3, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 0, 2, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 2, 0.001, False),
 ]
 
 verifier = MySolver()
@@ -155,6 +162,7 @@ GlobalConfig().logging_levels['cegis'] = logging.INFO
 logger = logging.getLogger('cegis')
 GlobalConfig().default_logger_setup(logger)
 
+import ipdb; ipdb.set_trace()
 
 ret = optimize_multi_var(verifier, optimization_list)
 df = pd.DataFrame(ret)

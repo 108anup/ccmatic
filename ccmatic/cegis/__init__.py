@@ -16,7 +16,8 @@ class CegisConfig:
     # desired
     desired_util_f: Union[float, z3.ArithRef]
     desired_queue_bound_multiplier: Union[float, z3.ArithRef]
-    desired_loss_bound: Union[float, z3.ArithRef]
+    desired_loss_count_bound: Union[float, z3.ArithRef]
+    desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
 
     # environment
     infinite_buffer: bool = False

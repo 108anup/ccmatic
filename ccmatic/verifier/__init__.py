@@ -624,8 +624,8 @@ def get_all_desired(
         cc: CegisConfig, c: ModelConfig, v: Variables):
     first = cc.history
 
-    (_, fefficient, bounded_queue, bounded_loss,
-     total_losses) = get_desired_in_ss(cc, c, v)
+    (_, fefficient, bounded_queue, bounded_loss_count,
+     bounded_loss_amount, loss_count, loss_amount) = get_desired_in_ss(cc, c, v)
 
     # Induction invariants
     ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
@@ -635,16 +635,21 @@ def get_all_desired(
     ramp_down_bq = (
         (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
         < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    ramp_up_bq = (
+        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+        > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
 
     desired = z3.And(
-        z3.Or(fefficient, ramp_up_cwnd),
-        z3.Or(bounded_queue, ramp_down_bq),
-        z3.Or(bounded_loss, ramp_down_bq))
+        z3.Or(fefficient, ramp_up_cwnd, ramp_up_bq),
+        z3.Or(bounded_queue, ramp_down_cwnd, ramp_down_bq),
+        z3.Or(bounded_loss_count, ramp_down_cwnd, ramp_down_bq),
+        z3.Or(bounded_loss_amount, ramp_down_cwnd, ramp_down_bq))
     assert isinstance(desired, z3.ExprRef)
 
-    return (desired, fefficient, bounded_queue, bounded_loss,
+    return (desired, fefficient, bounded_queue,
+            bounded_loss_count, bounded_loss_amount,
             ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
-            total_losses)
+            loss_count, loss_amount)
 
 
 def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
@@ -664,11 +669,17 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
         loss_list.append(v.L[t] > v.L[t-1])
-    total_losses = z3.Sum(*loss_list)
-    bounded_loss = total_losses <= cc.desired_loss_bound
+    loss_count = z3.Sum(*loss_list)
+    bounded_loss_count = loss_count <= cc.desired_loss_count_bound
 
-    desired_ss = z3.And(fefficient, bounded_queue, bounded_loss)
-    return desired_ss, fefficient, bounded_queue, bounded_loss, total_losses
+    loss_amount = v.L[-1] - v.L[first]
+    bounded_loss_amount = \
+        loss_amount <= cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+
+    desired_ss = z3.And(fefficient, bounded_queue,
+                        bounded_loss_count, bounded_loss_amount)
+    return (desired_ss, fefficient, bounded_queue, bounded_loss_count,
+            bounded_loss_amount, loss_count, loss_amount)
 
 
 def get_steady_state_conditions(
@@ -996,19 +1007,22 @@ def get_gen_cex_df(
 
 def get_desired_property_string(
         cc: CegisConfig, c: ModelConfig,
-        fefficient, bounded_queue, bounded_loss,
+        fefficient, bounded_queue,
+        bounded_loss_count, bounded_loss_amount,
         ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses,
+        loss_count, loss_amount,
         model: z3.ModelRef):
     conds = {
         "fefficient": fefficient,
         "bounded_queue": bounded_queue,
-        "bounded_loss": bounded_loss,
+        "bounded_loss_count": bounded_loss_count,
+        "bounded_loss_amount": bounded_loss_amount,
         "ramp_up_cwnd": ramp_up_cwnd,
         "ramp_down_bq": ramp_down_bq,
         "ramp_down_q": ramp_down_q,
         "ramp_down_cwnd": ramp_down_cwnd,
-        "total_losses": total_losses,
+        "loss_count": loss_count,
+        "loss_amount": loss_amount,
     }
     if(cc.dynamic_buffer):
         conds["buffer"] = c.buf_min
