@@ -96,6 +96,7 @@ assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
+critical_generator_vars = flatten(list(coeffs.values()))
 
 
 # Method overrides
@@ -176,9 +177,10 @@ if DEBUG:
         f.write(definitions.sexpr())
 
 try:
+    md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     known_solution)
+                     known_solution, md)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

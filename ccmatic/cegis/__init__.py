@@ -1,8 +1,14 @@
-from typing import Union
+from dataclasses import dataclass
+from typing import Union, List, Optional
 
 import z3
 
-from cegis import Cegis
+from cegis import Cegis, remove_solution
+
+
+@dataclass
+class CegisMetaData:
+    critical_generator_vars: Optional[List[z3.ExprRef]]
 
 
 class CegisConfig:
@@ -33,7 +39,28 @@ class CegisConfig:
 
 class CegisCCAGen(Cegis):
 
-    pass
+    def __init__(
+            self, generator_vars: List[z3.ExprRef],
+            verifier_vars: List[z3.ExprRef],
+            definition_vars: List[z3.ExprRef], search_constraints: z3.ExprRef,
+            definitions: z3.ExprRef, specification: z3.ExprRef,
+            ctx: z3.Context, known_solution: Optional[z3.ExprRef] = None,
+            metadata: Optional[CegisMetaData] = None):
+        super(CegisCCAGen, self).__init__(
+            generator_vars, verifier_vars, definition_vars,
+            search_constraints, definitions, specification, ctx,
+            known_solution)
+        self.metadata = metadata
+
+    def remove_solution(self, solution: z3.ModelRef):
+        """
+        Used to remove solutions that vary only in the constant term
+        """
+        critical_generator_vars = self.generator_vars
+        if(self.metadata and self.metadata.critical_generator_vars):
+            critical_generator_vars = self.metadata.critical_generator_vars
+        remove_solution(
+            self.generator, solution, critical_generator_vars, self.ctx)
 
     # def get_counter_example_str(counter_example: z3.ModelRef,
     #                             verifier_vars: List[z3.ExprRef]):
