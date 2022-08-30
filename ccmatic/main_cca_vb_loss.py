@@ -12,7 +12,7 @@ import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import flatten, get_product_ite
 
-from .verifier import (get_cex_df, get_desired_necessary, get_gen_cex_df,
+from .verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -21,24 +21,55 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
+cc.synth_ss = True
+
 cc.infinite_buffer = False
-cc.dynamic_buffer = True
-cc.buffer_size_multiplier = 0.1
+cc.dynamic_buffer = False
+cc.buffer_size_multiplier = 1
 cc.template_queue_bound = True
 
-cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 2
-cc.desired_loss_count_bound = 3
-cc.desired_loss_amount_bound_multiplier = 2
+cc.desired_util_f = 0.8
+cc.desired_queue_bound_multiplier = 1.5
+cc.desired_loss_count_bound = 1
+cc.desired_loss_amount_bound_multiplier = 0.6
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-d = get_desired_necessary(cc, c, v)
-desired = d.desired_necessary
+if(cc.synth_ss):
+    d = get_desired_ss_invariant(cc, c, v)
+    desired = d.desired_invariant
+else:
+    d = get_desired_necessary(cc, c, v)
+    desired = d.desired_necessary
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
+domain_clauses = []
+
+if(cc.synth_ss):
+    # Steady state search
+    assert d.steady_state_variables
+    for sv in d.steady_state_variables:
+        domain_clauses.append(sv.lo >= 0)
+        domain_clauses.append(sv.hi >= 0)
+        domain_clauses.append(sv.hi >= sv.lo)
+
+    sv_dict = {sv.name: sv for sv in d.steady_state_variables}
+    # domain_clauses.extend([
+    #     sv_dict['cwnd'].lo == c.C * (c.R),
+    #     sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
+    #     sv_dict['queue'].lo == 0,
+    #     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    # ])
+
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
+        sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    ])
+
 vn = VariableNames(v)
 coeffs = {
     'c_f[0]_loss': z3.Real('Gen__coeff_c_f[0]_loss'),
@@ -57,7 +88,6 @@ search_range_coeff = [Fraction(i, 2) for i in range(5)]
 # search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
 search_range_const = [-1, 0, 1]
 # search_range = [-1, 0, 1]
-domain_clauses = []
 for coeff in flatten(list(coeffs.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeff]))
 for const in flatten(list(consts.values())):
@@ -96,6 +126,10 @@ assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
+if(d.steady_state_variables):
+    for sv in d.steady_state_variables:
+        generator_vars.append(sv.lo)
+        generator_vars.append(sv.hi)
 critical_generator_vars = flatten(list(coeffs.values()))
 
 
@@ -128,6 +162,11 @@ def get_solution_str(solution: z3.ModelRef,
            f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_loss})\n"
            f"else:\n"
            f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_noloss})")
+
+    if d.steady_state_variables:
+        for sv in d.steady_state_variables:
+            ret += "\n{}: [{}, {}]".format(
+                sv.name, solution.eval(sv.lo), solution.eval(sv.hi))
     return ret
 
 
@@ -146,18 +185,25 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 # Known solution
 known_solution = None
 
-# known_solution_list = []
-# known_solution_list.append(coeffs['c_f[0]_loss'] == 0)
-# known_solution_list.append(coeffs['ack_f[0]_loss'] == 1/2)
-# known_solution_list.append(consts['c_f[0]_loss'] == 0)
+# AIMD
+known_solution_list = [
+    coeffs['c_f[0]_loss'] == 1/2,
+    coeffs['ack_f[0]_loss'] == 0,
+    consts['c_f[0]_loss'] == 0,
 
-# known_solution_list.append(coeffs['c_f[0]_noloss'] == 2)
-# known_solution_list.append(coeffs['ack_f[0]_noloss'] == 0)
-# known_solution_list.append(consts['c_f[0]_noloss'] == 0)
-# known_solution = z3.And(*known_solution_list)
-# assert(isinstance(known_solution, z3.ExprRef))
+    coeffs['c_f[0]_noloss'] == 1,
+    coeffs['ack_f[0]_noloss'] == 0,
+    consts['c_f[0]_noloss'] == 1,
+]
+known_solution = z3.And(*known_solution_list)
+assert(isinstance(known_solution, z3.ExprRef))
+
+if(cc.synth_ss):
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert(isinstance(search_constraints, z3.ExprRef))
 
 # Debugging:
+debug_known_solution = None
 if DEBUG:
     if(known_solution is not None):
         known_solver = MySolver()
@@ -167,6 +213,7 @@ if DEBUG:
         print(known_solver.model())
 
     # Search constraints
+    debug_known_solution = known_solution
     search_constraints = z3.And(search_constraints, known_solution)
     assert(isinstance(search_constraints, z3.ExprRef))
     with open('tmp/search.txt', 'w') as f:
@@ -180,7 +227,7 @@ try:
     md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     known_solution, md)
+                     debug_known_solution, md)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

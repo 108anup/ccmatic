@@ -13,9 +13,9 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.infinite_buffer = False
-cc.dynamic_buffer = True
+cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
-cc.template_queue_bound = True
+cc.template_queue_bound = False
 cc.template_mode_switching = False
 
 cc.desired_util_f = z3.Real('desired_util_f')
@@ -94,10 +94,6 @@ for t in range(first, c.T):
         rhs_loss = 1/2 * acked_bytes
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
-        # # AIMD
-        # rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        # rhs_noloss = v.c_f[0][t-c.R] + 1
-
         # Hybrid to 0
         rhs_loss = 0
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
@@ -105,6 +101,10 @@ for t in range(first, c.T):
         # Hybrid MD
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
+
+        # AIMD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = v.c_f[0][t-c.R] + 1
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
@@ -138,6 +138,16 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
+# verifier.add(desired)
+
+# # Steady state
+# verifier.add(v.c_f[0][first] <= 3 * c.C * (c.R + c.D))
+# verifier.add(v.c_f[0][first] >= 1.5 * c.C * c.R)
+# verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
+# verifier.add(v.A[first] - v.L[first] - v.S[first] <= 2 * c.C * (c.R + c.D))
+
+# verifier.add(v.c_f[0][first] == 3 * c.C * (c.R + c.D))
+# verifier.add(v.A[first] - v.L[first] - v.S[first] > 1.5 * c.C * (c.R + c.D))
 
 verifier.push()
 for metric in optimization_list:

@@ -60,12 +60,12 @@ if(cc.synth_ss):
         sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
     ])
 
-    domain_clauses.extend([
-        sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
-        sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
-        sv_dict['queue'].lo == 0,
-        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
-    ])
+    # domain_clauses.extend([
+    #     sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
+    #     sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+    #     sv_dict['queue'].lo == 0,
+    #     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    # ])
     desired = d.desired_invariant
 else:
     desired = d.desired_necessary
