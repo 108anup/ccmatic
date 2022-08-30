@@ -28,6 +28,8 @@ class CegisConfig:
     N: int = 1
     T: int = 9
 
+    synth_ss: bool = False
+
 
 class CegisCCAGen(Cegis):
 

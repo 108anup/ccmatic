@@ -1,0 +1,23 @@
+[08/29 18:48:28]  --------------------------------------------------------------------------------
+[08/29 18:48:28]  Iteration: 1 (0 solution, 0 counterexamples)
+[08/29 18:48:28]  Generator returned sat in 0.004076 secs.
+[08/29 18:48:28]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 0)
+else:
+	c_f[0][t] = max(0.01, 2v.c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 0)[0m
+[08/29 18:48:28]  Improved gap from 0.1 to 100
+[08/29 18:48:28]  Improved number of small numbers from 100 to 100 out of a max of 100
+[08/29 18:48:28]  Verifer returned sat in 0.218398 secs.
+[08/29 18:48:28]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  wasted_t  arrival_0,t  cwnd_0,t  service_0,t  losts_0,t  queue_t  bottle_queue_t
+0        -5219.9        -5239.9    190.15      -5219.9       0.1      -5239.9        0.0     20.0            20.0
+1        -5219.9        -5239.9    190.15      -5219.9      20.0      -5239.9        0.0     20.0           -80.0
+2        -5139.8        -5139.9    190.15      -5139.8     100.1      -5139.9        0.0      0.1           -99.9
+3        -5039.8        -5039.9    190.15      -5039.8     100.1      -5039.9        0.0      0.1           -99.9
+4        -4439.7        -4939.9    190.15      -4439.7     600.2      -4939.9      380.2    120.0            20.0
+5        -2759.3        -4777.9    190.15      -2759.3    1800.4      -4777.9     1960.6     58.0            20.0
+6         1507.5        -4679.9    190.15       1507.5    4324.8      -4679.9     6127.4     60.0            20.0
+7        10817.1        -4609.9    190.15      10817.1    9369.6      -4609.9    15337.0     90.0            20.0
+8        30126.3        -4539.9    190.15      30126.3   19399.2      -4539.9    34546.2    120.0            20.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_loss_amount=False, ramp_up_cwnd=True, ramp_down_bq=False, ramp_down_q=False, ramp_down_cwnd=False, loss_count=5, loss_amount=34166.[0m

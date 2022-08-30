@@ -12,10 +12,9 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten, get_product_ite
 from cegis.util import get_raw_value
 
-from .verifier import (SteadyStateVariable, get_all_desired, get_cex_df, get_desired_in_ss,
-                       get_desired_property_string, get_desired_ss_string, get_gen_cex_df, get_steady_state_conditions,
-                       run_verifier_incomplete, run_verifier_incomplete_wce,
-                       setup_cegis_basic)
+from .verifier import (get_cex_df, get_desired_necessary,
+                       get_desired_ss_invariant, get_gen_cex_df,
+                       run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -23,63 +22,53 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
+cc.synth_ss = True
+
 cc.infinite_buffer = True
+
 cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 2
+cc.desired_queue_bound_multiplier = 3
+cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired_ss, fefficient, bounded_queue, bounded_loss,
- total_losses) = get_desired_in_ss(cc, c, v)
-
-steady_state_variables: List[SteadyStateVariable] = [
-    SteadyStateVariable(
-        'cwnd',
-        v.c_f[0][cc.history],
-        v.c_f[0][c.T-1],
-        z3.Int('SSThresh_cwnd_lo'),
-        z3.Int('SSThresh_cwnd_hi')),
-    SteadyStateVariable(
-        'queue',
-        v.A_f[0][cc.history] - v.L_f[0][cc.history] - v.S_f[0][cc.history],
-        v.A_f[0][c.T-1] - v.L_f[0][c.T-1] - v.S_f[0][c.T-1],
-        z3.Int('SSThresh_queue_lo'),
-        z3.Int('SSThresh_queue_hi'))
-]
-sv_dict = {sv.name: sv for sv in steady_state_variables}
-steady_state_exists = get_steady_state_conditions(
-    cc, c, v, steady_state_variables)
-
-desired = z3.And(steady_state_exists,
-                 z3.Implies(z3.And(*[sv.init_inside()
-                            for sv in steady_state_variables]), desired_ss))
+if(cc.synth_ss):
+    d = get_desired_ss_invariant(cc, c, v)
+else:
+    d = get_desired_necessary(cc, c, v)
 
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
 domain_clauses = []
 
-# Steady state search
-for sv in steady_state_variables:
-    domain_clauses.append(sv.lo >= 0)
-    domain_clauses.append(sv.hi >= 0)
-    domain_clauses.append(sv.hi >= sv.lo)
+if(cc.synth_ss):
+    # Steady state search
+    assert d.steady_state_variables
+    for sv in d.steady_state_variables:
+        domain_clauses.append(sv.lo >= 0)
+        domain_clauses.append(sv.hi >= 0)
+        domain_clauses.append(sv.hi >= sv.lo)
 
-domain_clauses.extend([
-    sv_dict['cwnd'].lo == c.C * (c.R),
-    sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D) + 2,
-    sv_dict['queue'].lo == 0,
-    sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
-])
+    sv_dict = {sv.name: sv for sv in d.steady_state_variables}
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo == c.C * (c.R),
+        sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    ])
 
-# domain_clauses.extend([
-#     sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
-#     sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
-#     sv_dict['queue'].lo == 0,
-#     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
-# ])
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
+        sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    ])
+    desired = d.desired_invariant
+else:
+    desired = d.desired_necessary
 
 vn = VariableNames(v)
 rhs_var_symbols = ['S_f[0]']
@@ -149,9 +138,10 @@ assert(isinstance(definitions, z3.ExprRef))
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
-for sv in steady_state_variables:
-    generator_vars.append(sv.lo)
-    generator_vars.append(sv.hi)
+if(d.steady_state_variables):
+    for sv in d.steady_state_variables:
+        generator_vars.append(sv.lo)
+        generator_vars.append(sv.hi)
 
 
 # Method overrides
@@ -162,9 +152,7 @@ for sv in steady_state_variables:
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    desired_string = get_desired_ss_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
-        total_losses, steady_state_variables, counter_example)
+    desired_string = d.to_string(cc, c, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 
@@ -187,9 +175,11 @@ def get_solution_str(solution: z3.ModelRef,
     rhs_expr += "+ {}".format(this_const_val)
     ret = "{}[t] = max({}, {})".format(
         lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
-    for sv in steady_state_variables:
-        ret += "\n{}: [{}, {}]".format(
-            sv.name, solution.eval(sv.lo), solution.eval(sv.hi))
+
+    if d.steady_state_variables:
+        for sv in d.steady_state_variables:
+            ret += "\n{}: [{}, {}]".format(
+                sv.name, solution.eval(sv.lo), solution.eval(sv.hi))
     return ret
 
 
@@ -205,16 +195,24 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
     return gen_view_str
 
 
+# Known solution
+lvar_symbol = "c_f[0]"
+rvar_idx = 0
+known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+                        coeffs[lvar_symbol][rvar_idx][1] == 0,
+                        coeffs[lvar_symbol][rvar_idx][2] == 0,
+                        coeffs[lvar_symbol][rvar_idx][3] == -1,
+                        consts[lvar_symbol] == 0)
+assert isinstance(known_solution, z3.ExprRef)
+
+if(cc.synth_ss):
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert(isinstance(search_constraints, z3.ExprRef))
+
 # Debugging:
+debug_known_solution = None
 if DEBUG:
-    # Known solution
-    lvar_symbol = "c_f[0]"
-    rvar_idx = 0
-    known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
-                            coeffs[lvar_symbol][rvar_idx][1] == 0,
-                            coeffs[lvar_symbol][rvar_idx][2] == 0,
-                            coeffs[lvar_symbol][rvar_idx][3] == -1,
-                            consts[lvar_symbol] == 0)
+    debug_known_solution = known_solution
     search_constraints = z3.And(search_constraints, known_solution)
     assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -226,7 +224,8 @@ if DEBUG:
 try:
 
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
-                     search_constraints, definitions, specification, ctx)
+                     search_constraints, definitions, specification, ctx,
+                     debug_known_solution)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

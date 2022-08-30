@@ -13,7 +13,7 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import (flatten, get_product_ite, get_renamed_vars,
                             get_val_list)
 
-from .verifier import (get_all_desired, get_cex_df,
+from .verifier import (get_desired_necessary, get_cex_df,
                        get_desired_property_string, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
@@ -37,7 +37,7 @@ cc.desired_loss_count_bound = 3
 
 (desired, fefficient, bounded_queue, bounded_loss,
  ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_all_desired(cc, c, v)
+ total_losses) = get_desired_necessary(cc, c, v)
 
 # ----------------------------------------------------------------
 # TEMPLATE

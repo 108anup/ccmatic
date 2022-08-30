@@ -1,18 +1,17 @@
-import itertools
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import z3
-from ccac.model import (ModelConfig, calculate_qbound, calculate_qdel, cca_aimd, cca_bbr,
-                        cca_const, cca_copa, cca_paced, cwnd_rate_arrival,
+from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, get_name_for_list, get_renamed_vars, get_val_list
+from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
+                            get_val_list)
 from cegis import NAME_TEMPLATE
 from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
@@ -110,6 +109,81 @@ class SteadyStateVariable:
                               self.final >= self.lo))
         )
         assert isinstance(ret, z3.BoolRef)
+        return ret
+
+
+@dataclass
+class DesiredContainer:
+    desired_necessary: Optional[z3.BoolRef] = None
+    desired_in_ss: Optional[z3.BoolRef] = None
+    desired_invariant: Optional[z3.BoolRef] = None
+
+    fefficient: Optional[z3.BoolRef] = None
+    bounded_queue: Optional[z3.BoolRef] = None
+    bounded_loss_count: Optional[z3.BoolRef] = None
+    bounded_loss_amount: Optional[z3.BoolRef] = None
+
+    ramp_up_cwnd: Optional[z3.BoolRef] = None
+    ramp_down_cwnd: Optional[z3.BoolRef] = None
+
+    ramp_down_queue: Optional[z3.BoolRef] = None
+    ramp_up_queue: Optional[z3.BoolRef] = None
+
+    ramp_down_bq: Optional[z3.BoolRef] = None
+    ramp_up_bq: Optional[z3.BoolRef] = None
+
+    loss_count: Optional[z3.ArithRef] = None
+    loss_amount: Optional[z3.ArithRef] = None
+
+    steady_state_variables: Optional[List[SteadyStateVariable]] = None
+    steady_state_exists: Optional[z3.BoolRef] = None
+
+    atleast_one_outside: Optional[z3.BoolRef] = None
+    none_degrade: Optional[z3.BoolRef] = None
+    atleast_one_moves_inside: Optional[z3.BoolRef] = None
+
+    init_inside: Optional[z3.BoolRef] = None
+    final_inside: Optional[z3.BoolRef] = None
+
+    def to_string(self, cc: CegisConfig,
+                  c: ModelConfig, model: z3.ModelRef) -> str:
+        conds = {
+            "fefficient": self.fefficient,
+            "bounded_queue": self.bounded_queue,
+            "bounded_loss_count": self.bounded_loss_count,
+            "bounded_loss_amount": self.bounded_loss_amount,
+            "ramp_up_cwnd": self.ramp_up_cwnd,
+            "ramp_down_cwnd": self.ramp_down_cwnd,
+            "ramp_up_bq": self.ramp_down_bq,
+            "ramp_down_bq": self.ramp_down_bq,
+            "ramp_up_queue": self.ramp_down_queue,
+            "ramp_down_queue": self.ramp_down_queue,
+            "loss_count": self.loss_count,
+            "loss_amount": self.loss_amount,
+
+            "atleast_one_outside": self.atleast_one_outside,
+            "none_degrade": self.none_degrade,
+            "atleast_one_moves_inside": self.atleast_one_moves_inside,
+
+            "init_inside": self.init_inside,
+            "final_inside": self.final_inside
+        }
+        if(cc.dynamic_buffer):
+            conds["buffer"] = c.buf_min
+        cond_list = []
+        term_count = 0
+        for cond_name, cond in conds.items():
+            if(cond is not None):
+                cond_list.append(
+                    "{}={}".format(cond_name, model.eval(cond)))
+                term_count += 1
+                if(term_count % 6 == 0):
+                    cond_list.append("\n")
+        ret = ", ".join(cond_list)
+        if(self.steady_state_variables):
+            for sv in self.steady_state_variables:
+                ret += "\n{}: [{}, {}]".format(
+                    sv.name, model.eval(sv.lo), model.eval(sv.hi))
         return ret
 
 
@@ -620,39 +694,44 @@ def setup_ccac_full(cca="copa"):
     return c, s, v
 
 
-def get_all_desired(
+def get_desired_necessary(
         cc: CegisConfig, c: ModelConfig, v: Variables):
     first = cc.history
 
-    (_, fefficient, bounded_queue, bounded_loss_count,
-     bounded_loss_amount, loss_count, loss_amount) = get_desired_in_ss(cc, c, v)
+    d = get_desired_in_ss(cc, c, v)
 
     # Induction invariants
-    ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
-    ramp_down_cwnd = v.c_f[0][-1] < v.c_f[0][first]
-    ramp_down_q = (v.A[-1] - v.L[-1] - v.S[-1] <
-                   v.A[first] - v.L[first] - v.S[first])
-    ramp_down_bq = (
+    d.ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
+    d.ramp_down_cwnd = v.c_f[0][-1] < v.c_f[0][first]
+
+    d.ramp_down_queue = (v.A[-1] - v.L[-1] - v.S[-1] <
+                         v.A[first] - v.L[first] - v.S[first])
+    d.ramp_up_queue = (v.A[-1] - v.L[-1] - v.S[-1] >
+                       v.A[first] - v.L[first] - v.S[first])
+
+    d.ramp_down_bq = (
         (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
         < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
-    ramp_up_bq = (
+    d.ramp_up_bq = (
         (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
         > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
 
-    desired = z3.And(
-        z3.Or(fefficient, ramp_up_cwnd, ramp_up_bq),
-        z3.Or(bounded_queue, ramp_down_cwnd, ramp_down_bq),
-        z3.Or(bounded_loss_count, ramp_down_cwnd, ramp_down_bq),
-        z3.Or(bounded_loss_amount, ramp_down_cwnd, ramp_down_bq))
-    assert isinstance(desired, z3.ExprRef)
+    d.desired_necessary = z3.And(
+        z3.Or(d.fefficient, d.ramp_up_cwnd,
+              d.ramp_up_queue, d.ramp_up_bq),
+        z3.Or(d.bounded_queue, d.ramp_down_cwnd,
+              d.ramp_down_queue, d.ramp_down_bq),
+        z3.Or(d.bounded_loss_count, d.ramp_down_cwnd,
+              d.ramp_down_queue, d.ramp_down_bq),
+        z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd,
+              d.ramp_down_queue, d.ramp_down_bq))
 
-    return (desired, fefficient, bounded_queue,
-            bounded_loss_count, bounded_loss_amount,
-            ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
-            loss_count, loss_amount)
+    return d
 
 
 def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
+    d = DesiredContainer()
+
     first = cc.history
     cond_list = []
     for t in range(first, c.T):
@@ -661,30 +740,58 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         cond_list.append(
             v.A[t] - v.L[t] - v.S[t] <=
             cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
-    bounded_queue = z3.And(*cond_list)
+    d.bounded_queue = z3.And(*cond_list)
 
-    fefficient = (
+    d.fefficient = (
         v.S[-1] - v.S[first] >= cc.desired_util_f * c.C * (c.T-1-first-c.D))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
         loss_list.append(v.L[t] > v.L[t-1])
-    loss_count = z3.Sum(*loss_list)
-    bounded_loss_count = loss_count <= cc.desired_loss_count_bound
+    d.loss_count = z3.Sum(*loss_list)
+    d.bounded_loss_count = d.loss_count <= cc.desired_loss_count_bound
 
-    loss_amount = v.L[-1] - v.L[first]
-    bounded_loss_amount = \
-        loss_amount <= cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+    d.loss_amount = v.L[-1] - v.L[first]
+    d.bounded_loss_amount = \
+        d.loss_amount <= \
+        cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
 
-    desired_ss = z3.And(fefficient, bounded_queue,
-                        bounded_loss_count, bounded_loss_amount)
-    return (desired_ss, fefficient, bounded_queue, bounded_loss_count,
-            bounded_loss_amount, loss_count, loss_amount)
+    d.desired_in_ss = z3.And(d.fefficient, d.bounded_queue,
+                             d.bounded_loss_count, d.bounded_loss_amount)
+    return d
 
 
-def get_steady_state_conditions(
+def get_desired_ss_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
+    d = get_desired_in_ss(cc, c, v)
+
+    d.steady_state_variables = [
+        SteadyStateVariable(
+            'cwnd',
+            v.c_f[0][cc.history],
+            v.c_f[0][c.T-1],
+            z3.Int('SSThresh_cwnd_lo'),
+            z3.Int('SSThresh_cwnd_hi')),
+        SteadyStateVariable(
+            'queue',
+            v.A_f[0][cc.history] - v.L_f[0][cc.history] - v.S_f[0][cc.history],
+            v.A_f[0][c.T-1] - v.L_f[0][c.T-1] - v.S_f[0][c.T-1],
+            z3.Int('SSThresh_queue_lo'),
+            z3.Int('SSThresh_queue_hi'))
+    ]
+    d.steady_state_exists = get_steady_state_definitions(
+        cc, c, v, d)
+    inside_ss = z3.And(*[sv.init_inside()
+                         for sv in d.steady_state_variables])
+
+    d.desired_invariant = z3.And(d.steady_state_exists,
+                                 z3.Implies(inside_ss, d.desired_in_ss))
+    return d
+
+
+def get_steady_state_definitions(
         cc: CegisConfig, c: ModelConfig, v: Variables,
-        steady_state_variables: List[SteadyStateVariable]):
+        d: DesiredContainer):
+    assert d.steady_state_variables
     assertions = []
 
     # # Initial in SS implies Final in SS
@@ -697,22 +804,27 @@ def get_steady_state_conditions(
     #     IMPLIES
     #         none should degrade AND
     #         atleast one that is outside must move towards inside
+    d.atleast_one_outside = z3.Or(
+        *[sv.init_outside() for sv in d.steady_state_variables])
+    d.none_degrade = z3.And(*[sv.does_not_degrage()
+                              for sv in d.steady_state_variables])
+    d.atleast_one_moves_inside = \
+        z3.Or(*[z3.And(sv.init_outside(), sv.strictly_improves())
+                for sv in d.steady_state_variables])
     assertions.append(z3.Implies(
-        z3.Or(*[sv.init_outside() for sv in steady_state_variables]),
+        d.atleast_one_outside,
         z3.And(
-            z3.And(*[sv.does_not_degrage()
-                     for sv in steady_state_variables]),
-            z3.Or(*[z3.And(sv.init_outside(), sv.strictly_improves())
-                    for sv in steady_state_variables])
-        ))
-    )
+            d.none_degrade,
+            d.atleast_one_moves_inside)))
 
     # All inside
     #    IMPLIES
     #         All remain inside
+    d.init_inside = z3.And(*[sv.init_inside() for sv in d.steady_state_variables])
+    d.final_inside = z3.And(*[sv.final_inside() for sv in d.steady_state_variables])
     assertions.append(z3.Implies(
-        z3.And(*[sv.init_inside() for sv in steady_state_variables]),
-        z3.And(*[sv.final_inside() for sv in steady_state_variables]),
+        d.init_inside,
+        d.final_inside
     ))
 
     ret = z3.And(*assertions)
@@ -1003,56 +1115,3 @@ def get_gen_cex_df(
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
     return df
-
-
-def get_desired_property_string(
-        cc: CegisConfig, c: ModelConfig,
-        fefficient, bounded_queue,
-        bounded_loss_count, bounded_loss_amount,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        loss_count, loss_amount,
-        model: z3.ModelRef):
-    conds = {
-        "fefficient": fefficient,
-        "bounded_queue": bounded_queue,
-        "bounded_loss_count": bounded_loss_count,
-        "bounded_loss_amount": bounded_loss_amount,
-        "ramp_up_cwnd": ramp_up_cwnd,
-        "ramp_down_bq": ramp_down_bq,
-        "ramp_down_q": ramp_down_q,
-        "ramp_down_cwnd": ramp_down_cwnd,
-        "loss_count": loss_count,
-        "loss_amount": loss_amount,
-    }
-    if(cc.dynamic_buffer):
-        conds["buffer"] = c.buf_min
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, model.eval(cond)))
-    ret = ", ".join(cond_list)
-    return ret
-
-
-def get_desired_ss_string(
-        cc: CegisConfig, c: ModelConfig,
-        fefficient, bounded_queue, bounded_loss,
-        total_losses, steady_state_variables: List[SteadyStateVariable],
-        model: z3.ModelRef):
-    conds = {
-        "fefficient": fefficient,
-        "bounded_queue": bounded_queue,
-        "bounded_loss": bounded_loss,
-        "total_losses": total_losses,
-    }
-    if(cc.dynamic_buffer):
-        conds["buffer"] = c.buf_min
-    cond_list = []
-    for cond_name, cond in conds.items():
-        cond_list.append(
-            "{}={}".format(cond_name, model.eval(cond)))
-    ret = ", ".join(cond_list)
-    for sv in steady_state_variables:
-        ret += "\n{}: [{}, {}]".format(
-            sv.name, model.eval(sv.lo), model.eval(sv.hi))
-    return ret

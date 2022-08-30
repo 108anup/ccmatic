@@ -9,11 +9,10 @@ from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen, CegisConfig
+from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import flatten, get_product_ite
 
-from .verifier import (get_all_desired, get_cex_df,
-                       get_desired_property_string, get_gen_cex_df,
+from .verifier import (get_cex_df, get_desired_necessary, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -27,19 +26,16 @@ cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 
-cc.desired_util_f = 0.8
-cc.desired_queue_bound_multiplier = 1.5
-cc.desired_loss_count_bound = 2
-cc.desired_loss_amount_bound_multiplier = 1
+cc.desired_util_f = 0.3
+cc.desired_queue_bound_multiplier = 2
+cc.desired_loss_count_bound = 3
+cc.desired_loss_amount_bound_multiplier = 2
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue,
- bounded_loss_count, bounded_loss_amount,
- ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- loss_count, loss_amount) = get_all_desired(cc, c, v)
-
+d = get_desired_necessary(cc, c, v)
+desired = d.desired_necessary
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
@@ -59,7 +55,7 @@ consts = {
 # Search constr
 search_range_coeff = [Fraction(i, 2) for i in range(5)]
 # search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
-search_range_const = [0, 1]
+search_range_const = [-1, 0, 1]
 # search_range = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten(list(coeffs.values())):
@@ -110,11 +106,7 @@ generator_vars = (flatten(list(coeffs.values())) +
 def get_counter_example_str(counter_example: z3.ModelRef,
                             verifier_vars: List[z3.ExprRef]) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue,
-        bounded_loss_count, bounded_loss_amount,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        loss_count, loss_amount, counter_example)
+    desired_string = d.to_string(cc, c, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 

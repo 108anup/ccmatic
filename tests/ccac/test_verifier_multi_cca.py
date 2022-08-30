@@ -2,7 +2,7 @@ import numpy as np
 import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import get_val_list
-from ccmatic.verifier import (get_all_desired, get_cex_df,
+from ccmatic.verifier import (get_desired_necessary, get_cex_df,
                               get_desired_property_string, setup_cegis_basic)
 from cegis.util import Metric
 from pyz3_utils.my_solver import MySolver
@@ -25,7 +25,7 @@ cc.desired_loss_count_bound = z3.Real('desired_loss_bound')
 
 (desired, fefficient, bounded_queue, bounded_loss,
  ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_all_desired(cc, c, v)
+ total_losses) = get_desired_necessary(cc, c, v)
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
