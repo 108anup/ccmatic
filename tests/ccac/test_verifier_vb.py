@@ -13,9 +13,9 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.infinite_buffer = False
-cc.dynamic_buffer = False
-cc.buffer_size_multiplier = 0.1
-cc.template_queue_bound = False
+cc.dynamic_buffer = True
+cc.buffer_size_multiplier = 1
+cc.template_queue_bound = True
 cc.template_mode_switching = False
 
 cc.desired_util_f = z3.Real('desired_util_f')
@@ -33,7 +33,7 @@ vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
 template_definitions = []
 if(cc.template_queue_bound):
-    template_definitions.append(v.qsize_thresh == 8)
+    template_definitions.append(v.qsize_thresh == 2)
 
 if(cc.template_mode_switching):
     for t in range(1, c.T):
@@ -63,9 +63,14 @@ for t in range(first, c.T):
         rhs = z3.If(v.mode_f[0][t], z3.If(
             loss_detected, rhs_mode0_if, rhs_mode0_else), rhs_mode1_if)
     elif(cc.template_queue_bound):
+
         rhs_loss = 0
         rhs_delay = 1/2 * (acked_bytes)
         rhs_noloss = acked_bytes
+
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_delay = (acked_bytes)
+        rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
         rhs = z3.If(loss_detected, rhs_loss, z3.If(
             delay_detected, rhs_delay, rhs_noloss))
@@ -85,16 +90,20 @@ for t in range(first, c.T):
         rhs_loss = v.c_f[0][t-c.R] - 1
         rhs_noloss = v.c_f[0][t-c.R] + 1
 
-        # AIMD
-        rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        rhs_noloss = v.c_f[0][t-c.R] + 1
-
-        # Hybrid
-        rhs_loss = 1/2 * v.c_f[0][t-c.R] + 1
+        # Hybrid half_acked_bytes
+        rhs_loss = 1/2 * acked_bytes
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
+
+        # # AIMD
+        # rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        # rhs_noloss = v.c_f[0][t-c.R] + 1
 
         # Hybrid to 0
         rhs_loss = 0
+        rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
+
+        # Hybrid MD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)

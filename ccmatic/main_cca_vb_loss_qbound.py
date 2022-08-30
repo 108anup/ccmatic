@@ -1,4 +1,5 @@
 import functools
+import itertools
 import logging
 from fractions import Fraction
 from typing import List
@@ -9,12 +10,11 @@ from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen, CegisConfig
+from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import (flatten, get_product_ite, get_renamed_vars,
                             get_val_list)
 
-from .verifier import (get_desired_necessary, get_cex_df,
-                       get_desired_property_string, get_gen_cex_df,
+from .verifier import (get_cex_df, get_desired_necessary, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -31,13 +31,13 @@ cc.template_queue_bound = True
 cc.desired_util_f = 0.33
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_count_bound = 3
+cc.desired_loss_amount_bound_multiplier = 2
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
- ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_desired_necessary(cc, c, v)
+d = get_desired_necessary(cc, c, v)
+desired = d.desired_necessary
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -74,6 +74,17 @@ for const in flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_const]))
 domain_clauses.append(z3.Or(
     *[v.qsize_thresh == val for val in qsize_thresh_choices]))
+
+# All expressions should be different. Otherwise that expression is not needed.
+conds = ['loss', 'delay', 'noloss']
+for pair in itertools.combinations(conds, 2):
+    is_same = z3.And(
+        coeffs['c_f[0]_{}'.format(pair[0])] ==
+        coeffs['c_f[0]_{}'.format(pair[1])],
+        coeffs['ack_f[0]_{}'.format(pair[0])] ==
+        coeffs['ack_f[0]_{}'.format(pair[1])])
+    domain_clauses.append(z3.Not(is_same))
+
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -125,6 +136,7 @@ assert isinstance(definitions, z3.ExprRef)
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())) + [v.qsize_thresh])
+critical_generator_vars = flatten(list(coeffs.values()))
 
 
 # Method overrides
@@ -144,10 +156,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
         for t in range(1, c.T)])
     ret = "{}".format(df)
 
-    desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+    desired_string = d.to_string(cc, c, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 
@@ -205,6 +214,16 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 # Known solution
 known_solution = None
+# known_solution_list = [
+#     coeffs['c_f[0]_delay'] == 1/2,
+#     coeffs['ack_f[0]_delay'] == 1/2,
+#     coeffs['c_f[0]_noloss'] == 1/2,
+#     coeffs['ack_f[0]_noloss'] == 1/2,
+#     coeffs['c_f[0]_loss'] == 1/2,
+#     coeffs['ack_f[0]_loss'] == 0,
+#     v.qsize_thresh == 6
+# ]
+# known_solution = z3.And(*known_solution_list)
 
 # Debugging:
 if DEBUG:
@@ -226,9 +245,10 @@ if DEBUG:
         f.write(definitions.sexpr())
 
 try:
+    md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     known_solution)
+                     known_solution, md)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

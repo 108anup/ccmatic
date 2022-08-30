@@ -22,11 +22,11 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 cc = CegisConfig()
 cc.infinite_buffer = False
-cc.dynamic_buffer = False
-cc.buffer_size_multiplier = 1
-cc.template_queue_bound = False
+cc.dynamic_buffer = True
+cc.buffer_size_multiplier = 0.1
+cc.template_queue_bound = True
 
-cc.desired_util_f = 0.3
+cc.desired_util_f = 0.33
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_count_bound = 3
 cc.desired_loss_amount_bound_multiplier = 2
