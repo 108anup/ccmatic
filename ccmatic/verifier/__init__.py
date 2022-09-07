@@ -617,10 +617,10 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     return c
 
 
-def setup_cegis_basic(cc: CegisConfig):
+def setup_cegis_basic(cc: CegisConfig, name=None):
     c = setup_ccac_for_cegis(cc)
     s = MySolver()
-    v = Variables(c, s)
+    v = Variables(c, s, name)
 
     ccac_domain = z3.And(*s.assertion_list)
     sd = setup_ccac_definitions(c, v)
@@ -692,6 +692,23 @@ def setup_ccac_full(cca="copa"):
     # Avoid weird cases where single packet is larger than BDP.
     s.add(v.alpha < 1/5)
     return c, s, v
+
+
+def get_periodic_constraints(cc: CegisConfig, c: ModelConfig, v: Variables):
+    # In beginning and in end,
+    # For each flow, packet queue and cwnd should be same
+    # Token queue should be same
+    periodic = []
+    last = cc.T-1 - (cc.history-1)
+    for h in range(cc.history):
+        for n in range(cc.N):
+            periodic.append(v.c_f[n][h] == v.c_f[n][last+h])
+            periodic.append(
+                v.A_f[n][h] - v.L_f[n][h] - v.S_f[n][h] ==
+                v.A_f[n][last+h] - v.L_f[n][last+h] - v.S_f[n][last+h])
+        periodic.append(v.C0 + c.C * h - v.W[h] - v.S[h] ==
+                        v.C0 + c.C * (last+h) - v.W[last+h] - v.S[last+h])
+    return z3.And(*periodic)
 
 
 def get_desired_necessary(

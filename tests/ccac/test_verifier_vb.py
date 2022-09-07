@@ -98,13 +98,17 @@ for t in range(first, c.T):
         rhs_loss = 0
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
+        # AIMD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = v.c_f[0][t-c.R] + 1
+
         # Hybrid MD
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
-        # AIMD
-        rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        rhs_noloss = v.c_f[0][t-c.R] + 1
+        # # Hybrid MD no combination
+        # rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        # rhs_noloss = acked_bytes
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 

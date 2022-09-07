@@ -13,7 +13,9 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.history = 4
+cc.T = 8 + cc.history * 2
 cc.infinite_buffer = True
+
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
@@ -25,14 +27,15 @@ cc.desired_loss_amount_bound_multiplier = \
 
 d = get_desired_necessary(cc, c, v)
 desired = d.desired_necessary
+desired = d.desired_in_ss
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
 template_definitions = []
 for t in range(first, c.T):
-    rhs = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
+    # rhs = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
     # rhs = v.S_f[0][t-c.R] - v.S_f[0][t-3] + 1
-    # rhs = v.S_f[0][t-1] + v.S_f[0][t-2] - (v.S_f[0][t-3] + v.S_f[0][t-4])
+    rhs = v.S_f[0][t-1] + v.S_f[0][t-2] - (v.S_f[0][t-3] + v.S_f[0][t-4])
     assert isinstance(rhs, z3.ArithRef)
     template_definitions.append(
         v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
@@ -63,6 +66,14 @@ verifier.add(ccac_definitions)
 verifier.add(environment)
 verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
+
+# Periodic cex
+for h in range(cc.history):
+    last = cc.T-1 - (cc.history-1)
+    for n in range(cc.N):
+        verifier.add(v.c_f[n][h] == v.c_f[n][last+h])
+    verifier.add(v.A[h] - v.L[h] - v.S[h] ==
+                 v.A[last+h] - v.L[last+h] - v.S[last+h])
 
 verifier.push()
 for metric in optimization_list:

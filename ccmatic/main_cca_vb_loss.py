@@ -191,8 +191,8 @@ known_solution_list = [
     coeffs['ack_f[0]_loss'] == 0,
     consts['c_f[0]_loss'] == 0,
 
-    coeffs['c_f[0]_noloss'] == 1,
-    coeffs['ack_f[0]_noloss'] == 0,
+    coeffs['c_f[0]_noloss'] == 1/2,
+    coeffs['ack_f[0]_noloss'] == 1/2,
     consts['c_f[0]_noloss'] == 1,
 ]
 known_solution = z3.And(*known_solution_list)
