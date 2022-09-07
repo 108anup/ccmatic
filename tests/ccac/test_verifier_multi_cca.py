@@ -2,8 +2,8 @@ import numpy as np
 import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import get_val_list
-from ccmatic.verifier import (get_desired_necessary, get_cex_df,
-                              get_desired_property_string, setup_cegis_basic)
+from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+                              get_periodic_constraints, setup_cegis_basic)
 from cegis.util import Metric
 from pyz3_utils.my_solver import MySolver
 
@@ -14,18 +14,19 @@ cc.history = 4
 cc.infinite_buffer = True
 cc.template_queue_bound = False
 cc.N = 2
-cc.T = 15
+cc.T = 9
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_loss_count_bound = z3.Real('desired_loss_bound')
+cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
- ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_desired_necessary(cc, c, v)
+d = get_desired_necessary(cc, c, v)
+desired = d.desired_necessary
+desired = d.desired_in_ss
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
@@ -97,10 +98,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
                 v.A_f[n][t] - v.L_f[n][t] - v.S_f[n][t]).as_fraction()
             for t in range(c.T)]
 
-    desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+    desired_string = d.to_string(cc, c, counter_example)
     ret = "{}\n{}.".format(df.astype(float), desired_string)
 
     qdel_vals = []
@@ -115,6 +113,7 @@ optimization_list = [
     Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 8, 0.001, False),
     Metric(cc.desired_loss_count_bound, 0, 0, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 0, 0.001, False),
 ]
 
 verifier = MySolver()
@@ -125,23 +124,18 @@ verifier.add(environment)
 verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
 
+# Initial state
+verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) >= c.C * (c.R + c.D))
+verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) <= (cc.history-1) * c.C * (c.R + c.D))
+verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
+verifier.add(v.A[first-1] - v.L[first-1] - v.S[first-1] <= 1.5 * c.C * (c.R + c.D))
+
+
 # Check performant trace
 # verifier.add(desired)
 
 # Periodic counter example
-for t in range(first):
-    last = c.T-first
-    for n in range(c.N):
-        verifier.add(v.c_f[n][t] == v.c_f[n][last+t])
-        verifier.add(v.A_f[n][t] - v.L_f[n][t] - v.S_f[n][t]
-                     == v.A_f[n][last+t] - v.L_f[n][last+t] - v.S_f[n][last+t])
-    verifier.add(
-        v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t]) ==
-        v.A[last+t] - v.L[last+t] - (v.C0 + c.C * (last+t) - v.W[last+t]))
-
-    # verifier.add(v.c_f[n][0] == v.c_f[n][c.T-1])
-    # verifier.add(v.A_f[n][c.T-1] - v.L_f[n][c.T-1] - v.S_f[n][c.T-1]
-    #              == v.A_f[n][0] - v.L_f[n][0] - v.S_f[n][0])
+# verifier.add(get_periodic_constraints(cc, c, v))
 # verifier.add(z3.And(high_util, v.L[-3] > v.L[first]))
 
 verifier.push()

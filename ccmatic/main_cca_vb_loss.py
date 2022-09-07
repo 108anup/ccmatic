@@ -21,7 +21,7 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.synth_ss = True
+cc.synth_ss = False
 
 cc.infinite_buffer = False
 cc.dynamic_buffer = False
@@ -30,8 +30,8 @@ cc.template_queue_bound = True
 
 cc.desired_util_f = 0.8
 cc.desired_queue_bound_multiplier = 1.5
-cc.desired_loss_count_bound = 1
-cc.desired_loss_amount_bound_multiplier = 0.6
+cc.desired_loss_count_bound = 2
+cc.desired_loss_amount_bound_multiplier = 1
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -57,17 +57,17 @@ if(cc.synth_ss):
 
     sv_dict = {sv.name: sv for sv in d.steady_state_variables}
     # domain_clauses.extend([
-    #     sv_dict['cwnd'].lo == c.C * (c.R),
+    #     sv_dict['cwnd'].lo == 0.75 * c.C * (c.R + c.D),
     #     sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
     #     sv_dict['queue'].lo == 0,
-    #     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+    #     sv_dict['queue'].hi == 1.5 * c.C * (c.R + c.D),
     # ])
 
     domain_clauses.extend([
         sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
         sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
-        sv_dict['queue'].lo == 0,
-        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
+        sv_dict['queue'].lo >= 0,
+        sv_dict['queue'].hi <= 2 * c.C * (c.R + c.D),
     ])
 
 vn = VariableNames(v)

@@ -718,8 +718,14 @@ def get_desired_necessary(
     d = get_desired_in_ss(cc, c, v)
 
     # Induction invariants
-    d.ramp_up_cwnd = v.c_f[0][-1] > v.c_f[0][first]
-    d.ramp_down_cwnd = v.c_f[0][-1] < v.c_f[0][first]
+    total_final_cwnd = 0
+    total_initial_cwnd = 0
+    for n in range(c.N):
+        total_initial_cwnd += v.c_f[n][first]
+        total_final_cwnd += v.c_f[n][-1]
+
+    d.ramp_up_cwnd = total_final_cwnd > total_initial_cwnd
+    d.ramp_down_cwnd = total_final_cwnd < total_initial_cwnd
 
     d.ramp_down_queue = (v.A[-1] - v.L[-1] - v.S[-1] <
                          v.A[first] - v.L[first] - v.S[first])
@@ -781,11 +787,17 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
 def get_desired_ss_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     d = get_desired_in_ss(cc, c, v)
 
+    total_final_cwnd = 0
+    total_initial_cwnd = 0
+    for n in range(c.N):
+        total_initial_cwnd += v.c_f[n][cc.history]
+        total_final_cwnd += v.c_f[n][-1]
+
     d.steady_state_variables = [
         SteadyStateVariable(
             'cwnd',
-            v.c_f[0][cc.history],
-            v.c_f[0][c.T-1],
+            total_initial_cwnd,
+            total_final_cwnd,
             z3.Int('SSThresh_cwnd_lo'),
             z3.Int('SSThresh_cwnd_hi')),
         SteadyStateVariable(

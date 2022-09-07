@@ -25,6 +25,7 @@ DEBUG = False
 cc = CegisConfig()
 cc.synth_ss = False
 cc.T = 5 + cc.history * 2
+cc.N = 2
 
 cc.infinite_buffer = True
 
@@ -82,7 +83,7 @@ if(cc.synth_ss):
 
 vn = VariableNames(v)
 rhs_var_symbols = ['S_f[0]']
-rhs_var_symbols = ['c_f[0]', 'S_f[0]']
+# rhs_var_symbols = ['c_f[0]', 'S_f[0]']
 lhs_var_symbols = ['c_f[0]']
 lvar_lower_bounds = {
     'c_f[0]': 0.01

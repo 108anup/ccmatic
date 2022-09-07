@@ -28,6 +28,7 @@ cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 
 d = get_desired_necessary(cc, c, v)
 desired = d.desired_necessary
+desired = d.desired_in_ss
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
@@ -129,10 +130,10 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 
 optimization_list = [
-    Metric(cc.desired_util_f, 0.3, 1, 0.001, True),
+    Metric(cc.desired_util_f, 0.9, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
-    Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
-    Metric(cc.desired_loss_amount_bound_multiplier, 0, 2, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 0, 2, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 0.5, 0.001, False),
 ]
 
 verifier = MySolver()
@@ -144,11 +145,17 @@ verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
 # verifier.add(desired)
 
-# # Steady state
+# # Initial states
 # verifier.add(v.c_f[0][first] <= 3 * c.C * (c.R + c.D))
 # verifier.add(v.c_f[0][first] >= 1.5 * c.C * c.R)
 # verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
 # verifier.add(v.A[first] - v.L[first] - v.S[first] <= 2 * c.C * (c.R + c.D))
+
+# Initial state H[loss=MD, noloss=combination]
+verifier.add(v.c_f[0][first] >= c.C * (c.R + c.D))
+verifier.add(v.c_f[0][first] <= (cc.history-1) * c.C * (c.R + c.D))
+verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
+verifier.add(v.A[first-1] - v.L[first-1] - v.S[first-1] <= 1.5 * c.C * (c.R + c.D))
 
 # verifier.add(v.c_f[0][first] == 3 * c.C * (c.R + c.D))
 # verifier.add(v.A[first] - v.L[first] - v.S[first] > 1.5 * c.C * (c.R + c.D))
