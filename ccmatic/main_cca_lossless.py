@@ -23,8 +23,9 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.synth_ss = False
+cc.synth_ss = True
 cc.T = 5 + cc.history * 2
+cc.T = 9
 cc.N = 2
 
 cc.infinite_buffer = True
@@ -34,11 +35,17 @@ cc.desired_queue_bound_multiplier = 3
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
 (c, s, v,
- ccac_domain, ccac_definitions, _environment,
+ ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
 # Periodic cex
-environment = z3.And(_environment, get_periodic_constraints(cc, c, v))
+# environment = z3.And(environment, get_periodic_constraints(cc, c, v))
+
+# # To get rid of monotonic solutions
+# cwnd_has_upper_bound = []
+# for t in range(cc.history, c.T):
+#     cwnd_has_upper_bound.append(v.c_f[0][t] <= 10 * c.C * (c.R + c.D))
+# desired = z3.And(d.desired_in_ss, z3.And(*cwnd_has_upper_bound))
 
 if(cc.synth_ss):
     d = get_desired_ss_invariant(cc, c, v)
@@ -46,12 +53,6 @@ if(cc.synth_ss):
 else:
     d = get_desired_necessary(cc, c, v)
     desired = d.desired_necessary
-
-# To get rid of monotonic solutions
-cwnd_has_upper_bound = []
-for t in range(cc.history, c.T):
-    cwnd_has_upper_bound.append(v.c_f[0][t] <= 10 * c.C * (c.R + c.D))
-desired = z3.And(d.desired_in_ss, z3.And(*cwnd_has_upper_bound))
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -116,6 +117,7 @@ assert(isinstance(search_constraints, z3.ExprRef))
 template_definitions = []
 
 
+# TODO(108anup): For multi-flow, need to add constraints for both CCAs.
 def get_expr(lvar_symbol, t) -> z3.ArithRef:
     term_list = []
     for rvar_idx in range(len(rhs_var_symbols)):
