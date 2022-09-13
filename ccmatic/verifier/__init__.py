@@ -695,19 +695,30 @@ def setup_ccac_full(cca="copa"):
 
 
 def get_periodic_constraints(cc: CegisConfig, c: ModelConfig, v: Variables):
-    # In beginning and in end,
-    # For each flow, packet queue and cwnd should be same
-    # Token queue should be same
     periodic = []
-    last = cc.T-1 - (cc.history-1)
-    for h in range(cc.history):
-        for n in range(cc.N):
-            periodic.append(v.c_f[n][h] == v.c_f[n][last+h])
-            periodic.append(
-                v.A_f[n][h] - v.L_f[n][h] - v.S_f[n][h] ==
-                v.A_f[n][last+h] - v.L_f[n][last+h] - v.S_f[n][last+h])
-        periodic.append(v.C0 + c.C * h - v.W[h] - v.S[h] ==
-                        v.C0 + c.C * (last+h) - v.W[last+h] - v.S[last+h])
+
+    # # In beginning and in end,
+    # # For each flow, packet queue and cwnd should be same
+    # # Token queue should be same
+    # last = cc.T-1 - (cc.history-1)
+    # for h in range(cc.history):
+    #     for n in range(cc.N):
+    #         periodic.append(v.c_f[n][h] == v.c_f[n][last+h])
+    #         periodic.append(
+    #             v.A_f[n][h] - v.L_f[n][h] - v.S_f[n][h] ==
+    #             v.A_f[n][last+h] - v.L_f[n][last+h] - v.S_f[n][last+h])
+    #     periodic.append(v.C0 + c.C * h - v.W[h] - v.S[h] ==
+    #                     v.C0 + c.C * (last+h) - v.W[last+h] - v.S[last+h])
+
+    # First decided by CCA is equal to last decided by CCA
+    for n in range(cc.N):
+        periodic.append(v.c_f[n][cc.history] == v.c_f[n][c.T-1])
+        periodic.append(
+            v.A_f[n][cc.history] - v.L_f[n][cc.history] - v.S_f[n][cc.history] ==
+            v.A_f[n][c.T-1] - v.L_f[n][c.T-1] - v.S_f[n][c.T-1])
+    periodic.append(v.C0 + c.C * cc.history - v.W[cc.history] - v.S[cc.history] ==
+                    v.C0 + c.C * (c.T-1) - v.W[c.T-1] - v.S[c.T-1])
+
     return z3.And(*periodic)
 
 
@@ -793,6 +804,8 @@ def get_desired_ss_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
         total_initial_cwnd += v.c_f[n][cc.history]
         total_final_cwnd += v.c_f[n][-1]
 
+    assert(isinstance(total_final_cwnd, z3.ArithRef))
+    assert(isinstance(total_initial_cwnd, z3.ArithRef))
     d.steady_state_variables = [
         SteadyStateVariable(
             'cwnd',
@@ -800,12 +813,24 @@ def get_desired_ss_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
             total_final_cwnd,
             z3.Int('SSThresh_cwnd_lo'),
             z3.Int('SSThresh_cwnd_hi')),
+
+        # Queue
         SteadyStateVariable(
             'queue',
-            v.A_f[0][cc.history] - v.L_f[0][cc.history] - v.S_f[0][cc.history],
-            v.A_f[0][c.T-1] - v.L_f[0][c.T-1] - v.S_f[0][c.T-1],
+            v.A[cc.history] - v.L[cc.history] - v.S[cc.history],
+            v.A[c.T-1] - v.L[c.T-1] - v.S[c.T-1],
             z3.Int('SSThresh_queue_lo'),
             z3.Int('SSThresh_queue_hi'))
+
+        # # Bottleneck Queue
+        # SteadyStateVariable(
+        #     'queue',
+        #     v.A[cc.history] - v.L[cc.history]
+        #     - (v.C0 + c.C * (cc.history) - v.W[cc.history]),
+        #     v.A[c.T-1] - v.L[c.T-1]
+        #     - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]),
+        #     z3.Int('SSThresh_queue_lo'),
+        #     z3.Int('SSThresh_queue_hi'))
     ]
     d.steady_state_exists = get_steady_state_definitions(
         cc, c, v, d)

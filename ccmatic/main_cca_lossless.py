@@ -23,15 +23,15 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.synth_ss = True
-cc.T = 5 + cc.history * 2
-cc.T = 9
+# cc.synth_ss = True
+# cc.T = 5 + cc.history * 2
+cc.T = 15
 cc.N = 2
 
 cc.infinite_buffer = True
 
 cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 3
+cc.desired_queue_bound_multiplier = 4
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
 (c, s, v,
@@ -68,26 +68,33 @@ if(cc.synth_ss):
         domain_clauses.append(sv.hi >= sv.lo)
 
     sv_dict = {sv.name: sv for sv in d.steady_state_variables}
-    domain_clauses.extend([
-        sv_dict['cwnd'].lo == c.C * (c.R),
-        sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
-        sv_dict['queue'].lo == 0,
-        sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
-    ])
-
     # domain_clauses.extend([
-    #     sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
-    #     sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+    #     sv_dict['cwnd'].lo == c.C * (c.R),
+    #     sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
     #     sv_dict['queue'].lo == 0,
     #     sv_dict['queue'].hi == 2 * c.C * (c.R + c.D),
     # ])
 
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo == c.C * (c.R),
+        sv_dict['cwnd'].hi == 3 * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 3 * c.C * (c.R + c.D),
+    ])
+
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo >= 0.5 * c.C * (c.R),
+        sv_dict['cwnd'].hi <= c.T * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 3 * c.C * (c.R + c.D),
+    ])
+
 vn = VariableNames(v)
-rhs_var_symbols = ['S_f[0]']
-# rhs_var_symbols = ['c_f[0]', 'S_f[0]']
-lhs_var_symbols = ['c_f[0]']
+rhs_var_symbols = ['S_f']
+# rhs_var_symbols = ['c_f', 'S_f']
+lhs_var_symbols = ['c_f']
 lvar_lower_bounds = {
-    'c_f[0]': 0.01
+    'c_f': 0.01
 }
 n_coeffs = len(rhs_var_symbols) * cc.history
 n_const = 1
@@ -118,14 +125,14 @@ template_definitions = []
 
 
 # TODO(108anup): For multi-flow, need to add constraints for both CCAs.
-def get_expr(lvar_symbol, t) -> z3.ArithRef:
+def get_expr(lvar_symbol, t, n) -> z3.ArithRef:
     term_list = []
     for rvar_idx in range(len(rhs_var_symbols)):
         rvar_symbol = rhs_var_symbols[rvar_idx]
         for h in range(cc.history):
             this_coeff = coeffs[lvar_symbol][rvar_idx][h]
             time_idx = t - c.R - h
-            rvar = eval('v.{}'.format(rvar_symbol))
+            rvar = eval(f'v.{rvar_symbol}[{n}]')
             this_term = get_product_ite(
                 this_coeff, rvar[time_idx], search_range)
             term_list.append(this_term)
@@ -135,13 +142,14 @@ def get_expr(lvar_symbol, t) -> z3.ArithRef:
 
 
 first = cc.history
-for lvar_symbol in lhs_var_symbols:
-    lower_bound = lvar_lower_bounds[lvar_symbol]
-    for t in range(first, c.T):
-        lvar = eval('v.{}'.format(lvar_symbol))
-        rhs = get_expr(lvar_symbol, t)
-        template_definitions.append(
-            lvar[t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
+for n in range(c.N):
+    for lvar_symbol in lhs_var_symbols:
+        lower_bound = lvar_lower_bounds[lvar_symbol]
+        for t in range(first, c.T):
+            lvar = eval(f'v.{lvar_symbol}[{n}]')
+            rhs = get_expr(lvar_symbol, t, n)
+            template_definitions.append(
+                lvar[t] == z3.If(rhs >= lower_bound, rhs, lower_bound))
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -173,7 +181,7 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
     assert(len(lhs_var_symbols) == 1)
-    lvar_symbol = "c_f[0]"
+    lvar_symbol = "c_f"
     rhs_expr = ""
     for rvar_idx in range(len(rhs_var_symbols)):
         rvar_symbol = rhs_var_symbols[rvar_idx]
@@ -209,7 +217,7 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 
 # Known solution
-lvar_symbol = "c_f[0]"
+lvar_symbol = "c_f"
 rvar_idx = 0
 known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
                         coeffs[lvar_symbol][rvar_idx][1] == 0,

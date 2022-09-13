@@ -2,7 +2,7 @@ import numpy as np
 import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import get_val_list
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+from ccmatic.verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant,
                               get_periodic_constraints, setup_cegis_basic)
 from cegis.util import Metric
 from pyz3_utils.my_solver import MySolver
@@ -14,7 +14,8 @@ cc.history = 4
 cc.infinite_buffer = True
 cc.template_queue_bound = False
 cc.N = 2
-cc.T = 9
+cc.T = 15
+# cc.synth_ss = True
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
@@ -24,9 +25,23 @@ cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-d = get_desired_necessary(cc, c, v)
-desired = d.desired_necessary
-desired = d.desired_in_ss
+if(cc.synth_ss):
+    d = get_desired_ss_invariant(cc, c, v)
+    desired = d.desired_invariant
+else:
+    d = get_desired_necessary(cc, c, v)
+    desired = d.desired_necessary
+
+domain_clauses = []
+if(cc.synth_ss):
+    assert d.steady_state_variables
+    sv_dict = {sv.name: sv for sv in d.steady_state_variables}
+    domain_clauses.extend([
+        sv_dict['cwnd'].lo == 0.5 * c.C * (c.R),
+        sv_dict['cwnd'].hi == (cc.history-1) * c.C * (c.R + c.D),
+        sv_dict['queue'].lo == 0,
+        sv_dict['queue'].hi == 3 * c.C * (c.R + c.D),
+    ])
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
@@ -121,14 +136,15 @@ verifier.warn_undeclared = False
 verifier.add(ccac_domain)
 verifier.add(ccac_definitions)
 verifier.add(environment)
+verifier.add(z3.And(*domain_clauses))
 verifier.add(z3.And(*template_definitions))
 verifier.add(z3.Not(desired))
 
-# Initial state
-verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) >= c.C * (c.R + c.D))
-verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) <= (cc.history-1) * c.C * (c.R + c.D))
-verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
-verifier.add(v.A[first-1] - v.L[first-1] - v.S[first-1] <= 1.5 * c.C * (c.R + c.D))
+# # Initial state
+# verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) >= c.C * (c.R + c.D))
+# verifier.add(z3.Sum(*[v.c_f[n][first] for n in range(c.N)]) <= (cc.history-1) * c.C * (c.R + c.D))
+# verifier.add(v.A[first] - v.L[first] - v.S[first] >= 0)
+# verifier.add(v.A[first-1] - v.L[first-1] - v.S[first-1] <= 1.5 * c.C * (c.R + c.D))
 
 
 # Check performant trace
