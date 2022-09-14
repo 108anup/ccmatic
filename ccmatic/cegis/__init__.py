@@ -35,6 +35,7 @@ class CegisConfig:
     T: int = 9
 
     synth_ss: bool = False
+    feasible_response: bool = False
 
 
 class CegisCCAGen(Cegis):

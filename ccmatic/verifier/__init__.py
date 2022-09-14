@@ -253,6 +253,20 @@ def service_waste(c: ModelConfig, s: MySolver, v: Variables):
                                v.A[t] - v.L[t] <= v.S[t] + v.epsilon))
 
 
+def service_choice(c: ModelConfig, s: MySolver, v: Variables):
+    assert c.N == 1
+    for t in range(c.T):
+        S_lower = v.C0 + c.C * (t - c.D) - v.W[0]
+        if t >= c.D:
+            S_lower = v.C0 + c.C * (t - c.D) - v.W[t - c.D]
+        feasible = z3.And(
+            v.S_choice[t] <= v.A[t] - v.L[t],
+            v.S[t] <= v.C0 + c.C * t - v.W[t],
+            S_lower <= v.S[t])
+        s.add(z3.Implies(feasible, v.S[t] == v.S_choice[t]))
+        s.add(z3.Implies(z3.Not(feasible), v.S[t] == S_lower))
+
+
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
     assert c.deterministic_loss
     assert c.buf_max == c.buf_min
@@ -519,7 +533,7 @@ def get_cegis_vars(
     if(c.buf_min is None):
         # No loss
         verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W,
+            [v.A_f[:, :history], v.c_f[:, :history], v.W,
              v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
         definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:],
@@ -529,7 +543,7 @@ def get_cegis_vars(
         # Determinisitic loss
         assert c.loss_oracle
         verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W,
+            [v.A_f[:, :history], v.c_f[:, :history], v.W,
              v.L_f[:, :1], v.Ld_f[:, :c.R],
              v.dupacks, v.alpha, conditional_vvars, v.C0])
         definition_vars = flatten(
@@ -541,11 +555,17 @@ def get_cegis_vars(
         # Non-determinisitic loss
         assert c.loss_oracle
         verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.S_f, v.W, v.L_f,
+            [v.A_f[:, :history], v.c_f[:, :history], v.W, v.L_f,
              v.Ld_f[:, :c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
         definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:], v.Ld_f[:, c.R:],
              v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+
+    if(cc.feasible_response):
+        verifier_vars.extend(v.S_choice)
+        definition_vars.extend(v.S_f)
+    else:
+        verifier_vars.extend(v.S_f)
 
     if(c.calculate_qbound):
         definition_vars.extend(flatten(v.exceed_queue_f))
@@ -561,7 +581,7 @@ def get_cegis_vars(
     return verifier_vars, definition_vars
 
 
-def setup_ccac_definitions(c, v):
+def setup_ccac_definitions(c: ModelConfig, v: Variables):
     s = MySolver()
     s.warn_undeclared = False
 
@@ -582,6 +602,8 @@ def setup_ccac_definitions(c, v):
     cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
     assert c.cca == "paced"
     cca_paced(c, s, v)  # Defs to compute rate.
+    if(c.feasible_response):
+        service_choice(c, s, v)
 
     return s
 
@@ -613,6 +635,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     if(c.N > 1):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
+    c.feasible_response = cc.feasible_response
 
     return c
 
