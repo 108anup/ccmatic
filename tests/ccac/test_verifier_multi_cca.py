@@ -1,10 +1,13 @@
+import pandas as pd
+import logging
 import numpy as np
 import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import get_val_list
 from ccmatic.verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant,
                               get_periodic_constraints, setup_cegis_basic)
-from cegis.util import Metric
+from cegis.util import Metric, optimize_multi_var
+from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 from ccac.variables import VariableNames
@@ -182,4 +185,16 @@ if(str(sat) == "sat"):
 #     import ipdb; ipdb.set_trace()
 
 verifier.pop()
+
+GlobalConfig().logging_levels['cegis'] = logging.INFO
+logger = logging.getLogger('cegis')
+GlobalConfig().default_logger_setup(logger)
+
+ret = optimize_multi_var(verifier, optimization_list)
+df = pd.DataFrame(ret)
+sort_columns = [x.name() for x in optimization_list]
+sort_order = [x.maximize for x in optimization_list]
+df = df.sort_values(by=sort_columns, ascending=sort_order)
+print(df)
+
 print("Done")
