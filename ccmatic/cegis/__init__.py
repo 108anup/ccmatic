@@ -18,6 +18,7 @@ class CegisConfig:
     template_queue_bound: bool = False
     template_mode_switching: bool = False
     template_loss_oracle: bool = True  # Use ECN marks
+    template_qdel: bool = False  # For copa like algos
 
     # desired
     desired_util_f: Union[float, z3.ArithRef]
@@ -35,6 +36,8 @@ class CegisConfig:
     T: int = 9
     R: int = 1
     D: int = 1
+    cca: str = "paced"
+    compose: bool = True
 
     synth_ss: bool = False
     feasible_response: bool = False

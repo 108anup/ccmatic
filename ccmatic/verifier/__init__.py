@@ -600,8 +600,8 @@ def setup_ccac_definitions(c: ModelConfig, v: Variables):
         last_decrease_defs(c, s, v)
         exceed_queue_defs(c, s, v)
     cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
-    assert c.cca == "paced"
-    cca_paced(c, s, v)  # Defs to compute rate.
+    if(c.cca == "paced"):
+        cca_paced(c, s, v)  # Defs to compute rate.
     if(c.feasible_response):
         service_choice(c, s, v)
 
@@ -611,12 +611,13 @@ def setup_ccac_definitions(c: ModelConfig, v: Variables):
 def setup_ccac_for_cegis(cc: CegisConfig):
     c = ModelConfig.default()
     c.compose = True
-    c.cca = "paced"
+    c.cca = cc.cca
     c.simplify = False
     c.C = 100
     c.T = cc.T
     c.R = cc.R
     c.D = cc.D
+    c.compose = cc.compose
 
     # Signals
     c.loss_oracle = cc.template_loss_oracle
@@ -634,7 +635,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
 
     if(cc.template_queue_bound):
         c.calculate_qbound = True
-    if(c.N > 1):
+    if(c.N > 1 or cc.template_qdel):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response

@@ -1,0 +1,75 @@
+import z3
+from ccac.variables import VariableNames
+from ccmatic.cegis import CegisConfig
+from cegis.util import unroll_assertions
+from ccmatic.verifier import get_cex_df, setup_cegis_basic
+from ccmatic.verifier.assumptions import (get_cca_definition,
+                                          get_periodic_constraints)
+from pyz3_utils.my_solver import MySolver
+
+
+def test_copa_composition():
+    cc = CegisConfig()
+    cc.history = cc.R + cc.D
+    cc.infinite_buffer = True  # No loss for simplicity
+    cc.dynamic_buffer = False
+    cc.buffer_size_multiplier = 1
+    cc.template_queue_bound = False
+    cc.template_mode_switching = False
+    cc.template_qdel = True
+
+    cc.compose = True
+    cc.cca = "copa"
+
+    cc.feasible_response = True
+
+    (c, s, v,
+     ccac_domain, ccac_definitions, environment,
+     verifier_vars, definition_vars) = setup_cegis_basic(cc)
+    vn = VariableNames(v)
+    periodic_constriants = get_periodic_constraints(cc, c, v)
+    cca_definitions = get_cca_definition(cc, c, v)
+
+    # 10% utilization. Can be made arbitrarily small
+    desired = v.S[-1] - v.S[0] >= 0.1 * c.C * c.T
+
+    def get_counter_example_str(counter_example: z3.ModelRef) -> str:
+        df = get_cex_df(counter_example, v, vn, c)
+        ret = "\n{}".format(df)
+        return ret
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(ccac_domain)
+    verifier.add(ccac_definitions)
+    verifier.add(environment)
+    verifier.add(cca_definitions)
+    verifier.add(periodic_constriants)
+    # verifier.add(z3.Not(desired))
+    # verifier.add(desired)
+    verifier.add(v.c_f[0][4] == 100)
+    # verifier.add(v.L[0] == 0)
+
+    sat = verifier.check()
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(get_counter_example_str(model))
+
+    else:
+        # Unsat core
+        dummy = MySolver()
+        dummy.warn_undeclared = False
+        dummy.set(unsat_core=True)
+
+        assertion_list = verifier.assertion_list
+        for assertion in assertion_list:
+            for expr in unroll_assertions(assertion):
+                dummy.add(expr)
+        assert(str(dummy.check()) == "unsat")
+        unsat_core = dummy.unsat_core()
+        print(len(unsat_core))
+        import ipdb; ipdb.set_trace()
+
+
+if (__name__ == "__main__"):
+    test_copa_composition()
