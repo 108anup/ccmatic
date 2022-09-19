@@ -616,6 +616,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.C = 100
     c.T = cc.T
     c.R = cc.R
+    c.D = cc.D
 
     # Signals
     c.loss_oracle = cc.template_loss_oracle
@@ -936,7 +937,8 @@ def maximize_gap(
     if(cur_min == np.inf):
         return orig_sat, orig_model
 
-    binary_search = BinarySearch(0, c.C * c.D, c.C * c.D/64)
+    eps = max(1, c.C * c.D)/64
+    binary_search = BinarySearch(0, c.C * c.D, eps)
     min_gap = z3.Real('min_gap', ctx=ctx)
 
     for t in range(1, c.T):

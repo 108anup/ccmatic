@@ -23,9 +23,10 @@ DEBUG = False
 cc = CegisConfig()
 cc.synth_ss = False
 cc.feasible_response = True
-cc.R = 3
-cc.history = 6
-cc.T = 15
+cc.R = 1
+cc.D = 0
+cc.history = 4
+cc.T = 9
 
 cc.infinite_buffer = False
 cc.dynamic_buffer = False

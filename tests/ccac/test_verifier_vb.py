@@ -13,10 +13,13 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.infinite_buffer = False
-cc.dynamic_buffer = False
+cc.dynamic_buffer = True
 cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 cc.template_mode_switching = False
+
+cc.feasible_response = True
+cc.D = 0
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
@@ -111,6 +114,10 @@ for t in range(first, c.T):
         # rhs_loss = 1/2 * v.c_f[0][t-c.R]
         # rhs_noloss = acked_bytes
 
+        # 0 jitter network
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = 1/2 * acked_bytes
+
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
     assert isinstance(rhs, z3.ArithRef)
@@ -130,10 +137,10 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 
 optimization_list = [
-    Metric(cc.desired_util_f, 0.9, 1, 0.001, True),
+    Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
-    Metric(cc.desired_loss_count_bound, 0, 2, 0.001, False),
-    Metric(cc.desired_loss_amount_bound_multiplier, 0, 0.5, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 2, 0.001, False),
 ]
 
 verifier = MySolver()

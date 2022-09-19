@@ -34,6 +34,7 @@ class CegisConfig:
     N: int = 1
     T: int = 9
     R: int = 1
+    D: int = 1
 
     synth_ss: bool = False
     feasible_response: bool = False
