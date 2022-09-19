@@ -33,6 +33,7 @@ class CegisConfig:
     deterministic_loss: bool = True
     N: int = 1
     T: int = 9
+    R: int = 1
 
     synth_ss: bool = False
     feasible_response: bool = False

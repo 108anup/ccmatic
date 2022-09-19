@@ -259,12 +259,12 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
         S_lower = v.C0 + c.C * (t - c.D) - v.W[0]
         if t >= c.D:
             S_lower = v.C0 + c.C * (t - c.D) - v.W[t - c.D]
-        feasible = z3.And(
+        feasible_choice = z3.And(
             v.S_choice[t] <= v.A[t] - v.L[t],
-            v.S[t] <= v.C0 + c.C * t - v.W[t],
-            S_lower <= v.S[t])
-        s.add(z3.Implies(feasible, v.S[t] == v.S_choice[t]))
-        s.add(z3.Implies(z3.Not(feasible), v.S[t] == S_lower))
+            v.S_choice[t] <= v.C0 + c.C * t - v.W[t],
+            v.S_choice[t] >= S_lower)
+        s.add(z3.Implies(feasible_choice, v.S[t] == v.S_choice[t]))
+        s.add(z3.Implies(z3.Not(feasible_choice), v.S[t] == S_lower))
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -562,10 +562,10 @@ def get_cegis_vars(
              v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
 
     if(cc.feasible_response):
-        verifier_vars.extend(v.S_choice)
-        definition_vars.extend(v.S_f)
+        verifier_vars.extend(flatten(v.S_choice))
+        definition_vars.extend(flatten(v.S_f))
     else:
-        verifier_vars.extend(v.S_f)
+        verifier_vars.extend(flatten(v.S_f))
 
     if(c.calculate_qbound):
         definition_vars.extend(flatten(v.exceed_queue_f))
@@ -615,6 +615,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.simplify = False
     c.C = 100
     c.T = cc.T
+    c.R = cc.R
 
     # Signals
     c.loss_oracle = cc.template_loss_oracle
@@ -799,8 +800,9 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
             cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
     d.bounded_queue = z3.And(*cond_list)
 
+    assert first >= 1
     d.fefficient = (
-        v.S[-1] - v.S[first] >= cc.desired_util_f * c.C * (c.T-1-first-c.D))
+        v.S[-1] - v.S[first-1] >= cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
@@ -1076,6 +1078,10 @@ def get_cex_df(
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
             # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
+        })
+    if(c.feasible_response):
+        cex_dict.update({
+            get_name_for_list(vn.S_choice): _get_model_value(v.S_choice),
         })
     df = pd.DataFrame(cex_dict).astype(float)
     # Can remove this by adding queue_t as a definition variable...

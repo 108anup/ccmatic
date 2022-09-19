@@ -12,6 +12,9 @@ from pyz3_utils.my_solver import MySolver
 from ccac.variables import VariableNames, Variables
 
 cc = CegisConfig()
+# cc.T = 15
+cc.feasible_response = True
+
 cc.infinite_buffer = False
 cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
@@ -115,6 +118,9 @@ verifier.add(z3.And(*same_decisions))
 # Find a trace such that main works but alt does not
 verifier.add(specification)
 verifier.add(z3.Not(specification_alt))
+verifier.add(d.fefficient)
+verifier.add(z3.Not(d_alt.fefficient))
+
 
 optimization_list = [
     Metric(cc.desired_util_f, 0.8, 1, 0.001, True),
@@ -134,3 +140,5 @@ sat = verifier.check()
 if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
+
+    import ipdb; ipdb.set_trace()

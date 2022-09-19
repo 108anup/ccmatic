@@ -22,6 +22,10 @@ GlobalConfig().default_logger_setup(logger)
 DEBUG = False
 cc = CegisConfig()
 cc.synth_ss = False
+cc.feasible_response = True
+cc.R = 3
+cc.history = 6
+cc.T = 15
 
 cc.infinite_buffer = False
 cc.dynamic_buffer = False
