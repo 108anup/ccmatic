@@ -36,6 +36,7 @@ class CegisConfig:
     T: int = 9
     R: int = 1
     D: int = 1
+    C: float = 100
     cca: str = "paced"
     compose: bool = True
 

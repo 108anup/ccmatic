@@ -20,6 +20,7 @@ cc.template_mode_switching = False
 
 cc.feasible_response = True
 cc.D = 0
+cc.C = 30
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')

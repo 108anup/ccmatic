@@ -613,7 +613,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.compose = True
     c.cca = cc.cca
     c.simplify = False
-    c.C = 100
+    c.C = cc.C
     c.T = cc.T
     c.R = cc.R
     c.D = cc.D
@@ -688,7 +688,7 @@ def setup_ccac_environment(c, v):
     # make_periodic(c, s, v, c.R + c.D)
 
     # Avoid weird cases where single packet is larger than BDP.
-    s.add(v.alpha < 1/5)  # Verifier only
+    s.add(v.alpha < max(0.2, (c.C * c.R)/5))  # Verifier only
 
     # Buffer should at least have one packet
     if(isinstance(c.buf_min, z3.ExprRef)):
