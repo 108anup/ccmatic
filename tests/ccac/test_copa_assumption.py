@@ -1,7 +1,7 @@
 import z3
 from ccac.variables import VariableNames
 from ccmatic.cegis import CegisConfig
-from cegis.util import unroll_assertions
+from cegis.util import get_raw_value, unroll_assertions
 from ccmatic.verifier import get_cex_df, setup_cegis_basic
 from ccmatic.verifier.assumptions import (get_cca_definition,
                                           get_periodic_constraints)
@@ -10,6 +10,7 @@ from pyz3_utils.my_solver import MySolver
 
 def test_copa_composition():
     cc = CegisConfig()
+    cc.T = 10
     cc.history = cc.R + cc.D
     cc.infinite_buffer = True  # No loss for simplicity
     cc.dynamic_buffer = False
@@ -18,7 +19,7 @@ def test_copa_composition():
     cc.template_mode_switching = False
     cc.template_qdel = True
 
-    cc.compose = True
+    cc.compose = False
     cc.cca = "copa"
 
     cc.feasible_response = True
@@ -35,7 +36,19 @@ def test_copa_composition():
 
     def get_counter_example_str(counter_example: z3.ModelRef) -> str:
         df = get_cex_df(counter_example, v, vn, c)
+        for n in range(c.N):
+            df[f"incr_{n},t"] = [
+                get_raw_value(counter_example.eval(z3.Bool(f"incr_{n},{t}"))) for t in range(c.T)]
+            df[f"decr_{n},t"] = [
+                get_raw_value(counter_example.eval(z3.Bool(f"decr_{n},{t}"))) for t in range(c.T)]
         ret = "\n{}".format(df)
+        ret += "\nv.qdel[t][dt]\n"
+        ret += "  " + " ".join([str(i) for i in range(c.T)]) + "\n"
+        for t in range(c.T):
+            ret += f"{t} " + " ".join([
+                str(int(bool(counter_example.eval(v.qdel[t][dt]))))
+                for dt in range(c.T)]) + "\n"
+
         return ret
 
     verifier = MySolver()
@@ -45,9 +58,9 @@ def test_copa_composition():
     verifier.add(environment)
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
-    # verifier.add(z3.Not(desired))
+    verifier.add(z3.Not(desired))
     # verifier.add(desired)
-    verifier.add(v.c_f[0][4] == 100)
+    # verifier.add(v.c_f[0][4] == 100)
     # verifier.add(v.L[0] == 0)
 
     sat = verifier.check()
