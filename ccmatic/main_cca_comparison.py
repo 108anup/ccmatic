@@ -34,10 +34,10 @@ assert(not cc.template_mode_switching)
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
 # variables for other cca being compared to
-alt_prefix = "alt"
+prefix_alt = "alt"
 (c_alt, s_alt, v_alt,
  ccac_domain_alt, ccac_definitions_alt, environment_alt,
- verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, alt_prefix)
+ verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
 
 d = get_desired_necessary(cc, c, v)
 desired = d.desired_necessary
@@ -51,7 +51,7 @@ first = cc.history  # First cwnd idx decided by synthesized cca
 
 same_decisions = []
 for vvar in verifier_vars:
-    v_alt_var = z3.Const(f"{alt_prefix}__{vvar.decl().name()}", vvar.sort())
+    v_alt_var = z3.Const(f"{prefix_alt}__{vvar.decl().name()}", vvar.sort())
     same_decisions.append(v_alt_var == vvar)
 
 template_definitions = []

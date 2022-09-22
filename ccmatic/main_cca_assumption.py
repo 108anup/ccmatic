@@ -6,6 +6,7 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from cegis import rename_vars
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
@@ -23,7 +24,6 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc = CegisConfig()
 cc.T = 10
 cc.history = cc.R + cc.D
 cc.infinite_buffer = True  # No loss for simplicity
@@ -37,16 +37,34 @@ cc.compose = True
 cc.cca = "copa"
 
 cc.feasible_response = True
+
+# CCA under test
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 vn = VariableNames(v)
 
 periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
-cca_definitions = get_cca_definition(cc, c, v)
+cca_definitions = get_cca_definition(c, v)
 environment = z3.And(environment, periodic_constriants, cca_definitions)
-
 poor_utilization = v.S[-1] - v.S[0] < 0.1 * c.C * c.T
+
+# Referenece CCA
+prefix_alt = "alt"
+(c_alt, s_alt, v_alt,
+ ccac_domain_alt, ccac_definitions_alt, environment_alt,
+ verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
+c_alt.cca = "paced"
+vn_alt = VariableNames(v_alt)
+
+periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
+cca_definitions_alt = get_cca_definition(c_alt, v_alt)
+cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
+    *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
+      for t in range(c.T) for n in range(c.N)]))
+environment_alt = z3.And(
+    environment_alt, periodic_constriants_alt, cca_definitions_alt)
+poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < 0.1 * c_alt.C * c_alt.T
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -54,7 +72,7 @@ poor_utilization = v.S[-1] - v.S[0] < 0.1 * c.C * c.T
 domain_clauses = []
 
 vn = VariableNames(v)
-ineq_var_symbols = ['S', 'A', 'L', 'W', 'C']
+ineq_var_symbols = ['S', 'A', 'W', 'C', 'mmBDP']
 # Coeff for determining rhs var, of lhs var, at shift t
 coeffs: List[z3.ExprRef] = [
     z3.Real('Gen__coeff_{}'.format(var)) for var in ineq_var_symbols]
@@ -93,13 +111,19 @@ for t in range(c.T):
 # CCmatic inputs
 ctx = z3.main_ctx()
 assumption = z3.And(assumption_constraints)
+assert isinstance(assumption, z3.ExprRef)
+assumption_alt = rename_vars(
+    assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
+specification_alt = z3.And(environment_alt, assumption_alt, poor_utilization_alt)
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
-assert(isinstance(definitions, z3.ExprRef))
+definitions_alt = z3.And(
+    ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
+assert isinstance(definitions, z3.ExprRef)
 
 generator_vars: List[z3.ExprRef] = coeffs + consts
-critical_generator_vars: List[z3.ExprRef] = coeffs
+critical_generator_vars: List[z3.ExprRef] = coeffs + consts
 
 # Method overrides
 # These use function closures, hence have to be defined here.
@@ -137,6 +161,10 @@ def get_solution_str(solution: z3.ModelRef,
     ret = "W[t] > W[t-1] implies " + " + ".join([
         get_term_from_sym(sym, i) for i, sym in enumerate(ineq_var_symbols)
     ]) + " <= 0"
+    df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
+    df_alt['alt_tokens_t'] = [float(solution.eval(v_alt.C0 + c.C * t).as_fraction())
+                              for t in range(c.T)]
+    ret += "\n{}".format(df_alt)
 
     return ret
 
@@ -149,7 +177,8 @@ def get_verifier_view(
 
 def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                        definition_vars: List[z3.ExprRef], n_cex: int) -> str:
-    gen_view_str = "{}".format(get_gen_cex_df(solution, v, vn, n_cex, c))
+    df = get_gen_cex_df(solution, v, vn, n_cex, c)
+    gen_view_str = "{}".format(df)
     return gen_view_str
 
 
@@ -171,9 +200,23 @@ if DEBUG:
 
 try:
     md = CegisMetaData(critical_generator_vars)
-    cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
-                     search_constraints, definitions, specification, ctx,
+    all_generator_vars = generator_vars + verifier_vars_alt + definition_vars_alt
+    search_constraints = z3.And(search_constraints, definitions_alt, specification_alt)
+    assert isinstance(search_constraints, z3.ExprRef)
+    cg = CegisCCAGen(generator_vars, verifier_vars,
+                     definition_vars, search_constraints,
+                     definitions, specification, ctx,
                      debug_known_solution, md)
+    # verifier_vars_combined = verifier_vars + verifier_vars_alt
+    # definition_vars_combined = definition_vars + definition_vars_alt
+    # specification_combined = z3.And(specification, specification_alt)
+    # definitions_combined = z3.And(definitions, definitions_alt)
+    # assert isinstance(specification_combined, z3.ExprRef)
+    # assert isinstance(definitions_combined, z3.ExprRef)
+    # cg = CegisCCAGen(generator_vars, verifier_vars_combined,
+    #                  definition_vars_combined, search_constraints,
+    #                  definitions_combined, specification_combined, ctx,
+    #                  debug_known_solution, md)
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

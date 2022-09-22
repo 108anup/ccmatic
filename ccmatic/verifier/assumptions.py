@@ -69,7 +69,7 @@ def get_periodic_constraints_ccac(cc: CegisConfig, c: ModelConfig, v: Variables)
     return z3.And(*s.assertion_list)
 
 
-def get_cca_definition(cc: CegisConfig, c: ModelConfig, v: Variables):
+def get_cca_definition(c: ModelConfig, v: Variables):
     s = MySolver()
     s.warn_undeclared = False
 
