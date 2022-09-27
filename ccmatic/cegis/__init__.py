@@ -43,6 +43,8 @@ class CegisConfig:
     synth_ss: bool = False
     feasible_response: bool = False
 
+    DEBUG: bool = False
+
 
 class CegisCCAGen(Cegis):
 

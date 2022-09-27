@@ -23,17 +23,18 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.synth_ss = True
+cc.synth_ss = False
+cc.compose = False
 
 cc.infinite_buffer = False
-cc.dynamic_buffer = True
+cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
 cc.template_queue_bound = True
 
-cc.desired_util_f = 0.33
+cc.desired_util_f = 0.8
 cc.desired_queue_bound_multiplier = 2
-cc.desired_loss_count_bound = 3
-cc.desired_loss_amount_bound_multiplier = 2
+cc.desired_loss_count_bound = 2
+cc.desired_loss_amount_bound_multiplier = 1
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -104,15 +105,15 @@ for const in flatten(list(consts.values())):
 domain_clauses.append(z3.Or(
     *[v.qsize_thresh == val for val in qsize_thresh_choices]))
 
-# All expressions should be different. Otherwise that expression is not needed.
-conds = ['loss', 'delay', 'noloss']
-for pair in itertools.combinations(conds, 2):
-    is_same = z3.And(
-        coeffs['c_f[0]_{}'.format(pair[0])] ==
-        coeffs['c_f[0]_{}'.format(pair[1])],
-        coeffs['ack_f[0]_{}'.format(pair[0])] ==
-        coeffs['ack_f[0]_{}'.format(pair[1])])
-    domain_clauses.append(z3.Not(is_same))
+# # All expressions should be different. Otherwise that expression is not needed.
+# conds = ['loss', 'delay', 'noloss']
+# for pair in itertools.combinations(conds, 2):
+#     is_same = z3.And(
+#         coeffs['c_f[0]_{}'.format(pair[0])] ==
+#         coeffs['c_f[0]_{}'.format(pair[1])],
+#         coeffs['ack_f[0]_{}'.format(pair[0])] ==
+#         coeffs['ack_f[0]_{}'.format(pair[1])])
+#     domain_clauses.append(z3.Not(is_same))
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
