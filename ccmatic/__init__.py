@@ -50,11 +50,13 @@ class CCmatic():
         self.desired = desired
 
     def setup_cegis_loop(
-            self, template_definitions: List[z3.ExprRef],
+            self, search_constraints: z3.ExprRef,
+            template_definitions: List[z3.ExprRef],
             generator_vars: List[z3.ExprRef],
             get_solution_str: Callable[[z3.ModelRef, List[z3.ExprRef], int], str]):
         vn = VariableNames(self.v)
 
+        self.search_constraints = search_constraints
         self.ctx = z3.main_ctx()
         self.specification = z3.Implies(self.environment, self.desired)
         self.definitions = z3.And(

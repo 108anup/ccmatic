@@ -15,7 +15,7 @@ logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 cc = CegisConfig()
-cc.compose = True
+cc.compose = False
 cc.infinite_buffer = True
 cc.template_qdel = True
 
@@ -57,15 +57,18 @@ for coeff in flatten(list(coeffs.values())):
 for const in flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 
-# All expressions should be different. Otherwise that expression is not needed.
-conds = ['delay', 'nodelay']
-for pair in itertools.combinations(conds, 2):
-    is_same = z3.And(
-        coeffs['c_f[n]_{}'.format(pair[0])] ==
-        coeffs['c_f[n]_{}'.format(pair[1])],
-        coeffs['ack_f[n]_{}'.format(pair[0])] ==
-        coeffs['ack_f[n]_{}'.format(pair[1])])
-    domain_clauses.append(z3.Not(is_same))
+# # All expressions should be different. Otherwise that expression is not needed.
+# conds = ['delay', 'nodelay']
+# for pair in itertools.combinations(conds, 2):
+#     is_same = z3.And(
+#         coeffs['c_f[n]_{}'.format(pair[0])] ==
+#         coeffs['c_f[n]_{}'.format(pair[1])],
+#         coeffs['ack_f[n]_{}'.format(pair[0])] ==
+#         coeffs['ack_f[n]_{}'.format(pair[1])])
+#     domain_clauses.append(z3.Not(is_same))
+
+search_constraints = z3.And(*domain_clauses)
+assert(isinstance(search_constraints, z3.ExprRef))
 
 template_definitions = []
 first = cc.history
@@ -135,12 +138,13 @@ def get_solution_str(solution: z3.ModelRef,
                    f"(S_f[n][t-{c.R}]-S_f[n][t-{cc.history}])"
                    f" + {solution.eval(consts['c_f[n]_nodelay'])}")
     ret = (f"if(decr_allowed):\n"
-           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_delay})\n"
+           f"\tc_f[n][t] = max(alpha, {rhs_delay})\n"
            f"else:\n"
-           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_nodelay})")
+           f"\tc_f[n][t] = max(alpha, {rhs_nodelay})")
     return ret
 
 
 ccmatic.setup_cegis_loop(
+    search_constraints,
     template_definitions, generator_vars, get_solution_str)
 ccmatic.run_cegis(None)
