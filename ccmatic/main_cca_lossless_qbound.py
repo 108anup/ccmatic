@@ -1,4 +1,5 @@
 import functools
+import itertools
 import logging
 from fractions import Fraction
 from typing import List
@@ -13,7 +14,7 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import (flatten, get_product_ite, get_renamed_vars,
                             get_val_list)
 
-from .verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant, get_gen_cex_df,
+from .verifier import (get_cex_df, get_desired_necessary, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
 
 logger = logging.getLogger('cca_gen')
@@ -30,8 +31,8 @@ cc.synth_ss = False
 cc.infinite_buffer = True
 cc.template_queue_bound = True
 
-cc.desired_util_f = 0.66
-cc.desired_queue_bound_multiplier = 2
+cc.desired_util_f = 0.751
+cc.desired_queue_bound_multiplier = 1.98
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
 
@@ -71,6 +72,20 @@ for const in flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 domain_clauses.append(z3.Or(
     *[v.qsize_thresh == val for val in qsize_thresh_choices]))
+
+# All expressions should be different. Otherwise that expression is not needed.
+conds = ['delay', 'nodelay']
+for pair in itertools.combinations(conds, 2):
+    is_same = z3.And(
+        coeffs['c_f[n]_{}'.format(pair[0])] ==
+        coeffs['c_f[n]_{}'.format(pair[1])],
+        coeffs['ack_f[n]_{}'.format(pair[0])] ==
+        coeffs['ack_f[n]_{}'.format(pair[1])])
+    domain_clauses.append(z3.Not(is_same))
+
+search_constraints = z3.And(*domain_clauses)
+assert(isinstance(search_constraints, z3.ExprRef))
+
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 

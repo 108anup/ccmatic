@@ -23,15 +23,16 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
+cc.compose = False
 # cc.synth_ss = True
 # cc.T = 5 + cc.history * 2
-cc.T = 15
-cc.N = 2
+# cc.T = 15
+# cc.N = 2
 
 cc.infinite_buffer = True
 
-cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 4
+cc.desired_util_f = 0.66
+cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
 (c, s, v,

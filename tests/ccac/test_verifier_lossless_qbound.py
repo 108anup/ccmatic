@@ -3,8 +3,8 @@ import logging
 import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
-from ccmatic.verifier import (get_desired_necessary, get_cex_df,
-                              get_desired_property_string, setup_cegis_basic)
+from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+                              setup_cegis_basic)
 from cegis.util import Metric, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -15,30 +15,53 @@ cc = CegisConfig()
 cc.history = 4
 cc.infinite_buffer = True
 cc.template_queue_bound = True
+cc.compose = False
+
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
-cc.desired_loss_count_bound = z3.Real('desired_loss_bound')
+cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
+cc.desired_loss_amount_bound_multiplier = \
+    z3.Real('desired_loss_amount_bound_multiplier')
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
-(desired, fefficient, bounded_queue, bounded_loss,
- ramp_up_cwnd, ramp_down_cwnd, ramp_down_q, ramp_down_bq,
- total_losses) = get_desired_necessary(cc, c, v)
+d = get_desired_necessary(cc, c, v)
+desired = d.desired_necessary
 
 vn = VariableNames(v)
 first = cc.history  # First cwnd idx decided by synthesized cca
 template_definitions = []
-template_definitions.append(v.qsize_thresh == 1)
+template_definitions.append(v.qsize_thresh == 3)
 for t in range(first, c.T):
     delay_detected = v.exceed_queue_f[0][t]
     this_decrease = z3.And(delay_detected,
                            v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
                            v.S_f[0][t-1-c.R] >= v.last_decrease_f[0][t-1])
-    rhs_delay = (
-        1/2 * v.c_f[0][t-c.R]
-        + 1/2 * (v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]))
-    rhs_nodelay = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
+    this_decrease = z3.And(delay_detected,
+                           v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
+                           v.S_f[0][t-c.R] > v.last_decrease_f[0][t-1])
+    acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
+    # acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-3]
+
+    rhs_delay = 1/2 * v.c_f[0][t-c.R] + 1/2 * acked_bytes
+    rhs_nodelay = acked_bytes
+
+    rhs_delay = 1/2 * v.c_f[0][t-c.R] + 1
+    rhs_nodelay = 1/2 * v.c_f[0][t-c.R] + 1/2 * acked_bytes + 1
+
+    rhs_delay = 1/2 * acked_bytes + 1
+    rhs_nodelay = 1/2 * v.c_f[0][t-c.R] + 1/2 * acked_bytes + 1
+
+    rhs_delay = v.c_f[0][t-c.R]/2
+    rhs_nodelay = v.c_f[0][t-c.R] + 1
+
+    # rhs_delay = 1/2 * acked_bytes + 1/2
+    # rhs_nodelay = 1/2 * v.c_f[0][t-c.R] + 1/2 * acked_bytes + 1/2
+
+    # rhs_delay = 1/2 * v.c_f[0][t-c.R] + 1/2 * acked_bytes
+    # rhs_nodelay = acked_bytes + 1
+
     rhs = z3.If(this_decrease, rhs_delay, rhs_nodelay)
     assert isinstance(rhs, z3.ArithRef)
     template_definitions.append(
@@ -51,18 +74,16 @@ for t in range(first, c.T):
 
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
-    desired_string = get_desired_property_string(
-        cc, c, fefficient, bounded_queue, bounded_loss,
-        ramp_up_cwnd, ramp_down_bq, ramp_down_q, ramp_down_cwnd,
-        total_losses, counter_example)
+    desired_string = d.to_string(cc, c, counter_example)
     ret = "{}\n{}.".format(df, desired_string)
     return ret
 
 
 optimization_list = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
-    Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
-    Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
+    Metric(cc.desired_queue_bound_multiplier, 1, 3, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 0, 0, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 0, 0.001, False),
 ]
 
 verifier = MySolver()
