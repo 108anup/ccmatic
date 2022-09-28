@@ -1,12 +1,16 @@
 import functools
 from typing import Callable, List, Optional
+
 import z3
 from ccac.variables import VariableNames
+
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.verifier import get_cex_df, get_desired_necessary, get_desired_ss_invariant, get_gen_cex_df, run_verifier_incomplete, setup_cegis_basic
+from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+                              get_desired_ss_invariant, get_gen_cex_df,
+                              run_verifier_incomplete, setup_cegis_basic)
 
 
-def CCmatic():
+class CCmatic():
     # Boilerplate for common steps
     # Ad-hoc, created from past runs...
 
@@ -22,6 +26,7 @@ def CCmatic():
         self.cc = cc
 
     def setup_config_vars(self):
+        cc = self.cc
         (c, s, v,
          ccac_domain, ccac_definitions, environment,
          verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -92,6 +97,7 @@ def CCmatic():
         self.get_counter_example_str = get_counter_example_str
         self.get_verifier_view = get_verifier_view
         self.get_generator_view = get_generator_view
+        self.get_solution_str = get_solution_str
 
     def run_cegis(self, known_solution: Optional[z3.ExprRef]):
         # Directly update any closures or critical_generator_vars
