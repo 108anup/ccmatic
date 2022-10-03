@@ -1,31 +1,37 @@
 import functools
 import logging
-from fractions import Fraction
-from os import environ
 from typing import List
 
 import z3
 from ccac.variables import VariableNames
-from cegis import remove_solution, rename_vars
+from cegis.util import unroll_assertions
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.common import flatten, get_product_ite
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
-                              get_desired_ss_invariant, get_gen_cex_df,
+from ccmatic.cegis import CegisCCAGen, CegisConfig
+from ccmatic.common import flatten
+from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
-from ccmatic.verifier.assumptions import get_cca_definition, get_periodic_constraints_ccac
-from cegis.util import get_raw_value
+from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
+                                          get_periodic_constraints_ccac)
+from cegis import remove_solution, rename_vars
+from pyz3_utils.my_solver import extract_vars
 
 logger = logging.getLogger('assumption_gen')
 GlobalConfig().default_logger_setup(logger)
 
+"""
+Ideally cwnd, r, etc, should be verifier variables.
+There aren't really any definition vars...
+
+Can keep cca_definitions in environment as they only involve def var or env var.
+Since all def vars only depend on env vars. They are fixed...
+Though, need to ensure that each def var takes exactly one value.
+"""
 
 DEBUG = False
 cc = CegisConfig()
 cc.T = 10
-cc.history = cc.R + cc.D
 cc.infinite_buffer = True  # No loss for simplicity
 cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
@@ -34,7 +40,11 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.compose = True
-cc.cca = "copa"
+cc.cca = "bbr"
+if(cc.cca == "copa"):
+    cc.history = cc.R + cc.D
+elif(cc.cca == "bbr"):
+    cc.history = 2 * cc.R
 
 cc.feasible_response = True
 
@@ -46,6 +56,8 @@ vn = VariableNames(v)
 
 periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
 cca_definitions = get_cca_definition(c, v)
+cca_vvars = get_cca_vvars(c, v)
+verifier_vars.extend(flatten(cca_vvars))
 environment = z3.And(environment, periodic_constriants, cca_definitions)
 poor_utilization = v.S[-1] - v.S[0] < 0.1 * c.C * c.T
 
@@ -338,25 +350,25 @@ vname2vnum = {}
 for vnum, vname in enumerate(ineq_var_symbols):
     vname2vnum[vname] = vnum
 
-# Ineq 0
-known_solution_list.append(coeffs[0][vname2vnum['W']][0] == 1)
-known_solution_list.append(coeffs[0][vname2vnum['W']][1] == -1)
+# Ineq 1
+known_solution_list.append(coeffs[1][vname2vnum['W']][0] == 1)
+known_solution_list.append(coeffs[1][vname2vnum['W']][1] == -1)
 for vname in ineq_var_symbols[:-1]:
     if(vname != 'W'):
-        known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
-        known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
-known_solution_list.append(z3.Not(clauses[0][0]))
-known_solution_list.append(clausenegs[0][0])
+        known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
+        known_solution_list.append(coeffs[1][vname2vnum[vname]][1] == 0)
+known_solution_list.append(z3.Not(clauses[0][1]))
+known_solution_list.append(clausenegs[0][1])
 
-# # Ineq 1
+# # Ineq 0
 # known_solution_list.append(coeffs[0][vname2vnum['A']][0] == 1)
 # known_solution_list.append(coeffs[0][vname2vnum['']][1] == -1)
 # for vname in ineq_var_symbols[:-1]:
 #     if(vname != 'W'):
 #         known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
 #         known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
-known_solution_list.append(clauses[0][1])
-known_solution_list.append(z3.Not(clausenegs[0][1]))
+known_solution_list.append(clauses[0][0])
+known_solution_list.append(z3.Not(clausenegs[0][0]))
 
 known_solution = z3.And(known_solution_list)
 assert isinstance(known_solution, z3.ExprRef)

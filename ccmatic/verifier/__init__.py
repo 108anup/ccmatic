@@ -508,71 +508,58 @@ def get_cegis_vars(
 ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
     history = cc.history
 
-    conditional_vvars = []
+    verifier_vars = flatten(
+            [v.A_f[:, :history], v.c_f[:, :history], v.r_f[:, :history], v.W,
+             v.dupacks, v.alpha, v.C0])
+    definition_vars = flatten(
+            [v.A_f[:, history:], v.A, v.c_f[:, history:],
+             v.r_f[:, history:], v.S, v.timeout_f])
+
     if(not c.compose):
-        conditional_vvars.append(v.epsilon)
+        verifier_vars.append(v.epsilon)
     if(c.calculate_qdel):
         # qdel[t][dt<t] is deterministic
         # qdel[t][dt>=t] is non-deterministic
-        conditional_vvars.append(
-            [v.qdel[t][dt] for t in range(c.T) for dt in range(t, c.T)])
+        verifier_vars.extend(flatten(
+            [v.qdel[t][dt] for t in range(c.T) for dt in range(t, c.T)]))
     if(c.calculate_qbound):
         # qbound[t][dt<=t] is deterministic
         # qbound[t][dt>t] is non deterministic
-        conditional_vvars.append(
-            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1, c.T)])
+        verifier_vars.extend(flatten(
+            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1, c.T)]))
+        definition_vars.extend(flatten(v.exceed_queue_f))
+        definition_vars.extend(flatten(v.last_decrease_f))
 
-    conditional_dvars = []
     if(c.calculate_qdel):
-        conditional_dvars.append(
-            [v.qdel[t][dt] for t in range(c.T) for dt in range(t)])
+        definition_vars.extend(flatten(
+            [v.qdel[t][dt] for t in range(c.T) for dt in range(t)]))
     if(c.calculate_qbound):
-        conditional_dvars.append(
-            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1)])
+        definition_vars.extend(flatten(
+            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1)]))
 
     if(c.buf_min is None):
         # No loss
-        verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.W,
-             v.L_f, v.Ld_f, v.dupacks, v.alpha, conditional_vvars, v.C0])
-        definition_vars = flatten(
-            [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
-
+        verifier_vars.extend(flatten([v.L_f, v.Ld_f]))
+        definition_vars.extend(flatten(v.L))
     elif(c.deterministic_loss):
         # Determinisitic loss
         assert c.loss_oracle
-        verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.W,
-             v.L_f[:, :1], v.Ld_f[:, :c.R],
-             v.dupacks, v.alpha, conditional_vvars, v.C0])
-        definition_vars = flatten(
-            [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.L_f[:, 1:], v.Ld_f[:, c.R:],
-             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
-
+        verifier_vars.extend(flatten([v.L_f[:, :1], v.Ld_f[:, :c.R]]))
+        definition_vars.extend(flatten([v.L_f[:, 1:], v.Ld_f[:, c.R:]]))
     else:
         # Non-determinisitic loss
         assert c.loss_oracle
-        verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.W, v.L_f,
-             v.Ld_f[:, :c.R], v.dupacks, v.alpha, conditional_vvars, v.C0])
-        definition_vars = flatten(
-            [v.A_f[:, history:], v.A, v.c_f[:, history:], v.Ld_f[:, c.R:],
-             v.r_f, v.S, v.L, v.timeout_f, conditional_dvars])
+        verifier_vars.extend(flatten([v.L_f, v.Ld_f[:, :c.R]]))
+        definition_vars.extend(flatten([v.Ld_f[:, c.R:]]))
+
+    if(isinstance(c.buf_min, z3.ExprRef)):
+        verifier_vars.append(c.buf_min)
 
     if(cc.feasible_response):
         verifier_vars.extend(flatten(v.S_choice))
         definition_vars.extend(flatten(v.S_f))
     else:
         verifier_vars.extend(flatten(v.S_f))
-
-    if(c.calculate_qbound):
-        definition_vars.extend(flatten(v.exceed_queue_f))
-        definition_vars.extend(flatten(v.last_decrease_f))
-
-    if(isinstance(c.buf_min, z3.ExprRef)):
-        verifier_vars.append(c.buf_min)
 
     if(c.mode_switch):
         definition_vars.extend(flatten(v.mode_f[:, 1:]))

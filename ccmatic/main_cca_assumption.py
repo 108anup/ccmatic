@@ -200,8 +200,10 @@ if DEBUG:
 
 try:
     md = CegisMetaData(critical_generator_vars)
-    all_generator_vars = generator_vars + verifier_vars_alt + definition_vars_alt
-    search_constraints = z3.And(search_constraints, definitions_alt, specification_alt)
+    all_generator_vars = (generator_vars + verifier_vars_alt
+                          + definition_vars_alt)
+    search_constraints = z3.And(search_constraints, definitions_alt,
+                                specification_alt)
     assert isinstance(search_constraints, z3.ExprRef)
     cg = CegisCCAGen(generator_vars, verifier_vars,
                      definition_vars, search_constraints,
