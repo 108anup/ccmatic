@@ -29,10 +29,10 @@ def test_copa_composition():
      verifier_vars, definition_vars) = setup_cegis_basic(cc)
     vn = VariableNames(v)
     periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
-    cca_definitions = get_cca_definition(cc, c, v)
+    cca_definitions = get_cca_definition(c, v)
 
     # 10% utilization. Can be made arbitrarily small
-    desired10 = v.S[-1] - v.S[0] >= 0.1 * c.C * c.T
+    desired10 = v.S[-1] - v.S[0] >= 0.5 * c.C * c.T
     desired50 = v.S[-1] - v.S[0] >= 0.8 * c.C * c.T
 
     def get_counter_example_str(counter_example: z3.ModelRef) -> str:
@@ -52,11 +52,18 @@ def test_copa_composition():
 
         return ret
 
+    # known_assumption_list = []
+    # for t in range(1, c.T):
+    #     known_assumption_list.append(
+    #         z3.Implies(v.W[t] > v.W[t-1],
+    #                    v.A[t]-v.L[t]-v.S[t] <= v.alpha)
+    #     )
+    # known_assumption = z3.And(known_assumption_list)
+
     known_assumption_list = []
     for t in range(1, c.T):
         known_assumption_list.append(
-            z3.Implies(v.W[t] > v.W[t-1],
-                       v.A[t]-v.L[t]-v.S[t] <= v.alpha)
+            v.S[t] > v.C0 + c.C * (t-1) - v.W[t-1]
         )
     known_assumption = z3.And(known_assumption_list)
 
@@ -67,8 +74,10 @@ def test_copa_composition():
     verifier.add(environment)
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
-    verifier.add(z3.Not(known_assumption))
-    verifier.add(desired50)
+    # verifier.add(z3.Not(known_assumption))
+    verifier.add(known_assumption)
+    verifier.add(desired10)
+    # verifier.add(desired50)
     # verifier.add(desired)
     # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
     # verifier.add(v.c_f[0][4] == 100)
@@ -80,20 +89,20 @@ def test_copa_composition():
         model = verifier.model()
         print(get_counter_example_str(model))
 
-    # else:
-    #     # Unsat core
-    #     dummy = MySolver()
-    #     dummy.warn_undeclared = False
-    #     dummy.set(unsat_core=True)
+    else:
+        # Unsat core
+        dummy = MySolver()
+        dummy.warn_undeclared = False
+        dummy.set(unsat_core=True)
 
-    #     assertion_list = verifier.assertion_list
-    #     for assertion in assertion_list:
-    #         for expr in unroll_assertions(assertion):
-    #             dummy.add(expr)
-    #     assert(str(dummy.check()) == "unsat")
-    #     unsat_core = dummy.unsat_core()
-    #     print(len(unsat_core))
-    #     import ipdb; ipdb.set_trace()
+        assertion_list = verifier.assertion_list
+        for assertion in assertion_list:
+            for expr in unroll_assertions(assertion):
+                dummy.add(expr)
+        assert(str(dummy.check()) == "unsat")
+        unsat_core = dummy.unsat_core()
+        print(len(unsat_core))
+        import ipdb; ipdb.set_trace()
 
 
 if (__name__ == "__main__"):

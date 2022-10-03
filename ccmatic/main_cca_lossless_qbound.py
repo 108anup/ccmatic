@@ -86,9 +86,6 @@ for pair in itertools.combinations(conds, 2):
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
-search_constraints = z3.And(*domain_clauses)
-assert(isinstance(search_constraints, z3.ExprRef))
-
 # Generator definitions
 template_definitions = []
 first = cc.history
