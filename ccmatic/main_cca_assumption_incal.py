@@ -6,7 +6,7 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
-from cegis import rename_vars
+from cegis import remove_solution, rename_vars
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
@@ -105,10 +105,50 @@ clausenegs: List[List[z3.ExprRef]] = [[
 # Search constr
 search_range_coeff = [-1, 0, 1]
 search_range_const = [x/2 for x in range(-4, 5)]
+search_range_const = [0]
 for coeff in flatten(coeffs):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeff]))
 for const in flatten(consts):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_const]))
+
+# Symmetry breaking
+for clausenum in range(nclause):
+    for ineqnum in range(1, nineq):
+
+        # Ineq i+1 can appear only if ineq i appears
+        # Sort literals that appear
+        # Keep only (0) instead of (1), (2), ...
+        domain_clauses.append(
+            z3.Implies(
+                z3.Or(clauses[clausenum][ineqnum],
+                      clausenegs[clausenum][ineqnum]),
+                z3.Or(clauses[clausenum][ineqnum-1],
+                      clausenegs[clausenum][ineqnum-1])))
+
+        # Ineq i+1 can only appear as positive literal
+        # if ineq i was positive literal
+        # Sort positive literals first
+        # Keep only (~0 or 1) instead of (0 or ~1), ...
+        domain_clauses.append(
+            z3.Implies(
+                clauses[clausenum][ineqnum],
+                clauses[clausenum][ineqnum-1]))
+
+        # Both variable and its negation can only happen for ineq 0.
+        domain_clauses.append(z3.Not(
+            z3.And(clauses[clausenum][ineqnum],
+                   clausenegs[clausenum][ineqnum])))
+
+    # If both +/- appear for ineq 0, then all other ineqs must not appear.
+    domain_clauses.append(
+        z3.Implies(
+            z3.And(clauses[clausenum][0],
+                   clausenegs[clausenum][0]),
+            z3.And(*[
+                z3.And(z3.Not(clauses[clausenum][ineqnum]),
+                       z3.Not(clausenegs[clausenum][ineqnum]))
+                for ineqnum in range(1, 0)])))
+
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -273,6 +313,24 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
     return ret
 
 
+def override_remove_solution(self: CegisCCAGen, solution: z3.ModelRef):
+    this_critical_generator_vars: List[z3.ExprRef] = \
+        flatten(clauses) + flatten(clausenegs)
+
+    for ineqnum in range(nineq):
+        ineq_appears = False
+        for clausenum in range(nclause):
+            if(bool(solution.eval(clauses[clausenum][ineqnum])) or
+               bool(solution.eval(clausenegs[clausenum][ineqnum]))):
+                ineq_appears = True
+                break
+        if(ineq_appears):
+            # We don't want new solutions that only differ in consts.
+            this_critical_generator_vars += flatten(coeffs[ineqnum])
+
+    remove_solution(self.generator, solution,
+                    this_critical_generator_vars, self.ctx)
+
 # Known solution
 known_solution = None
 known_solution_list = []
@@ -301,10 +359,10 @@ known_solution_list.append(clauses[0][1])
 known_solution_list.append(z3.Not(clausenegs[0][1]))
 
 known_solution = z3.And(known_solution_list)
-search_constraints = z3.And(search_constraints, known_solution)
-assert(isinstance(search_constraints, z3.ExprRef))
+assert isinstance(known_solution, z3.ExprRef)
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert(isinstance(search_constraints, z3.ExprRef))
 
-# assert isinstance(known_solution, z3.ExprRef)
 
 # Debugging:
 debug_known_solution = None
@@ -319,14 +377,16 @@ if DEBUG:
         f.write(definitions.sexpr())
 
 try:
-    md = CegisMetaData(critical_generator_vars)
-    all_generator_vars = generator_vars + verifier_vars_alt + definition_vars_alt
-    search_constraints = z3.And(search_constraints, definitions_alt, specification_alt)
+    # md = CegisMetaData(critical_generator_vars)
+    all_generator_vars = (generator_vars + verifier_vars_alt
+                          + definition_vars_alt)
+    search_constraints = z3.And(search_constraints, definitions_alt,
+                                specification_alt)
     assert isinstance(search_constraints, z3.ExprRef)
     cg = CegisCCAGen(generator_vars, verifier_vars,
                      definition_vars, search_constraints,
                      definitions, specification, ctx,
-                     debug_known_solution, md)
+                     debug_known_solution)
     # verifier_vars_combined = verifier_vars + verifier_vars_alt
     # definition_vars_combined = definition_vars + definition_vars_alt
     # specification_combined = z3.And(specification, specification_alt)
@@ -341,6 +401,10 @@ try:
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view
     cg.get_verifier_view = get_verifier_view
+    # https://stackoverflow.com/a/46757134/5039326.
+    # Since remove_solution is a bound method of the class,
+    # need to bind the method to instance!
+    cg.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
     run_verifier = functools.partial(
         run_verifier_incomplete, c=c, v=v, ctx=ctx)
     # run_verifier = functools.partial(

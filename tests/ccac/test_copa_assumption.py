@@ -32,8 +32,8 @@ def test_copa_composition():
     cca_definitions = get_cca_definition(c, v)
 
     # 10% utilization. Can be made arbitrarily small
-    desired10 = v.S[-1] - v.S[0] >= 0.5 * c.C * c.T
-    desired50 = v.S[-1] - v.S[0] >= 0.8 * c.C * c.T
+    desired10 = v.S[-1] - v.S[0] >= 0.1 * c.C * c.T
+    desired50 = v.S[-1] - v.S[0] >= 0.5 * c.C * c.T
 
     def get_counter_example_str(counter_example: z3.ModelRef) -> str:
         df = get_cex_df(counter_example, v, vn, c)
@@ -52,6 +52,7 @@ def test_copa_composition():
 
         return ret
 
+    # # CCAC paper
     # known_assumption_list = []
     # for t in range(1, c.T):
     #     known_assumption_list.append(
@@ -60,10 +61,33 @@ def test_copa_composition():
     #     )
     # known_assumption = z3.And(known_assumption_list)
 
+    # # When to waste, Incal
+    # known_assumption_list = []
+    # for t in range(1, c.T):
+    #     known_assumption_list.append(
+    #         v.S[t] > v.C0 + c.C * (t-1) - v.W[t-1]
+    #     )
+    # known_assumption = z3.And(known_assumption_list)
+
+    # Netcal
+    def beta(t):
+        val = (t - c.D)
+        absval = z3.If(val >= 0, val, 0)
+        assert(isinstance(absval, z3.ArithRef))
+        return c.C * absval
+
+    def alpha(t):
+        burst = 0.5 * c.C * c.D
+        return burst + c.C * (t)
+
     known_assumption_list = []
-    for t in range(1, c.T):
+    for t in range(c.T):
         known_assumption_list.append(
-            v.S[t] > v.C0 + c.C * (t-1) - v.W[t-1]
+            z3.And(*[v.S[t] <= v.S[s] + alpha(t-s)
+                     for s in range(t+1)]))
+        known_assumption_list.append(
+            z3.Or(*[v.S[t] >= v.S[s] + beta(t-s)
+                    for s in range(t+1)])
         )
     known_assumption = z3.And(known_assumption_list)
 
@@ -75,8 +99,8 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(known_assumption)
-    verifier.add(desired10)
+    verifier.add(z3.Not(known_assumption))
+    # verifier.add(z3.Not(desired10))
     # verifier.add(desired50)
     # verifier.add(desired)
     # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
