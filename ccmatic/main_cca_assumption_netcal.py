@@ -103,7 +103,7 @@ for t in range(c.T):
         z3.And(*[v.S[t] <= v.S[s] + alpha(t-s) for s in range(t+1)]))
     # Minimum service curve (beta) constraint
     assumption_constraints.append(
-        z3.Or(*[v.S[t] >= v.S[s] + beta(t-s) for s in range(t+1)]))
+        z3.Or(*[v.S[t] >= v.A[s] + beta(t-s) for s in range(t+1)]))
 
 # CCmatic inputs
 ctx = z3.main_ctx()

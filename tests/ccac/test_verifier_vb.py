@@ -180,32 +180,30 @@ if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
 
-# import ipdb; ipdb.set_trace()
+else:
+    # # Unsat core
+    # dummy = MySolver()
+    # dummy.warn_undeclared = False
+    # dummy.set(unsat_core=True)
 
-# else:
-#     # Unsat core
-#     dummy = MySolver()
-#     dummy.warn_undeclared = False
-#     dummy.set(unsat_core=True)
+    # assertion_list = verifier.assertion_list
+    # for assertion in assertion_list:
+    #     for expr in unroll_assertions(assertion):
+    #         dummy.add(expr)
+    # assert(str(dummy.check()) == "unsat")
+    # unsat_core = dummy.unsat_core()
+    # print(len(unsat_core))
+    # import ipdb; ipdb.set_trace()
 
-#     assertion_list = verifier.assertion_list
-#     for assertion in assertion_list:
-#         for expr in unroll_assertions(assertion):
-#             dummy.add(expr)
-#     assert(str(dummy.check()) == "unsat")
-#     unsat_core = dummy.unsat_core()
-#     print(len(unsat_core))
-#     import ipdb; ipdb.set_trace()
+    verifier.pop()
 
-verifier.pop()
+    GlobalConfig().logging_levels['cegis'] = logging.INFO
+    logger = logging.getLogger('cegis')
+    GlobalConfig().default_logger_setup(logger)
 
-GlobalConfig().logging_levels['cegis'] = logging.INFO
-logger = logging.getLogger('cegis')
-GlobalConfig().default_logger_setup(logger)
-
-ret = optimize_multi_var(verifier, optimization_list)
-df = pd.DataFrame(ret)
-sort_columns = [x.name() for x in optimization_list]
-sort_order = [x.maximize for x in optimization_list]
-df = df.sort_values(by=sort_columns, ascending=sort_order)
-print(df)
+    ret = optimize_multi_var(verifier, optimization_list)
+    df = pd.DataFrame(ret)
+    sort_columns = [x.name() for x in optimization_list]
+    sort_order = [x.maximize for x in optimization_list]
+    df = df.sort_values(by=sort_columns, ascending=sort_order)
+    print(df)
