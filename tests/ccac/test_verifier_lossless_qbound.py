@@ -16,7 +16,8 @@ cc.history = 1
 cc.infinite_buffer = True
 cc.template_queue_bound = True
 cc.compose = False
-cc.T = 15
+cc.history = cc.R
+cc.T = 9
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
@@ -42,10 +43,10 @@ for t in range(first, c.T):
     if(t-c.R-1 >= 0):
         this_decrease = z3.And(delay_detected,
                                v.S_f[0][t-c.R] > v.S_f[0][t-c.R-1],
-                               v.S_f[0][t-c.R] >= v.last_decrease_f[0][t-1])
+                               v.S_f[0][t-c.R] > v.last_decrease_f[0][t-1])
     else:
         this_decrease = z3.And(delay_detected,
-                               v.S_f[0][t-c.R] >= v.last_decrease_f[0][t-1])
+                               v.S_f[0][t-c.R] > v.last_decrease_f[0][t-1])
     acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
     # acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-3]
 
