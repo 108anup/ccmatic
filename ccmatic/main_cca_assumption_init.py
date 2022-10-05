@@ -76,6 +76,13 @@ for t in range(first, c.T):
 
     rhs_delay = v.c_f[0][t-c.R]/2
     rhs_nodelay = v.c_f[0][t-c.R] + 1
+
+    rhs = z3.If(this_decrease, rhs_delay, rhs_nodelay)
+    assert isinstance(rhs, z3.ArithRef)
+    cca_definitions_list.append(
+        v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
+                             rhs, cc.template_cca_lower_bound))
+
 cca_definitions = z3.And(*cca_definitions_list)
 
 # cca_vvars = get_cca_vvars(c, v)
