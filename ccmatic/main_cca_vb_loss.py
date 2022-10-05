@@ -24,19 +24,19 @@ cc = CegisConfig()
 cc.synth_ss = False
 cc.feasible_response = True
 cc.R = 1
-cc.D = 0
+cc.D = 1
 cc.history = 4
 cc.T = 9
 
 cc.infinite_buffer = False
-cc.dynamic_buffer = False
+cc.dynamic_buffer = True
 cc.buffer_size_multiplier = 1
-cc.template_queue_bound = True
+# cc.template_queue_bound = True
 
-cc.desired_util_f = 0.8
-cc.desired_queue_bound_multiplier = 1.5
-cc.desired_loss_count_bound = 2
-cc.desired_loss_amount_bound_multiplier = 1
+cc.desired_util_f = 0.33
+cc.desired_queue_bound_multiplier = 2
+cc.desired_loss_count_bound = 3
+cc.desired_loss_amount_bound_multiplier = 2
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -190,7 +190,7 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 # Known solution
 known_solution = None
 
-# AIMD
+# MD + combination
 known_solution_list = [
     coeffs['c_f[0]_loss'] == 1/2,
     coeffs['ack_f[0]_loss'] == 0,

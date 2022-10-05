@@ -513,7 +513,7 @@ def get_cegis_vars(
              v.dupacks, v.alpha, v.C0])
     definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.r_f[:, history:], v.S, v.timeout_f])
+             v.r_f[:, history:], v.S, v.L, v.timeout_f])
 
     if(not c.compose):
         verifier_vars.append(v.epsilon)
@@ -540,7 +540,6 @@ def get_cegis_vars(
     if(c.buf_min is None):
         # No loss
         verifier_vars.extend(flatten([v.L_f, v.Ld_f]))
-        definition_vars.extend(flatten(v.L))
     elif(c.deterministic_loss):
         # Determinisitic loss
         assert c.loss_oracle
@@ -1064,6 +1063,7 @@ def get_cex_df(
         cex_dict.update({
             get_name_for_list(vn.A_f[n]): _get_model_value(v.A_f[n]),
             get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
+            get_name_for_list(vn.r_f[n]): _get_model_value(v.r_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
             # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
@@ -1149,6 +1149,7 @@ def get_gen_cex_df(
         cex_dict.update({
             get_name_for_list(vn.A_f[n]): _get_model_value(v.A_f[n]),
             get_name_for_list(vn.c_f[n]): _get_model_value(v.c_f[n]),
+            get_name_for_list(vn.r_f[n]): _get_model_value(v.r_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
             # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
