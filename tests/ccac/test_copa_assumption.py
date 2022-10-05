@@ -5,7 +5,7 @@ from ccac.variables import VariableNames
 from ccmatic.cegis import CegisConfig
 from cegis.util import Metric, get_raw_value, optimize_multi_var, unroll_assertions
 from ccmatic.verifier import get_cex_df, setup_cegis_basic
-from ccmatic.verifier.assumptions import (get_cca_definition,
+from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -23,7 +23,12 @@ def test_copa_composition():
     cc.template_qdel = True
 
     cc.compose = True
+    # cc.cca = "copa"
     cc.cca = "copa"
+    if(cc.cca == "copa"):
+        cc.history = cc.R + cc.D
+    elif(cc.cca == "bbr"):
+        cc.history = 2 * cc.R
 
     cc.feasible_response = True
 
@@ -55,14 +60,24 @@ def test_copa_composition():
 
         return ret
 
-    # # CCAC paper
-    # known_assumption_list = []
-    # for t in range(1, c.T):
-    #     known_assumption_list.append(
-    #         z3.Implies(v.W[t] > v.W[t-1],
-    #                    v.A[t]-v.L[t]-v.S[t] <= v.alpha)
-    #     )
-    # known_assumption = z3.And(known_assumption_list)
+    # CCAC paper
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Implies(v.W[t] > v.W[t-1],
+                       v.A[t]-v.L[t]-v.S[t] <= 0)
+        )
+    known_assumption_ccac = z3.And(known_assumption_list)
+
+    #
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Implies(v.W[t] > v.W[t-1],
+                       v.C0 + c.C * t - v.W[t] - v.S[t] <= 0)
+        )
+    known_assumption_ccmatic = z3.And(known_assumption_list)
+
 
     # # When to waste, Incal
     # known_assumption_list = []
@@ -72,30 +87,30 @@ def test_copa_composition():
     #     )
     # known_assumption = z3.And(known_assumption_list)
 
-    delay_f = z3.Real('delay_f')
-    burst_f = 1
+    # delay_f = z3.Real('delay_f')
+    # burst_f = 1
 
-    # Netcal
-    def beta(t):
-        val = (t - delay_f * c.D)
-        absval = z3.If(val >= 0, val, 0)
-        assert(isinstance(absval, z3.ArithRef))
-        return c.C * absval
+    # # Netcal
+    # def beta(t):
+    #     val = (t - delay_f * c.D)
+    #     absval = z3.If(val >= 0, val, 0)
+    #     assert(isinstance(absval, z3.ArithRef))
+    #     return c.C * absval
 
-    def alpha(t):
-        burst = burst_f * c.C * c.D
-        return burst + c.C * (t)
+    # def alpha(t):
+    #     burst = burst_f * c.C * c.D
+    #     return burst + c.C * (t)
 
-    known_assumption_list = []
-    for t in range(c.T):
-        known_assumption_list.append(
-            z3.And(*[v.S[t] <= v.S[s] + alpha(t-s)
-                     for s in range(t+1)]))
-        known_assumption_list.append(
-            z3.Or(*[v.S[t] >= v.A[s] + beta(t-s)
-                    for s in range(t+1)])
-        )
-    known_assumption = z3.And(known_assumption_list)
+    # known_assumption_list = []
+    # for t in range(1, c.T):
+    #     known_assumption_list.append(
+    #         z3.And(*[v.S[t] <= v.S[s] + alpha(t-s)
+    #                  for s in range(t+1)]))
+    #     known_assumption_list.append(
+    #         z3.Or(*[v.S[t] >= v.A[s]-v.L[s] + beta(t-s)
+    #                 for s in range(t+1)])
+    #     )
+    # known_assumption = z3.And(known_assumption_list)
 
     verifier = MySolver()
     verifier.warn_undeclared = False
@@ -105,8 +120,9 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(known_assumption)
-    verifier.add(z3.Not(desired))
+    verifier.add(z3.Not(known_assumption_ccac))
+    verifier.add(known_assumption_ccmatic)
+    # verifier.add(z3.Not(desired))
     # verifier.add(desired50)
     # verifier.add(desired)
     # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
@@ -114,9 +130,10 @@ def test_copa_composition():
     # verifier.add(v.L[0] == 0)
 
     optimization_list = [
-        Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
-        Metric(delay_f, 0, 1, 0.001, True)
+        # Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
+        # Metric(delay_f, 0, 1, 0.001, True)
     ]
+    verifier.add(cc.desired_util_f == 0.3)
 
     verifier.push()
     for metric in optimization_list:
@@ -148,7 +165,7 @@ def test_copa_composition():
 
         verifier.pop()
 
-        GlobalConfig().logging_levels['cegis'] = logging.INFO
+        GlobalConfig().logging_levels['cegis'] = logging.DEBUG
         logger = logging.getLogger('cegis')
         GlobalConfig().default_logger_setup(logger)
 

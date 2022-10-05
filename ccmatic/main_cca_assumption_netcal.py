@@ -12,7 +12,7 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten
 from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
-from ccmatic.verifier.assumptions import (get_cca_definition,
+from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
 from cegis import rename_vars
 
@@ -32,7 +32,13 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.compose = True
-cc.cca = "copa"
+# c.cca = "copa"
+cc.cca = "bbr"
+if(cc.cca == "copa"):
+    cc.history = cc.R + cc.D
+elif(cc.cca == "bbr"):
+    cc.history = 2 * cc.R
+
 
 cc.feasible_response = True
 
@@ -44,6 +50,8 @@ vn = VariableNames(v)
 
 periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
 cca_definitions = get_cca_definition(c, v)
+cca_vvars = get_cca_vvars(c, v)
+verifier_vars.extend(flatten(cca_vvars))
 environment = z3.And(environment, periodic_constriants, cca_definitions)
 poor_utilization = v.S[-1] - v.S[0] < 0.1 * c.C * c.T
 
@@ -97,13 +105,13 @@ def alpha(t):
     return coeffs['burst'] * burst + c.C * (t)
 
 
-for t in range(c.T):
+for t in range(1, c.T):
     # Maximum arrival curve (alpha) constraint
     assumption_constraints.append(
         z3.And(*[v.S[t] <= v.S[s] + alpha(t-s) for s in range(t+1)]))
     # Minimum service curve (beta) constraint
     assumption_constraints.append(
-        z3.Or(*[v.S[t] >= v.A[s] + beta(t-s) for s in range(t+1)]))
+        z3.Or(*[v.S[t] >= v.A[s]-v.L[s] + beta(t-s) for s in range(t+1)]))
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -152,7 +160,7 @@ def get_solution_str(solution: z3.ModelRef,
     ret = "forall t, forall 0<=s<=t\n" + \
         f"\tS[t] <= S[s] + {solution.eval(coeffs['burst'])}CD + Ct"
     ret += "\nforall t, exists 0<=s<=t\n" + \
-        f"\tS[t] >= S[s] + C * (t-s - {solution.eval(coeffs['delay'])}D)"
+        f"\tS[t] >= A[s]-L[s] + C * (t-s - {solution.eval(coeffs['delay'])}D)"
 
     df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
     df_alt['alt_tokens_t'] = [float(solution.eval(v_alt.C0 + c.C * t).as_fraction())
