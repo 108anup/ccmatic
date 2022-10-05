@@ -69,15 +69,21 @@ def test_copa_composition():
         )
     known_assumption_ccac = z3.And(known_assumption_list)
 
-    #
+    # CCmatic 1
     known_assumption_list = []
     for t in range(1, c.T):
         known_assumption_list.append(
             z3.Implies(v.W[t] > v.W[t-1],
                        v.C0 + c.C * t - v.W[t] - v.S[t] <= 0)
         )
-    known_assumption_ccmatic = z3.And(known_assumption_list)
+    known_assumption_ccmatic1 = z3.And(known_assumption_list)
 
+    # CCmatic 2
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            v.S[t] > v.C0 + c.C * (t-c.D) - v.W[t-c.D])
+    known_assumption_ccmatic2 = z3.And(known_assumption_list)
 
     # # When to waste, Incal
     # known_assumption_list = []
@@ -120,8 +126,8 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(z3.Not(known_assumption_ccac))
-    verifier.add(known_assumption_ccmatic)
+    verifier.add(known_assumption_ccac)
+    verifier.add(z3.Not(known_assumption_ccmatic2))
     # verifier.add(z3.Not(desired))
     # verifier.add(desired50)
     # verifier.add(desired)
@@ -150,6 +156,7 @@ def test_copa_composition():
         import ipdb; ipdb.set_trace()
 
     else:
+        sys.exit(1)
         # # Unsat core
         # dummy = MySolver()
         # dummy.warn_undeclared = False
