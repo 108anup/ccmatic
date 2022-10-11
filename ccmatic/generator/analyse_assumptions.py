@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import time
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -74,65 +75,68 @@ def parse_and_create_assumptions(assumption_records: pd.DataFrame,
     return assumptions
 
 
+def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
+    # For parallel calls, need to use unique context.
+    # From https://github.com/Z3Prover/z3/blob/master/examples/python/parallel.py
+    solver = MySolver(ctx=ctx)
+    solver.warn_undeclared = False
+    solver.s.add(lemmas)
+
+    def x_implies_y(x, y):
+        solver.push()
+        solver.s.add(z3.And(x, z3.Not(y)))
+        start = time.time()
+        logger.info("Started cmp")
+        ret = str(solver.check())
+        end = time.time()
+        logger.info(f"Cmp took {end - start} secs, returned {ret}")
+        solver.pop()
+        # if unsat then x implies y
+        if(ret == "unsat"):
+            return True  # x is stronger.
+        else:
+            return False
+
+    a_implies_b = x_implies_y(a, b)
+    # b_implies_a = x_implies_y(b, a)
+    return a_implies_b
+
+
 def build_adj_matrix(assumptions: List[z3.ExprRef],
                      lemmas: z3.ExprRef) -> npt.NDArray[np.bool8]:
     n = len(assumptions)
     logger.info(f"Building adj matrix ({n})")
     # Does a imply b
-    _adj: List[List[Union[bool, Future]]] = \
+    adj: List[List[Union[bool, Future]]] = \
         [[False for _ in range(n)] for _ in range(n)]
-
-    def threadsafe_compare(a, b):
-        # For parallel calls, need to use unique context.
-        ctx = z3.Context()
-        solver = MySolver(ctx=ctx)
-        solver.warn_undeclared = False
-        _lemmas = lemmas.translate(ctx)
-        _a = a.translate(ctx)
-        _b = b.translate(ctx)
-        solver.s.add(_lemmas)
-
-        def x_implies_y(x, y):
-            solver.push()
-            solver.s.add(z3.And(x, z3.Not(y)))
-            start = time.time()
-            logger.info("Started cmp")
-            ret = str(solver.check())
-            end = time.time()
-            logger.info(f"Cmp took {end - start} secs, returned {ret}")
-            solver.pop()
-            # if unsat then x implies y
-            if(ret == "unsat"):
-                return True  # x is stronger.
-            else:
-                return False
-
-        a_implies_b = x_implies_y(_a, _b)
-        # b_implies_a = x_implies_y(_b, _a)
-        return a_implies_b
 
     logger.info("Created thread pool")
     thread_pool_executor = ThreadPoolExecutor(max_workers=32)
     for ia, a in enumerate(assumptions):
         for ib, b in enumerate(assumptions):
             if(ia == ib):
-                _adj[ia][ib] = True
+                adj[ia][ib] = True
             else:
                 # _adj[ia][ib] = threadsafe_compare(a, b)
-                _adj[ia][ib] = thread_pool_executor.submit(
-                    threadsafe_compare, a, b)
+                ctx = z3.Context()
+                assert ctx != z3.main_ctx
+                _a = a.translate(ctx)
+                _b = b.translate(ctx)
+                _lemmas = lemmas.translate(ctx)
+                adj[ia][ib] = thread_pool_executor.submit(
+                    threadsafe_compare, _a, _b, _lemmas, ctx)
 
     logger.info("Waiting on thread pool")
     for ia, a in enumerate(assumptions):
         for ib, b in enumerate(assumptions):
             if(ia != ib):
-                future = _adj[ia][ib]
+                future = adj[ia][ib]
                 assert isinstance(future, Future)
-                _adj[ia][ib] = future.result()
+                adj[ia][ib] = future.result()
     thread_pool_executor.shutdown()
 
     logger.info("Built adj")
-    return np.array(_adj).astype(bool)
+    return np.array(adj).astype(bool)
 
 
 def get_unique_assumptions(adj: npt.NDArray[np.bool8]):
@@ -162,6 +166,8 @@ def get_topo_sort(unique_assumption_ids: List[int], adj: npt.NDArray[np.bool8]):
             if(i != j and adj[i][j]):
                 edges.append((i, j))
     g.add_edges_from(edges)
+    nx.draw(g, with_labels=True)
+    plt.savefig('tmp.pdf')
     return nx.topological_sort(g)
 
 
