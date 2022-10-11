@@ -409,7 +409,7 @@ if(args.sort_assumptions):
     assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
     f.close()
     lemmas = z3.And(
-        search_constraints,
+        # search_constraints,
 
         ccac_domain,
         ccac_definitions,

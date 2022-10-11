@@ -2,13 +2,14 @@ import matplotlib.pyplot as plt
 import time
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Callable, List, Union
+from typing import Callable, List, Tuple, Union
 
 import networkx as nx
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import z3
+from cegis import rename_vars
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -46,7 +47,7 @@ def extract_vars(e: z3.ExprRef) -> List[z3.ExprRef]:
 
 def parse_and_create_assumptions(assumption_records: pd.DataFrame,
                                  assumption_template: z3.ExprRef
-                                 ) -> List[z3.ExprRef]:
+                                 ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
     # Assumes that two varaiables with different sorts
     # always have different names.
     var_dict = {x.decl().name(): x
@@ -58,21 +59,30 @@ def parse_and_create_assumptions(assumption_records: pd.DataFrame,
     # import ipdb; ipdb.set_trace()
     assert set(gen_var_names).union(all_varnames) == all_varnames
 
-    def get_assumption_assign_from_record(assumption_record: pd.Series):
+    gen_vars = [var_dict[x] for x in gen_var_names]
+
+    def get_assumption_assign_from_record(assumption_record: pd.Series,
+                                          name_template: str):
         expr_list = []
         for vname, val in assumption_record.items():
-            expr_list.append(var_dict[vname] == val)
+            v = var_dict[vname]
+            new_name = name_template.format(v.decl().name())
+            expr_list.append(z3.Const(new_name, v.sort()) == val)
         return z3.And(*expr_list)
 
-    assumptions: List[z3.ExprRef] = []
-    for _, assumption_record in assumption_records.iterrows():
-        assumption_assign = get_assumption_assign_from_record(
-            assumption_record)
-        assumption_constr = z3.And(assumption_template, assumption_assign)
-        assert isinstance(assumption_constr, z3.ExprRef)
-        assumptions.append(assumption_constr)
+    assumption_assignments: List[z3.ExprRef] = []
+    assumption_expressions: List[z3.ExprRef] = []
+    for aid, assumption_record in assumption_records.iterrows():
+        name_template = f"Assumption{aid}___" + "{}"
+        assumption_assignment = get_assumption_assign_from_record(
+            assumption_record, name_template)
+        assert isinstance(assumption_assignment, z3.ExprRef)
+        assumption_assignments.append(assumption_assignment)
+        this_assumption_template = rename_vars(assumption_template,
+                                               gen_vars, name_template)
+        assumption_expressions.append(this_assumption_template)
 
-    return assumptions
+    return assumption_assignments, assumption_expressions
 
 
 def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
@@ -83,6 +93,7 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
     solver.s.add(lemmas)
 
     def x_implies_y(x, y):
+        # import ipdb; ipdb.set_trace()
         solver.push()
         solver.s.add(z3.And(x, z3.Not(y)))
         start = time.time()
@@ -90,6 +101,8 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
         ret = str(solver.check())
         end = time.time()
         logger.info(f"Cmp took {end - start} secs, returned {ret}")
+        # model = solver.model()
+        # import ipdb; ipdb.set_trace()
         solver.pop()
         # if unsat then x implies y
         if(ret == "unsat"):
@@ -102,18 +115,22 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
     return a_implies_b
 
 
-def build_adj_matrix(assumptions: List[z3.ExprRef],
+def build_adj_matrix(assumption_assignments: List[z3.ExprRef],
+                     assumption_expressions: List[z3.ExprRef],
                      lemmas: z3.ExprRef) -> npt.NDArray[np.bool8]:
-    n = len(assumptions)
+    assert len(assumption_expressions) == len(assumption_assignments)
+    n = len(assumption_expressions)
     logger.info(f"Building adj matrix ({n})")
     # Does a imply b
     adj: List[List[Union[bool, Future]]] = \
         [[False for _ in range(n)] for _ in range(n)]
 
-    logger.info("Created thread pool")
-    thread_pool_executor = ThreadPoolExecutor(max_workers=32)
-    for ia, a in enumerate(assumptions):
-        for ib, b in enumerate(assumptions):
+    PARALLEL: bool = True
+    if(PARALLEL):
+        logger.info("Created thread pool")
+        thread_pool_executor = ThreadPoolExecutor(max_workers=32)
+    for ia, a in enumerate(assumption_expressions):
+        for ib, b in enumerate(assumption_expressions):
             if(ia == ib):
                 adj[ia][ib] = True
             else:
@@ -123,17 +140,28 @@ def build_adj_matrix(assumptions: List[z3.ExprRef],
                 _a = a.translate(ctx)
                 _b = b.translate(ctx)
                 _lemmas = lemmas.translate(ctx)
-                adj[ia][ib] = thread_pool_executor.submit(
-                    threadsafe_compare, _a, _b, _lemmas, ctx)
+                assignments = z3.And(
+                        assumption_assignments[ia],
+                        assumption_assignments[ib])
+                assert isinstance(assignments, z3.ExprRef)
+                _assignments = assignments.translate(ctx)
+                _all_lemmas = z3.And(_lemmas, _assignments)
+                assert isinstance(_all_lemmas, z3.ExprRef)
+                if(PARALLEL):
+                    adj[ia][ib] = thread_pool_executor.submit(
+                        threadsafe_compare, _a, _b, _all_lemmas, ctx)
+                else:
+                    adj[ia][ib] = threadsafe_compare(_a, _b, _all_lemmas, ctx)
 
-    logger.info("Waiting on thread pool")
-    for ia, a in enumerate(assumptions):
-        for ib, b in enumerate(assumptions):
-            if(ia != ib):
-                future = adj[ia][ib]
-                assert isinstance(future, Future)
-                adj[ia][ib] = future.result()
-    thread_pool_executor.shutdown()
+    if(PARALLEL):
+        logger.info("Waiting on thread pool")
+        for ia in range(n):
+            for ib in range(n):
+                if(ia != ib):
+                    future = adj[ia][ib]
+                    assert isinstance(future, Future)
+                    adj[ia][ib] = future.result()
+        thread_pool_executor.shutdown()
 
     logger.info("Built adj")
     return np.array(adj).astype(bool)
@@ -166,8 +194,8 @@ def get_topo_sort(unique_assumption_ids: List[int], adj: npt.NDArray[np.bool8]):
             if(i != j and adj[i][j]):
                 edges.append((i, j))
     g.add_edges_from(edges)
-    nx.draw(g, with_labels=True)
-    plt.savefig('tmp.pdf')
+    nx.draw(nx.transitive_reduction(g), with_labels=True)
+    plt.savefig('tmp/tmp.pdf')
     return nx.topological_sort(g)
 
 
@@ -176,15 +204,18 @@ def sort_print_assumptions(
         assumption_template: z3.ExprRef, lemmas: z3.ExprRef,
         get_solution_str: Callable):
     # sort assumption assignments
-    sorted_assumption_records = assumption_records.sort_values(
-        by=list(assumption_records.columns))
+    # sorted_assumption_records = assumption_records.sort_values(
+    #     by=list(assumption_records.columns))
+    sorted_assumption_records = assumption_records
     logger.info(sorted_assumption_records)
     # del assumption_records
 
-    assumptions = parse_and_create_assumptions(sorted_assumption_records,
-                                               assumption_template)
+    assumption_assignments, assumption_expressions = \
+        parse_and_create_assumptions(sorted_assumption_records,
+                                     assumption_template)
 
-    adj = build_adj_matrix(assumptions, lemmas)
+    adj = build_adj_matrix(
+        assumption_assignments, assumption_expressions, lemmas)
     logger.info(f"Adj: {adj}")
 
     # Remove duplicates
