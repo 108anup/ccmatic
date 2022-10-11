@@ -4,6 +4,7 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from ccmatic.generator.analyse_assumptions import sort_print_assumptions
 from cegis.util import unroll_assertions
 from pyz3_utils.common import GlobalConfig
 
@@ -40,7 +41,7 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.compose = True
-cc.cca = "bbr"
+cc.cca = "copa"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
 elif(cc.cca == "bbr"):
@@ -221,6 +222,7 @@ specification = z3.Implies(
 specification_alt = z3.And(
     environment_alt, assumption_alt, poor_utilization_alt)
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
+# cca_definitions are verifier only. does not matter if they are here...
 definitions_alt = z3.And(
     ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
 assert isinstance(definitions, z3.ExprRef)
@@ -257,18 +259,28 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
+    use_model = False
+    if(isinstance(solution, z3.ModelRef)):
+        use_model = True
+
+    def get_solution_val(var: z3.ExprRef):
+        if(use_model):
+            return solution.eval(var)
+        else:
+            return solution[var.decl().name()]
+
     def get_term_from_sym(ineqnum: int, vnum: int, shift: int, vname: str):
         if(vname == 'mmBDP'):
             suffix = 'C(R + D)'
             if(shift == 0):
-                val = solution.eval(consts[ineqnum])
+                val = get_solution_val(consts[ineqnum])
             else:
                 val = 0
         elif(vname == 'C'):
-            val = solution.eval(coeffs[ineqnum][vnum][shift])
+            val = get_solution_val(coeffs[ineqnum][vnum][shift])
             suffix = f'(C_0 + C(t-{shift}))'
         else:
-            val = solution.eval(coeffs[ineqnum][vnum][shift])
+            val = get_solution_val(coeffs[ineqnum][vnum][shift])
             suffix = f'{vname}[t-{shift}]'
 
         if(val == 0):
@@ -288,7 +300,7 @@ def get_solution_str(solution: z3.ModelRef,
 
     def bool_or_default(z3var: z3.ExprRef):
         try:
-            return bool(solution.eval(z3var))
+            return bool(get_solution_val(z3var))
         except z3.z3types.Z3Exception:
             return False
 
@@ -304,10 +316,12 @@ def get_solution_str(solution: z3.ModelRef,
             this_clause.append("False")
         ret += f"Clause {clausenum}: " + " or ".join(this_clause) + "\n"
 
-    df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
-    df_alt['alt_tokens_t'] = [float(solution.eval(v_alt.C0 + c.C * t).as_fraction())
-                              for t in range(c.T)]
-    ret += "\n{}".format(df_alt)
+    if(use_model):
+        df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
+        df_alt['alt_tokens_t'] = [
+            float(get_solution_val(v_alt.C0 + c.C * t).as_fraction())
+            for t in range(c.T)]
+        ret += "\n{}".format(df_alt)
 
     return ret
 
@@ -376,6 +390,43 @@ assert isinstance(known_solution, z3.ExprRef)
 # assert(isinstance(search_constraints, z3.ExprRef))
 
 
+def get_args():
+    import argparse
+    parser = argparse.ArgumentParser(description='Synthesize assumptions')
+    parser.add_argument('--solution-log-path', type=str,
+                        action='store', default=None)
+    parser.add_argument('--sort-assumptions', action='store_true', default=False)
+    parser.add_argument('--simplify-assumptions', action='store_true', default=False)
+    args = parser.parse_args()
+    return args
+
+
+args = get_args()
+if(args.sort_assumptions):
+    import pandas as pd
+    f = open(args.solution_log_path, 'r')
+    df = pd.read_csv(f)
+    assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    f.close()
+    lemmas = z3.And(
+        search_constraints,
+
+        ccac_domain,
+        ccac_definitions,
+
+        cca_definitions,
+        environment,
+        periodic_constriants,
+
+        # z3.Not(poor_utilization)
+    )
+    assert isinstance(lemmas, z3.ExprRef)
+    sort_print_assumptions(assumption_records, assumption, lemmas,
+                           get_solution_str)
+
+    import sys
+    sys.exit(0)
+
 # Debugging:
 debug_known_solution = None
 if DEBUG:
@@ -398,7 +449,8 @@ try:
     cg = CegisCCAGen(generator_vars, verifier_vars,
                      definition_vars, search_constraints,
                      definitions, specification, ctx,
-                     debug_known_solution)
+                     debug_known_solution,
+                     solution_log_path=args.solution_log_path)
     # verifier_vars_combined = verifier_vars + verifier_vars_alt
     # definition_vars_combined = definition_vars + definition_vars_alt
     # specification_combined = z3.And(specification, specification_alt)
