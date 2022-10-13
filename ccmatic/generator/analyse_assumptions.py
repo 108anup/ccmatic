@@ -229,7 +229,7 @@ def sort_print_assumptions(
     solution_strs = []
     for i, uid in enumerate(sorted_order):
         solution_strs.append(
-            f"{i}, {uid}: " +
+            f"{uid}, {i} -- \n" +
             get_solution_str(sorted_assumption_records.iloc[uid],
                              None, None))
     logger.info("Sorted solutions: \n"+"\n".join(solution_strs))
