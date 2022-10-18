@@ -25,7 +25,7 @@ cc.template_qdel = False
 cc.template_queue_bound = False
 cc.N = 1
 cc.history = 4
-cc.cca = "paced"
+cc.cca = "none"
 # import ipdb; ipdb.set_trace()
 # cc.template_loss_oracle = True
 
@@ -49,12 +49,16 @@ coeffs = {
     'c_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_loss'),
     'c_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_noloss'),
     'ack_f[n]_loss': z3.Real('Gen__coeff_ack_f[n]_loss'),
-    'ack_f[n]_noloss': z3.Real('Gen__coeff_ack_f[n]_noloss')
+    'ack_f[n]_noloss': z3.Real('Gen__coeff_ack_f[n]_noloss'),
+    'r_f[n]_noloss': z3.Real('Gen__coeff_r_f[n]_noloss'),
+    'r_f[n]_loss': z3.Real('Gen__coeff_r_f[n]_loss')
 }
 
 consts = {
     'c_f[n]_loss': z3.Real('Gen__const_c_f[n]_loss'),
     'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_noloss'),
+    'r_f[n]_noloss': z3.Real('Gen__const_r_f[n]_noloss'),
+    'r_f[n]_loss': z3.Real('Gen__const_r_f[n]_loss')
 }
 
 generator_vars = (flatten(list(coeffs.values())) +
@@ -110,9 +114,29 @@ for n in range(c.N):
                                  rhs, cc.template_cca_lower_bound)
         )
 
+# Pacing
+for n in range(c.N):
+    for t in range(first):
+        # Basic constraints when adversary decides cwnd, loss
+        template_definitions.append(v.c_f[n][t] > 0)
+        template_definitions.append(v.r_f[n][t] == v.c_f[n][t] / c.R)
+
+    for t in range(first, c.T):
+        loss_detected = v.Ld_f[n][t] > v.Ld_f[n][t-c.R]
+        template_definitions.append(v.c_f[n][t] > 0)
+        rhs_loss = get_product_ite(
+            coeffs['r_f[n]_loss'], v.c_f[n][t] / c.R, search_range_coeffs) \
+            + consts['r_f[n]_loss']
+        rhs_noloss = get_product_ite(
+            coeffs['r_f[n]_noloss'], v.c_f[n][t] / c.R, search_range_coeffs) \
+            + consts['r_f[n]_noloss']
+        template_definitions.append(
+            v.r_f[n][t] == z3.If(loss_detected, rhs_loss, rhs_noloss))
+
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
+    ret = "CWND:\n"
     rhs_loss = (f"{solution.eval(coeffs['c_f[n]_loss'])}"
                 f"c_f[n][t-{c.R}]"
                 f" + {solution.eval(coeffs['ack_f[n]_loss'])}"
@@ -123,10 +147,24 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
                   f"(S_f[n][t-{c.R}]-S_f[n][t-{cc.history}])"
                   f" + {solution.eval(consts['c_f[n]_noloss'])}")
-    ret = (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
-           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_loss})\n"
-           f"else:\n"
-           f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_noloss})")
+    ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
+            f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_loss})\n"
+            f"else:\n"
+            f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_noloss})\n")
+
+    # Pacing
+    ret += "PACING:\n"
+    rhs_loss = (f"{solution.eval(coeffs['r_f[n]_loss'])}"
+                f"c_f[n][t]/{c.R}"
+                f" + {solution.eval(consts['r_f[n]_loss'])}")
+    rhs_noloss = (f"{solution.eval(coeffs['r_f[n]_noloss'])}"
+                  f"c_f[n][t]/{c.R}"
+                  f" + {solution.eval(consts['r_f[n]_noloss'])}")
+    ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
+            f"\tr_f[n][t] = {rhs_loss})\n"
+            f"else:\n"
+            f"\tr_f[n][t] = {rhs_noloss})")
+
     return ret
 
 
