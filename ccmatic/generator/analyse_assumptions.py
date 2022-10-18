@@ -1,3 +1,6 @@
+import itertools
+from concurrent import futures
+import gc
 import matplotlib.pyplot as plt
 import time
 import logging
@@ -112,6 +115,11 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
 
     a_implies_b = x_implies_y(a, b)
     # b_implies_a = x_implies_y(b, a)
+    del solver
+    del a
+    del b
+    del lemmas
+    del ctx
     return a_implies_b
 
 
@@ -125,42 +133,61 @@ def build_adj_matrix(assumption_assignments: List[z3.ExprRef],
     adj: List[List[Union[bool, Future]]] = \
         [[False for _ in range(n)] for _ in range(n)]
 
-    PARALLEL: bool = True
-    if(PARALLEL):
-        logger.info("Created thread pool")
-        thread_pool_executor = ThreadPoolExecutor(max_workers=32)
-    for ia, a in enumerate(assumption_expressions):
-        for ib, b in enumerate(assumption_expressions):
-            if(ia == ib):
-                adj[ia][ib] = True
-            else:
-                # _adj[ia][ib] = threadsafe_compare(a, b)
-                ctx = z3.Context()
-                assert ctx != z3.main_ctx
-                _a = a.translate(ctx)
-                _b = b.translate(ctx)
-                _lemmas = lemmas.translate(ctx)
-                assignments = z3.And(
-                        assumption_assignments[ia],
-                        assumption_assignments[ib])
-                assert isinstance(assignments, z3.ExprRef)
-                _assignments = assignments.translate(ctx)
-                _all_lemmas = z3.And(_lemmas, _assignments)
-                assert isinstance(_all_lemmas, z3.ExprRef)
-                if(PARALLEL):
-                    adj[ia][ib] = thread_pool_executor.submit(
-                        threadsafe_compare, _a, _b, _all_lemmas, ctx)
-                else:
-                    adj[ia][ib] = threadsafe_compare(_a, _b, _all_lemmas, ctx)
+    def create_inputs(ia, ib):
+        ctx = z3.Context()
+        assert ctx != z3.main_ctx
+        _a = assumption_expressions[ia].translate(ctx)
+        _b = assumption_expressions[ib].translate(ctx)
+        _lemmas = lemmas.translate(ctx)
+        assignments = z3.And(assumption_assignments[ia],
+                             assumption_assignments[ib])
+        assert isinstance(assignments, z3.ExprRef)
+        _assignments = assignments.translate(ctx)
+        _all_lemmas = z3.And(_lemmas, _assignments)
+        assert isinstance(_all_lemmas, z3.ExprRef)
+        del assignments
+        del _assignments
+        del _lemmas
+        return _a, _b, _all_lemmas, ctx
 
-    if(PARALLEL):
-        logger.info("Waiting on thread pool")
-        for ia in range(n):
-            for ib in range(n):
+    PARALLEL: bool = True
+    if not PARALLEL:
+        for ia, a in enumerate(assumption_expressions):
+            for ib, b in enumerate(assumption_expressions):
+                if(ia == ib):
+                    adj[ia][ib] = True
+                else:
+                    inputs = create_inputs(ia, ib)
+                    adj[ia][ib] = threadsafe_compare(*inputs)
+    else:
+        BATCH_SIZE = 256
+        WORKERS = 48
+        logger.info("Created thread pool")
+        thread_pool_executor = ThreadPoolExecutor(max_workers=WORKERS)
+        worklist = itertools.product(range(n), range(n))
+        itr1, itr2 = itertools.tee(worklist, 2)
+        done = 0
+        batch_i = 0
+        while done < n * n:
+            for ia, ib in itertools.islice(itr1, 0, BATCH_SIZE):
+                if(ia == ib):
+                    adj[ia][ib] = True
+                else:
+                    inputs = create_inputs(ia, ib)
+                    adj[ia][ib] = thread_pool_executor.submit(
+                        threadsafe_compare, *inputs)
+
+            for ia, ib in itertools.islice(itr2, 0, BATCH_SIZE):
+                done += 1
                 if(ia != ib):
                     future = adj[ia][ib]
                     assert isinstance(future, Future)
                     adj[ia][ib] = future.result()
+                    del future
+            gc.collect()
+            logger.info(f"Done batch {batch_i}")
+            batch_i += 1
+
         thread_pool_executor.shutdown()
 
     logger.info("Built adj")

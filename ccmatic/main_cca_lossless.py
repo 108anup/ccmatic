@@ -31,7 +31,7 @@ cc.compose = False
 
 cc.infinite_buffer = True
 
-cc.desired_util_f = 0.66
+cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
@@ -91,8 +91,8 @@ if(cc.synth_ss):
     ])
 
 vn = VariableNames(v)
-rhs_var_symbols = ['S_f']
-# rhs_var_symbols = ['c_f', 'S_f']
+# rhs_var_symbols = ['S_f']
+rhs_var_symbols = ['c_f', 'S_f']
 lhs_var_symbols = ['c_f']
 lvar_lower_bounds = {
     'c_f': 0.01
@@ -115,7 +115,7 @@ consts = {
 
 # Search constr
 search_range = [Fraction(i, 2) for i in range(-4, 5)]
-search_range = [-1, 0, 1]
+# search_range = [-1, 0, 1]
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)
@@ -226,6 +226,15 @@ known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
                         coeffs[lvar_symbol][rvar_idx][3] == -1,
                         consts[lvar_symbol] == 0)
 assert isinstance(known_solution, z3.ExprRef)
+
+# Search for non-zero cwnd
+rvar_idx = 1
+search_constraints = z3.And(search_constraints,
+                            z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+                                   coeffs[lvar_symbol][rvar_idx][1] == 0,
+                                   coeffs[lvar_symbol][rvar_idx][2] == 0,
+                                   coeffs[lvar_symbol][rvar_idx][3] == -1))
+assert(isinstance(search_constraints, z3.ExprRef))
 
 if(cc.synth_ss):
     search_constraints = z3.And(search_constraints, known_solution)
