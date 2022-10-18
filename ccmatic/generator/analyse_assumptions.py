@@ -1,12 +1,14 @@
-import itertools
-from concurrent import futures
 import gc
-import matplotlib.pyplot as plt
-import time
+import itertools
 import logging
+import pickle
+import time
+from concurrent import futures
 from concurrent.futures import Future, ThreadPoolExecutor
+from enum import unique
 from typing import Callable, List, Tuple, Union
 
+import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import numpy.typing as npt
@@ -152,41 +154,73 @@ def build_adj_matrix(assumption_assignments: List[z3.ExprRef],
 
     PARALLEL: bool = True
     if not PARALLEL:
-        for ia, a in enumerate(assumption_expressions):
-            for ib, b in enumerate(assumption_expressions):
+        for ia in range(n):
+            for ib in range(n):
                 if(ia == ib):
                     adj[ia][ib] = True
                 else:
                     inputs = create_inputs(ia, ib)
                     adj[ia][ib] = threadsafe_compare(*inputs)
     else:
-        BATCH_SIZE = 256
-        WORKERS = 48
+        WORKERS = 54
+        BATCH_SIZE = WORKERS * 32
         logger.info("Created thread pool")
         thread_pool_executor = ThreadPoolExecutor(max_workers=WORKERS)
+
+        def create_and_submit_job(ia, ib):
+            if(ia == ib):
+                adj[ia][ib] = True
+            else:
+                inputs = create_inputs(ia, ib)
+                adj[ia][ib] = thread_pool_executor.submit(
+                    threadsafe_compare, *inputs)
+
+        def post_process_job(ia, ib):
+            if(ia != ib):
+                future = adj[ia][ib]
+                assert isinstance(future, Future)
+                adj[ia][ib] = future.result()
+                del future
+
+        # # Batch by batch
+        # worklist = itertools.product(range(n), range(n))
+        # itr1, itr2 = itertools.tee(worklist, 2)
+        # done = 0
+        # batch_i = 0
+
+        # while done < n * n:
+        #     for ia, ib in itertools.islice(itr1, 0, BATCH_SIZE):
+        #         create_and_submit_job(ia, ib)
+
+        #     for ia, ib in itertools.islice(itr2, 0, BATCH_SIZE):
+        #         done += 1
+        #         post_process_job(ia, ib)
+
+        #     gc.collect()
+        #     logger.info(f"Done batch {batch_i}")
+        #     batch_i += 1
+
+        # Pipeline
         worklist = itertools.product(range(n), range(n))
         itr1, itr2 = itertools.tee(worklist, 2)
-        done = 0
-        batch_i = 0
-        while done < n * n:
-            for ia, ib in itertools.islice(itr1, 0, BATCH_SIZE):
-                if(ia == ib):
-                    adj[ia][ib] = True
-                else:
-                    inputs = create_inputs(ia, ib)
-                    adj[ia][ib] = thread_pool_executor.submit(
-                        threadsafe_compare, *inputs)
 
-            for ia, ib in itertools.islice(itr2, 0, BATCH_SIZE):
-                done += 1
-                if(ia != ib):
-                    future = adj[ia][ib]
-                    assert isinstance(future, Future)
-                    adj[ia][ib] = future.result()
-                    del future
-            gc.collect()
-            logger.info(f"Done batch {batch_i}")
-            batch_i += 1
+        for ia, ib in itertools.islice(itr1, 0, BATCH_SIZE):
+            create_and_submit_job(ia, ib)
+
+        done = 0
+        done_submit = False
+        # TODO: Use done order instead of sorted order to process futures
+        #  use: https://stackoverflow.com/a/41654240/5039326
+        for ia, ib in itr2:
+            post_process_job(ia, ib)
+            done += 1
+            logger.info(f"Done {done}/{n*n}.")
+            if(not done_submit):
+                try:
+                    nia, nib = next(itr1)
+                    create_and_submit_job(nia, nib)
+                except StopIteration:
+                    done_submit = True
 
         thread_pool_executor.shutdown()
 
@@ -212,6 +246,15 @@ def get_unique_assumptions(adj: npt.NDArray[np.bool8]):
     return unique_assumption_ids, groups
 
 
+# def write_adj_disk(unique_assumption_ids, edges):
+#     f = open("tmp/graph.txt", 'w')
+#     n, m = len(unique_assumption_ids), len(edges)
+#     f.write(n)
+#     f.write(m)
+#     for i in range(n):
+#         f.write()
+#     f.close()
+
 def get_topo_sort(unique_assumption_ids: List[int], adj: npt.NDArray[np.bool8]):
     g = nx.DiGraph()
     g.add_nodes_from(unique_assumption_ids)
@@ -221,6 +264,9 @@ def get_topo_sort(unique_assumption_ids: List[int], adj: npt.NDArray[np.bool8]):
             if(i != j and adj[i][j]):
                 edges.append((i, j))
     g.add_edges_from(edges)
+    f = open('tmp/graph.pickle', 'wb')
+    pickle.dump(g, f)
+    f.close()
     nx.draw(nx.transitive_reduction(g), with_labels=True)
     plt.savefig('tmp/tmp.pdf')
     return nx.topological_sort(g)
