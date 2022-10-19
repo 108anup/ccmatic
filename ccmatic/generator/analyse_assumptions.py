@@ -255,21 +255,24 @@ def get_unique_assumptions(adj: npt.NDArray[np.bool8]):
 #         f.write()
 #     f.close()
 
-def get_topo_sort(unique_assumption_ids: List[int], adj: npt.NDArray[np.bool8]):
+def get_graph(nodes, adj):
     g = nx.DiGraph()
-    g.add_nodes_from(unique_assumption_ids)
+    g.add_nodes_from(nodes)
     edges = []
-    for i in unique_assumption_ids:
-        for j in unique_assumption_ids:
+    for i in nodes:
+        for j in nodes:
             if(i != j and adj[i][j]):
                 edges.append((i, j))
     g.add_edges_from(edges)
+    return g
+
+
+def write_draw_graph(g: nx.DiGraph):
     f = open('tmp/graph.pickle', 'wb')
     pickle.dump(g, f)
     f.close()
-    nx.draw(nx.transitive_reduction(g), with_labels=True)
+    nx.draw(g, with_labels=True)
     plt.savefig('tmp/tmp.pdf')
-    return nx.topological_sort(g)
 
 
 def sort_print_assumptions(
@@ -297,7 +300,10 @@ def sort_print_assumptions(
 
     # Topological sort
     # Stronger to weaker (as adj matrix encodes implication relation)
-    sorted_order = get_topo_sort(unique_assumption_ids, adj)
+    g = get_graph(unique_assumption_ids, adj)
+    rg = nx.transitive_reduction(g)
+    write_draw_graph(rg)
+    sorted_order = nx.topological_sort(rg)
 
     solution_strs = []
     for i, uid in enumerate(sorted_order):

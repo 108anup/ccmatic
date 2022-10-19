@@ -104,13 +104,15 @@ consts: List[z3.ExprRef] = [
     for ineqnum in range(nineq)
 ]
 
-# True iff ineqnum appears in clausenum
+# clauses[clausenum][ineqnum] = True iff
+# ineqnum appears in clausenum
 clauses: List[List[z3.ExprRef]] = [[
     z3.Bool(f"Gen__clause_{clausenum}_{ineqnum}")
     for ineqnum in range(nineq)]
     for clausenum in range(nclause)]
 
-# True iff negation of ineqnum appears in clausenum
+# clausenegs[clausenum][ineqnum] = True iff
+# negation of ineqnum appears in clausenum
 clausenegs: List[List[z3.ExprRef]] = [[
     z3.Bool(f"Gen__clauseneg_{clausenum}_{ineqnum}")
     for ineqnum in range(nineq)]
@@ -387,6 +389,19 @@ assert isinstance(known_solution, z3.ExprRef)
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert(isinstance(search_constraints, z3.ExprRef))
 
+lemmas = z3.And(
+    # search_constraints,
+
+    ccac_domain,
+    ccac_definitions,
+
+    cca_definitions,
+    environment,
+    periodic_constriants,
+
+    # z3.Not(poor_utilization)
+)
+assert isinstance(lemmas, z3.ExprRef)
 
 if (__name__ == "__main__"):
 
@@ -407,19 +422,7 @@ if (__name__ == "__main__"):
         df = pd.read_csv(f)
         assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
         f.close()
-        lemmas = z3.And(
-            # search_constraints,
 
-            ccac_domain,
-            ccac_definitions,
-
-            cca_definitions,
-            environment,
-            periodic_constriants,
-
-            # z3.Not(poor_utilization)
-        )
-        assert isinstance(lemmas, z3.ExprRef)
         sort_print_assumptions(assumption_records, assumption, lemmas,
                                get_solution_str)
 
