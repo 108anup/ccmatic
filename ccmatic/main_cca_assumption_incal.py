@@ -4,6 +4,7 @@ from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from ccmatic import CCmatic
 from ccmatic.generator.analyse_assumptions import sort_print_assumptions
 from cegis.util import unroll_assertions
 from pyz3_utils.common import GlobalConfig
@@ -283,10 +284,7 @@ def get_solution_str(solution: z3.ModelRef,
             val = get_solution_val(coeffs[ineqnum][vnum][shift])
             suffix = f'{vname}[t-{shift}]'
 
-        if(val == 0):
-            return None
-        else:
-            return f'{val}{suffix}'
+        return CCmatic.get_pretty_term(val, suffix)
 
     ret = ""
     for ineqnum in range(nineq):
@@ -296,7 +294,7 @@ def get_solution_str(solution: z3.ModelRef,
             for vnum, vname in enumerate(ineq_var_symbols)
             for shift in range(nshift)]
         terms = list(filter(None, terms))
-        ret += " + ".join(terms) + " <= 0\n"
+        ret += " ".join(terms) + " <= 0\n"
 
     def bool_or_default(z3var: z3.ExprRef):
         try:

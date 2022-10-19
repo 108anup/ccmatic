@@ -101,6 +101,19 @@ class CCmatic():
         self.get_generator_view = get_generator_view
         self.get_solution_str = get_solution_str
 
+    @staticmethod
+    def get_pretty_term(val, suffix: str):
+        if(val == 0):
+            return None
+        if(val == 1):
+            return f'+{suffix}'
+        if(val == -1):
+            return f'-{suffix}'
+        if(val > 0):
+            return f'+{val}{suffix}'
+        if(val < 0):
+            return f'-{-val}{suffix}'
+
     def run_cegis(self, known_solution: Optional[z3.ExprRef]):
         # Directly update any closures or critical_generator_vars
         # or any other expression before calling run function.
