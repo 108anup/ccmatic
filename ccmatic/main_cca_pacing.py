@@ -29,7 +29,7 @@ cc.cca = "none"
 # import ipdb; ipdb.set_trace()
 # cc.template_loss_oracle = True
 
-cc.desired_util_f = 0.55
+cc.desired_util_f = 0.48
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_count_bound = 3
 cc.desired_loss_amount_bound_multiplier = 2
@@ -180,10 +180,19 @@ known_solution_list = [
 
     coeffs['c_f[n]_noloss'] == 1/2,
     coeffs['ack_f[n]_noloss'] == 1/2,
-    consts['c_f[n]_noloss'] == 1,
+    consts['c_f[n]_noloss'] == 0,
+
+    coeffs['r_f[n]_loss'] == 1,
+    consts['r_f[n]_loss'] == 0,
+
+    coeffs['r_f[n]_noloss'] == 1,
+    consts['r_f[n]_noloss'] == 0,
 ]
 known_solution = z3.And(*known_solution_list)
 assert(isinstance(known_solution, z3.ExprRef))
+
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert(isinstance(search_constraints, z3.ExprRef))
 
 # search_constraints = z3.And(search_constraints, coeffs['r_f[n]_loss'] == 1/2)
 # search_constraints = z3.And(
