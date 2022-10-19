@@ -747,8 +747,20 @@ def get_desired_necessary(
         total_initial_cwnd += v.c_f[n][first]
         total_final_cwnd += v.c_f[n][-1]
 
-    d.ramp_up_cwnd = total_final_cwnd > total_initial_cwnd
-    d.ramp_down_cwnd = total_final_cwnd < total_initial_cwnd
+    total_final_rate = 0
+    total_initial_rate = 0
+    for n in range(c.N):
+        total_initial_rate += v.r_f[n][first]
+        total_final_rate += v.r_f[n][-1]
+
+    # TODO: check if this is the right invariant for rate based CCAs.
+    #  For window based CCAs, pacing is const, so this should be fine.
+    d.ramp_up_cwnd = z3.And(
+        total_final_cwnd > total_initial_cwnd,
+        total_final_rate > total_initial_rate)
+    d.ramp_down_cwnd = z3.And(
+        total_final_cwnd < total_initial_cwnd,
+        total_final_rate < total_initial_rate)
 
     d.ramp_down_queue = (v.A[-1] - v.L[-1] - v.S[-1] <
                          v.A[first] - v.L[first] - v.S[first])
