@@ -390,97 +390,98 @@ assert isinstance(known_solution, z3.ExprRef)
 # assert(isinstance(search_constraints, z3.ExprRef))
 
 
-def get_args():
-    import argparse
-    parser = argparse.ArgumentParser(description='Synthesize assumptions')
-    parser.add_argument('--solution-log-path', type=str,
-                        action='store', default=None)
-    parser.add_argument('--sort-assumptions', action='store_true', default=False)
-    parser.add_argument('--simplify-assumptions', action='store_true', default=False)
-    args = parser.parse_args()
-    return args
+if (__name__ == "__main__"):
 
+    def get_args():
+        import argparse
+        parser = argparse.ArgumentParser(description='Synthesize assumptions')
+        parser.add_argument('--solution-log-path', type=str,
+                            action='store', default=None)
+        parser.add_argument('--sort-assumptions', action='store_true', default=False)
+        parser.add_argument('--simplify-assumptions', action='store_true', default=False)
+        args = parser.parse_args()
+        return args
 
-args = get_args()
-if(args.sort_assumptions):
-    import pandas as pd
-    f = open(args.solution_log_path, 'r')
-    df = pd.read_csv(f)
-    assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-    f.close()
-    lemmas = z3.And(
-        # search_constraints,
+    args = get_args()
+    if(args.sort_assumptions):
+        import pandas as pd
+        f = open(args.solution_log_path, 'r')
+        df = pd.read_csv(f)
+        assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        f.close()
+        lemmas = z3.And(
+            # search_constraints,
 
-        ccac_domain,
-        ccac_definitions,
+            ccac_domain,
+            ccac_definitions,
 
-        cca_definitions,
-        environment,
-        periodic_constriants,
+            cca_definitions,
+            environment,
+            periodic_constriants,
 
-        # z3.Not(poor_utilization)
-    )
-    assert isinstance(lemmas, z3.ExprRef)
-    sort_print_assumptions(assumption_records, assumption, lemmas,
-                           get_solution_str)
+            # z3.Not(poor_utilization)
+        )
+        assert isinstance(lemmas, z3.ExprRef)
+        sort_print_assumptions(assumption_records, assumption, lemmas,
+                               get_solution_str)
 
-    import sys
-    sys.exit(0)
+        import sys
+        sys.exit(0)
 
-# Debugging:
-debug_known_solution = None
-if DEBUG:
-    debug_known_solution = known_solution
-    search_constraints = z3.And(search_constraints, known_solution)
-    assert(isinstance(search_constraints, z3.ExprRef))
+    # Debugging:
+    debug_known_solution = None
+    if DEBUG:
+        debug_known_solution = known_solution
+        search_constraints = z3.And(search_constraints, known_solution)
+        assert(isinstance(search_constraints, z3.ExprRef))
 
-    # Definitions (including template)
-    with open('tmp/definitions.txt', 'w') as f:
-        assert(isinstance(definitions, z3.ExprRef))
-        f.write(definitions.sexpr())
+        # Definitions (including template)
+        with open('tmp/definitions.txt', 'w') as f:
+            assert(isinstance(definitions, z3.ExprRef))
+            f.write(definitions.sexpr())
 
-try:
-    # md = CegisMetaData(critical_generator_vars)
-    all_generator_vars = (generator_vars + verifier_vars_alt
-                          + definition_vars_alt)
-    search_constraints = z3.And(search_constraints, definitions_alt,
-                                specification_alt)
-    assert isinstance(search_constraints, z3.ExprRef)
-    cg = CegisCCAGen(generator_vars, verifier_vars,
-                     definition_vars, search_constraints,
-                     definitions, specification, ctx,
-                     debug_known_solution,
-                     solution_log_path=args.solution_log_path)
-    # verifier_vars_combined = verifier_vars + verifier_vars_alt
-    # definition_vars_combined = definition_vars + definition_vars_alt
-    # specification_combined = z3.And(specification, specification_alt)
-    # definitions_combined = z3.And(definitions, definitions_alt)
-    # assert isinstance(specification_combined, z3.ExprRef)
-    # assert isinstance(definitions_combined, z3.ExprRef)
-    # cg = CegisCCAGen(generator_vars, verifier_vars_combined,
-    #                  definition_vars_combined, search_constraints,
-    #                  definitions_combined, specification_combined, ctx,
-    #                  debug_known_solution, md)
-    cg.get_solution_str = get_solution_str
-    cg.get_counter_example_str = get_counter_example_str
-    cg.get_generator_view = get_generator_view
-    cg.get_verifier_view = get_verifier_view
-    # https://stackoverflow.com/a/46757134/5039326.
-    # Since remove_solution is a bound method of the class,
-    # need to bind the method to instance!
-    cg.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
-    run_verifier = functools.partial(
-        run_verifier_incomplete, c=c, v=v, ctx=ctx)
-    # run_verifier = functools.partial(
-    #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
-    cg.run_verifier = run_verifier
-    cg.run()
+    try:
+        # md = CegisMetaData(critical_generator_vars)
+        all_generator_vars = (generator_vars + verifier_vars_alt
+                              + definition_vars_alt)
+        search_constraints = z3.And(search_constraints, definitions_alt,
+                                    specification_alt)
+        assert isinstance(search_constraints, z3.ExprRef)
+        cg = CegisCCAGen(generator_vars, verifier_vars,
+                         definition_vars, search_constraints,
+                         definitions, specification, ctx,
+                         debug_known_solution,
+                         solution_log_path=args.solution_log_path)
+        # verifier_vars_combined = verifier_vars + verifier_vars_alt
+        # definition_vars_combined = definition_vars + definition_vars_alt
+        # specification_combined = z3.And(specification, specification_alt)
+        # definitions_combined = z3.And(definitions, definitions_alt)
+        # assert isinstance(specification_combined, z3.ExprRef)
+        # assert isinstance(definitions_combined, z3.ExprRef)
+        # cg = CegisCCAGen(generator_vars, verifier_vars_combined,
+        #                  definition_vars_combined, search_constraints,
+        #                  definitions_combined, specification_combined, ctx,
+        #                  debug_known_solution, md)
+        cg.get_solution_str = get_solution_str
+        cg.get_counter_example_str = get_counter_example_str
+        cg.get_generator_view = get_generator_view
+        cg.get_verifier_view = get_verifier_view
+        # https://stackoverflow.com/a/46757134/5039326.
+        # Since remove_solution is a bound method of the class,
+        # need to bind the method to instance!
+        cg.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
+        run_verifier = functools.partial(
+            run_verifier_incomplete, c=c, v=v, ctx=ctx)
+        # run_verifier = functools.partial(
+        #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
+        cg.run_verifier = run_verifier
+        cg.run()
 
-except Exception:
-    import sys
-    import traceback
+    except Exception:
+        import sys
+        import traceback
 
-    import ipdb
-    extype, value, tb = sys.exc_info()
-    traceback.print_exc()
-    ipdb.post_mortem(tb)
+        import ipdb
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        ipdb.post_mortem(tb)
