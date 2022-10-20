@@ -91,6 +91,9 @@ if(args.compare_known):
         known_assumption, ignore_index=True)
     assumption_assignments, assumption_expressions = \
         parse_and_create_assumptions(all_assumption_records, assumption)
+    if(args.out_dir):
+        all_assumption_records.to_csv(
+            os.path.join(args.out_dir, "seed_assumptions.csv"), header=True)
 
     adj = build_adj_matrix(
         assumption_assignments, assumption_expressions, lemmas)

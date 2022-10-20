@@ -1,3 +1,4 @@
+import pandas as pd
 import functools
 import logging
 from typing import List
@@ -11,12 +12,12 @@ from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig
-from ccmatic.common import flatten
+from ccmatic.common import flatten, substitute_values_df
 from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
-from cegis import remove_solution, rename_vars
+from cegis import remove_solution, rename_vars, substitute_values
 from pyz3_utils.my_solver import extract_vars
 
 logger = logging.getLogger('assumption_gen')
@@ -49,6 +50,7 @@ elif(cc.cca == "bbr"):
     cc.history = 2 * cc.R
 
 cc.feasible_response = True
+util_frac = 0.1
 
 # CCA under test
 (c, s, v,
@@ -61,7 +63,7 @@ cca_definitions = get_cca_definition(c, v)
 cca_vvars = get_cca_vvars(c, v)
 verifier_vars.extend(flatten(cca_vvars))
 environment = z3.And(environment, periodic_constriants, cca_definitions)
-poor_utilization = v.S[-1] - v.S[0] < 0.1 * c.C * c.T
+poor_utilization = v.S[-1] - v.S[0] < util_frac * c.C * c.T
 
 # Referenece CCA
 prefix_alt = "alt"
@@ -78,7 +80,23 @@ cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
       for t in range(c.T) for n in range(c.N)]))
 environment_alt = z3.And(
     environment_alt, periodic_constriants_alt, cca_definitions_alt)
-poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < 0.1 * c_alt.C * c_alt.T
+poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < util_frac * c_alt.C * c_alt.T
+
+# Novel trace (for monotonically increasing CCAs)
+prefix_novel = "novel"
+(c_novel, s_novel, v_novel,
+ ccac_domain_novel, ccac_definitions_novel, environment_novel,
+ verifier_vars_novel, definition_vars_novel) = setup_cegis_basic(
+    cc, prefix_novel)
+vn_novel = VariableNames(v_novel)
+
+periodic_constriants_novel = get_periodic_constraints_ccac(
+    cc, c_novel, v_novel)
+cca_definitions_novel = get_cca_definition(c_novel, v_novel)
+environment_novel = z3.And(
+    environment_novel, periodic_constriants_novel, cca_definitions_novel)
+poor_utilization_novel = v_novel.S[-1] - v_novel.S[0] < util_frac * c_novel.C * c_novel.T
+
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -220,14 +238,22 @@ assumption = z3.And(assumption_constraints)
 assert isinstance(assumption, z3.ExprRef)
 assumption_alt = rename_vars(
     assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
+assumption_novel = rename_vars(
+    assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
+
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
 specification_alt = z3.And(
     environment_alt, assumption_alt, poor_utilization_alt)
+specification_novel = z3.And(
+    environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
+
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
 # cca_definitions are verifier only. does not matter if they are here...
 definitions_alt = z3.And(
     ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
+definitions_novel = z3.And(
+    ccac_domain_novel, ccac_definitions_novel, cca_definitions_novel)
 assert isinstance(definitions, z3.ExprRef)
 
 generator_vars: List[z3.ExprRef] = \
@@ -323,6 +349,12 @@ def get_solution_str(solution: z3.ModelRef,
             for t in range(c.T)]
         ret += "\n{}".format(df_alt)
 
+        df_novel = get_cex_df(solution, v_novel, vn_novel, c_novel)
+        df_novel['novel_tokens_t'] = [
+            float(get_solution_val(v_novel.C0 + c.C * t).as_fraction())
+            for t in range(c.T)]
+        ret += "\n\n{}".format(df_novel)
+
     return ret
 
 
@@ -355,7 +387,41 @@ def override_remove_solution(self: CegisCCAGen, solution: z3.ModelRef):
             this_critical_generator_vars += flatten(coeffs[ineqnum])
 
     remove_solution(self.generator, solution,
-                    this_critical_generator_vars, self.ctx)
+                    this_critical_generator_vars, self.ctx,
+                    self._n_proved_solutions)
+
+    # Monotonically increasing assumption set.
+    name_template = f"Assumption{self._n_proved_solutions}___"+"{}"
+    assumption_assign = substitute_values(
+        self.generator_vars, solution, name_template, ctx)
+    assumption_expr = rename_vars(
+        assumption_novel, self.generator_vars, name_template)
+    self.generator.add(assumption_assign)
+    self.generator.add(z3.Not(assumption_expr))
+
+
+genvar_dict = {x.decl().name(): x
+               for x in generator_vars}
+
+
+def process_seed_assumptions(seed_assumptions_path: str):
+    # import ipdb; ipdb.set_trace()
+    f = open(seed_assumptions_path, 'r')
+    df = pd.read_csv(f)
+    seed_assumptions = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    f.close()
+
+    global search_constraints
+    for i, seed in seed_assumptions.iterrows():
+        name_template = f"SeedAssumption{i}___"+"{}"
+        assumption_assign = substitute_values_df(
+            seed, name_template, genvar_dict)
+        assumption_expr = rename_vars(
+            assumption_novel, generator_vars, name_template)
+        search_constraints = z3.And(
+            search_constraints,
+            assumption_assign, z3.Not(assumption_expr))
+
 
 # Known solution
 known_solution = None
@@ -410,6 +476,8 @@ if (__name__ == "__main__"):
         parser = argparse.ArgumentParser(description='Synthesize assumptions')
         parser.add_argument('--solution-log-path', type=str,
                             action='store', default=None)
+        parser.add_argument('--solution-seed-path', type=str,
+                            action='store', default=None)
         parser.add_argument('--sort-assumptions', action='store_true', default=False)
         parser.add_argument('--simplify-assumptions', action='store_true', default=False)
         args = parser.parse_args()
@@ -429,6 +497,9 @@ if (__name__ == "__main__"):
         import sys
         sys.exit(0)
 
+    if(args.solution_seed_path):
+        process_seed_assumptions(args.solution_seed_path)
+
     # Debugging:
     debug_known_solution = None
     if DEBUG:
@@ -443,10 +514,20 @@ if (__name__ == "__main__"):
 
     try:
         # md = CegisMetaData(critical_generator_vars)
-        all_generator_vars = (generator_vars + verifier_vars_alt
-                              + definition_vars_alt)
-        search_constraints = z3.And(search_constraints, definitions_alt,
-                                    specification_alt)
+
+        # Ideally all these are generator vars. But since generator vars are
+        # never substituted, the CEGIS loop really does not need to know all the
+        # generator vars. Generator vars are really only used for identifying
+        # repeat solutions. We are not going to use alt, novel vars for this
+        # anyway.
+
+        # Unused because ^^^
+        all_generator_vars = (generator_vars +
+                              verifier_vars_alt + definition_vars_alt +
+                              verifier_vars_novel + definition_vars_novel)
+        search_constraints = z3.And(search_constraints,
+                                    definitions_alt, specification_alt,
+                                    definitions_novel, specification_novel)
         assert isinstance(search_constraints, z3.ExprRef)
         cg = CegisCCAGen(generator_vars, verifier_vars,
                          definition_vars, search_constraints,

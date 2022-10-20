@@ -268,6 +268,9 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
+    """
+    L[t] - L[t-1] <= Max(0, r - c)
+    """
     assert c.deterministic_loss
     assert c.buf_max == c.buf_min
 

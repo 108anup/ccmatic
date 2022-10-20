@@ -6,7 +6,7 @@ import time
 from concurrent import futures
 from concurrent.futures import Future, ThreadPoolExecutor
 from enum import unique
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -14,6 +14,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import z3
+from ccmatic.common import substitute_values_df
 from cegis import rename_vars
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -66,21 +67,12 @@ def parse_and_create_assumptions(assumption_records: pd.DataFrame,
 
     gen_vars = [var_dict[x] for x in gen_var_names]
 
-    def get_assumption_assign_from_record(assumption_record: pd.Series,
-                                          name_template: str):
-        expr_list = []
-        for vname, val in assumption_record.items():
-            v = var_dict[vname]
-            new_name = name_template.format(v.decl().name())
-            expr_list.append(z3.Const(new_name, v.sort()) == val)
-        return z3.And(*expr_list)
-
     assumption_assignments: List[z3.ExprRef] = []
     assumption_expressions: List[z3.ExprRef] = []
     for aid, assumption_record in assumption_records.iterrows():
         name_template = f"Assumption{aid}___" + "{}"
-        assumption_assignment = get_assumption_assign_from_record(
-            assumption_record, name_template)
+        assumption_assignment = substitute_values_df(
+            assumption_record, name_template, var_dict)
         assert isinstance(assumption_assignment, z3.ExprRef)
         assumption_assignments.append(assumption_assignment)
         this_assumption_template = rename_vars(assumption_template,

@@ -356,7 +356,8 @@ def override_remove_solution(self: CegisCCAGen, solution: z3.ModelRef):
             this_critical_generator_vars += flatten(coeffs[ineqnum])
 
     remove_solution(self.generator, solution,
-                    this_critical_generator_vars, self.ctx)
+                    this_critical_generator_vars, self.ctx,
+                    self._n_proved_solutions)
 
 
 # Known solution

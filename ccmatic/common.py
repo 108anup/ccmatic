@@ -1,7 +1,7 @@
 import z3
 import numpy as np
 import pandas as pd
-from typing import List, Union
+from typing import Dict, List, Union
 
 from cegis import NAME_TEMPLATE
 
@@ -83,3 +83,15 @@ def get_renamed_vars(var_list, n_cex):
         renamed_var_list.append(renamed_var)
     return renamed_var_list
 
+
+def substitute_values_df(assumption_record: pd.Series,
+                         name_template: str,
+                         var_dict: Dict[str, z3.ExprRef]):
+    # var_dict is mostly used to infer var sorts.
+    expr_list = []
+    for vname, val in assumption_record.items():
+        assert isinstance(vname, str)
+        v = var_dict[vname]
+        new_name = name_template.format(v.decl().name())
+        expr_list.append(z3.Const(new_name, v.sort()) == val)
+    return z3.And(*expr_list)
