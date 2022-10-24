@@ -1,24 +1,22 @@
-import pandas as pd
 import functools
 import logging
 from typing import List
 
+import pandas as pd
 import z3
 from ccac.variables import VariableNames
-from ccmatic import CCmatic
-from ccmatic.generator.analyse_assumptions import sort_print_assumptions
-from cegis.util import unroll_assertions
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
+from ccmatic import CCmatic
 from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten, substitute_values_df
+from ccmatic.generator.analyse_assumptions import sort_print_assumptions
 from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
 from cegis import remove_solution, rename_vars, substitute_values
-from pyz3_utils.my_solver import extract_vars
 
 logger = logging.getLogger('assumption_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -72,8 +70,8 @@ poor_utilization = v.S[-1] - v.S[0] < util_frac * c.C * c.T
 if(cc.use_ref_cca):
     prefix_alt = "alt"
     (c_alt, s_alt, v_alt,
-    ccac_domain_alt, ccac_definitions_alt, environment_alt,
-    verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
+     ccac_domain_alt, ccac_definitions_alt, environment_alt,
+     verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
     c_alt.cca = "paced"
     vn_alt = VariableNames(v_alt)
 
@@ -81,17 +79,18 @@ if(cc.use_ref_cca):
     cca_definitions_alt = get_cca_definition(c_alt, v_alt)
     cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
         *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
-        for t in range(c.T) for n in range(c.N)]))
+          for t in range(c.T) for n in range(c.N)]))
     environment_alt = z3.And(
         environment_alt, periodic_constriants_alt, cca_definitions_alt)
-    poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < util_frac * c_alt.C * c_alt.T
+    poor_utilization_alt = v_alt.S[-1] - \
+        v_alt.S[0] < util_frac * c_alt.C * c_alt.T
 
 # Novel trace (for monotonically increasing CCAs)
 if(cc.monotonic_inc_assumption):
     prefix_novel = "novel"
     (c_novel, s_novel, v_novel,
-    ccac_domain_novel, ccac_definitions_novel, environment_novel,
-    verifier_vars_novel, definition_vars_novel) = setup_cegis_basic(
+     ccac_domain_novel, ccac_definitions_novel, environment_novel,
+     verifier_vars_novel, definition_vars_novel) = setup_cegis_basic(
         cc, prefix_novel)
     vn_novel = VariableNames(v_novel)
 
@@ -100,7 +99,8 @@ if(cc.monotonic_inc_assumption):
     cca_definitions_novel = get_cca_definition(c_novel, v_novel)
     environment_novel = z3.And(
         environment_novel, periodic_constriants_novel, cca_definitions_novel)
-    poor_utilization_novel = v_novel.S[-1] - v_novel.S[0] < util_frac * c_novel.C * c_novel.T
+    poor_utilization_novel = v_novel.S[-1] - \
+        v_novel.S[0] < util_frac * c_novel.C * c_novel.T
 
 
 # ----------------------------------------------------------------
