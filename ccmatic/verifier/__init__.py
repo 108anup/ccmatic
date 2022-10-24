@@ -12,7 +12,7 @@ from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
-from cegis import NAME_TEMPLATE
+from cegis import NAME_TEMPLATE, rename_vars
 from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
@@ -145,6 +145,27 @@ class DesiredContainer:
     init_inside: Optional[z3.BoolRef] = None
     final_inside: Optional[z3.BoolRef] = None
 
+    def rename_vars(self, var_list: List[z3.ExprRef], template: str):
+        conds = {
+            "fefficient": self.fefficient,
+            "bounded_queue": self.bounded_queue,
+            "bounded_loss_count": self.bounded_loss_count,
+            "bounded_loss_amount": self.bounded_loss_amount,
+            "ramp_up_cwnd": self.ramp_up_cwnd,
+            "ramp_down_cwnd": self.ramp_down_cwnd,
+            "ramp_up_bq": self.ramp_down_bq,
+            "ramp_down_bq": self.ramp_down_bq,
+            "ramp_up_queue": self.ramp_down_queue,
+            "ramp_down_queue": self.ramp_down_queue,
+            "loss_count": self.loss_count,
+            "loss_amount": self.loss_amount,
+        }
+        for attr_name, cond in conds.items():
+            if(isinstance(cond, bool)):
+                continue
+            new_cond = rename_vars(cond, var_list, template)
+            setattr(self, attr_name, new_cond)
+
     def to_string(self, cc: CegisConfig,
                   c: ModelConfig, model: z3.ModelRef) -> str:
         conds = {
@@ -168,6 +189,13 @@ class DesiredContainer:
             "init_inside": self.init_inside,
             "final_inside": self.final_inside
         }
+
+        def get_val(cond):
+            if(isinstance(cond, bool)):
+                return cond
+            else:
+                return model.eval(cond)
+
         if(cc.dynamic_buffer):
             conds["buffer"] = c.buf_min
         cond_list = []
@@ -175,7 +203,7 @@ class DesiredContainer:
         for cond_name, cond in conds.items():
             if(cond is not None):
                 cond_list.append(
-                    "{}={}".format(cond_name, model.eval(cond)))
+                    "{}={}".format(cond_name, get_val(cond)))
                 term_count += 1
                 if(term_count % 6 == 0):
                     cond_list.append("\n")
@@ -210,8 +238,10 @@ def monotone_env(c, s, v):
                 v.A_f[n][t] - v.L_f[n][t] >= v.A_f[n][t - 1] - v.L_f[n][t - 1])
 
         # Verifier only. Keep part of specification.
-        s.add(v.W[t] >= v.W[t - 1])
-        s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
+        if(hasattr(v, 'W')):
+            s.add(v.W[t] >= v.W[t - 1])
+            if(hasattr(v, 'C0')):
+                s.add(v.C0 + c.C * t - v.W[t] >= v.C0 + c.C * (t-1) - v.W[t-1])
 
 
 def monotone_defs(c, s, v):
@@ -513,10 +543,14 @@ def get_cegis_vars(
 
     verifier_vars = flatten(
             [v.A_f[:, :history], v.c_f[:, :history], v.r_f[:, :history], v.W,
-             v.dupacks, v.alpha, v.C0])
+             v.alpha, v.C0])
     definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.r_f[:, history:], v.S, v.L, v.timeout_f])
+             v.r_f[:, history:], v.S, v.L])
+
+    if(not c.loss_oracle):
+        verifier_vars.append(v.dupacks)
+        definition_vars.extend(flatten(v.timeout_f))
 
     if(not c.compose):
         verifier_vars.append(v.epsilon)
@@ -770,12 +804,17 @@ def get_desired_necessary(
     d.ramp_up_queue = (v.A[-1] - v.L[-1] - v.S[-1] >
                        v.A[first] - v.L[first] - v.S[first])
 
-    d.ramp_down_bq = (
-        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-        < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
-    d.ramp_up_bq = (
-        (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
-        > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    if(hasattr(v, 'C0') and hasattr(v, 'W')):
+        d.ramp_down_bq = (
+            (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+            < (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+        d.ramp_up_bq = (
+            (v.A[-1] - v.L[-1] - (v.C0 + c.C * (c.T-1) - v.W[-1]))
+            > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
+    else:
+        # For ideal link
+        d.ramp_down_bq = False
+        d.ramp_up_bq = False
 
     d.desired_necessary = z3.And(
         z3.Or(d.fefficient, d.ramp_up_cwnd,
@@ -814,9 +853,15 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
     d.bounded_loss_count = d.loss_count <= cc.desired_loss_count_bound
 
     d.loss_amount = v.L[-1] - v.L[first]
-    d.bounded_loss_amount = \
-        d.loss_amount <= \
-        cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+    if(cc.loss_alpha):
+        d.bounded_loss_amount = \
+            d.loss_amount <= \
+            cc.desired_loss_amount_bound_multiplier * v.alpha
+    else:
+        d.bounded_loss_amount = \
+            d.loss_amount <= \
+            cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+
 
     d.desired_in_ss = z3.And(d.fefficient, d.bounded_queue,
                              d.bounded_loss_count, d.bounded_loss_amount)
@@ -1042,7 +1087,8 @@ def run_verifier_incomplete(
 ) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
     # This is meant to create a partial function by
     # getting c, v, ctx from closure.
-    _, _ = maximize_gap(c, v, ctx, verifier)
+    if(hasattr(v, 'W') and hasattr(v, 'C0')):
+        maximize_gap(c, v, ctx, verifier)
     sat, _, model = find_small_denom_soln(verifier, 4096)
     return sat, model
 
@@ -1071,7 +1117,6 @@ def get_cex_df(
     cex_dict = {
         get_name_for_list(vn.A): _get_model_value(v.A),
         get_name_for_list(vn.S): _get_model_value(v.S),
-        get_name_for_list(vn.W): _get_model_value(v.W),
         # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
@@ -1086,8 +1131,10 @@ def get_cex_df(
         })
     if(c.feasible_response):
         cex_dict.update({
-            get_name_for_list(vn.S_choice): _get_model_value(v.S_choice),
-        })
+            get_name_for_list(vn.S_choice): _get_model_value(v.S_choice)})
+    if(hasattr(v, 'W')):
+        cex_dict.update({
+            get_name_for_list(vn.W): _get_model_value(v.W)})
     df = pd.DataFrame(cex_dict).astype(float)
     # Can remove this by adding queue_t as a definition variable...
     # This would also allow easily quiering this from generator
@@ -1098,13 +1145,14 @@ def get_cex_df(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
 
-    bottle_queue_t = []
-    for t in range(c.T):
-        bottle_queue_t.append(
-            get_raw_value(counter_example.eval(
-                v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
-            )))
-    df["bottle_queue_t"] = bottle_queue_t
+    if(hasattr(v, 'C0') and hasattr(v, 'W')):
+        bottle_queue_t = []
+        for t in range(c.T):
+            bottle_queue_t.append(
+                get_raw_value(counter_example.eval(
+                    v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
+                )))
+        df["bottle_queue_t"] = bottle_queue_t
 
     if(c.calculate_qbound):
         qdelay = []
@@ -1157,7 +1205,6 @@ def get_gen_cex_df(
     cex_dict = {
         get_name_for_list(vn.A): _get_model_value(v.A),
         get_name_for_list(vn.S): _get_model_value(v.S),
-        get_name_for_list(vn.W): _get_model_value(v.W),
         # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
@@ -1170,6 +1217,10 @@ def get_gen_cex_df(
             # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })
+    if(hasattr(v, 'W')):
+        cex_dict.update({
+            get_name_for_list(vn.W): _get_model_value(v.W)})
+
     df = pd.DataFrame(cex_dict).astype(float)
 
     if(c.calculate_qbound):

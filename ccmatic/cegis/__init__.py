@@ -26,6 +26,9 @@ class CegisConfig:
     desired_loss_count_bound: Union[float, z3.ArithRef]
     desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
 
+    loss_alpha: bool = False
+    ideal_link: bool = False
+
     # environment
     infinite_buffer: bool = False
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
@@ -74,7 +77,8 @@ class CegisCCAGen(Cegis):
         if(self.metadata and self.metadata.critical_generator_vars):
             critical_generator_vars = self.metadata.critical_generator_vars
         remove_solution(
-            self.generator, solution, critical_generator_vars, self.ctx)
+            self.generator, solution, critical_generator_vars,
+            self.ctx, self._n_proved_solutions)
 
     # def get_counter_example_str(counter_example: z3.ModelRef,
     #                             verifier_vars: List[z3.ExprRef]):

@@ -1,3 +1,4 @@
+import copy
 import functools
 from typing import Callable, List, Optional
 
@@ -5,9 +6,12 @@ import z3
 from ccac.variables import VariableNames
 
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
+from ccmatic.common import get_renamed_vars
 from ccmatic.verifier import (get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
+from ccmatic.verifier.ideal import IdealLink
+from cegis import NAME_TEMPLATE
 
 
 class CCmatic():
@@ -27,9 +31,14 @@ class CCmatic():
 
     def setup_config_vars(self):
         cc = self.cc
-        (c, s, v,
-         ccac_domain, ccac_definitions, environment,
-         verifier_vars, definition_vars) = setup_cegis_basic(cc)
+        if(cc.ideal_link):
+            (c, s, v,
+             ccac_domain, ccac_definitions, environment,
+             verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
+        else:
+            (c, s, v,
+             ccac_domain, ccac_definitions, environment,
+             verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
         self.c = c
         self.s = s
@@ -81,7 +90,8 @@ class CCmatic():
                 verifier_vars: List[z3.ExprRef]) -> str:
             df = get_cex_df(counter_example, v, vn, c)
             desired_string = d.to_string(cc, c, counter_example)
-            ret = "{}\n{}.".format(df, desired_string)
+            ret = "{}\n{}, alpha={}.".format(df, desired_string,
+                                             counter_example.eval(v.alpha))
             return ret
 
         def get_verifier_view(
@@ -93,7 +103,16 @@ class CCmatic():
                 solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
                 definition_vars: List[z3.ExprRef], n_cex: int) -> str:
             df = get_gen_cex_df(solution, v, vn, n_cex, c)
-            gen_view_str = "{}".format(df)
+
+            dcopy = copy.copy(d)
+            name_template = NAME_TEMPLATE + str(n_cex)
+            dcopy.rename_vars(
+                self.verifier_vars + self.definition_vars, name_template)
+            desired_string = dcopy.to_string(cc, c, solution)
+
+            renamed_alpha = get_renamed_vars([v.alpha], n_cex)[0]
+            gen_view_str = "{}\n{}, alpha={}.".format(df, desired_string,
+                                                      solution.eval(renamed_alpha))
             return gen_view_str
 
         self.get_counter_example_str = get_counter_example_str
