@@ -40,7 +40,7 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
-cc.use_ref_cca = True
+cc.use_ref_cca = False
 cc.monotonic_inc_assumption = True
 
 cc.compose = True
@@ -462,6 +462,9 @@ known_solution_list.append(clauses[0][0])
 known_solution_list.append(z3.Not(clausenegs[0][0]))
 
 known_solution = z3.And(known_solution_list)
+# Check the False assumption
+# known_solution = z3.And([z3.Not(x)
+#                          for x in (flatten(clauses) + flatten(clausenegs))])
 assert isinstance(known_solution, z3.ExprRef)
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert(isinstance(search_constraints, z3.ExprRef))

@@ -35,11 +35,19 @@ def cca_copa_deterministic(c: ModelConfig, s: MySolver, v: Variables):
                         v.S[t-c.R] > v.S[t-c.R-1],
                         v.c_f[n][t-1] * max(0, dt-1)
                         <= v.alpha*(c.R+max(0, dt-1))))
+                # decr_alloweds.append(
+                #     z3.And(
+                #         v.qdel[t-c.R-c.D][dt],
+                #         v.S[t-c.R] > v.S[t-c.R-1],
+                #         v.c_f[n][t-1] * dt >= v.alpha * (c.R + dt)))
                 decr_alloweds.append(
                     z3.And(
                         v.qdel[t-c.R-c.D][dt],
                         v.S[t-c.R] > v.S[t-c.R-1],
-                        v.c_f[n][t-1] * dt >= v.alpha * (c.R + dt)))
+                        # If the queue is too small, then clearly the min RTT
+                        # is also small
+                        v.S[t-c.R] < v.A[t-c.R] - v.L[t-c.R] - v.alpha,
+                        v.c_f[n][t-1] * (dt+1) >= v.alpha * (c.R + dt)))
             # If inp is high at the beginning, qdel can be arbitrarily
             # large
             decr_alloweds.append(v.S[t-c.R] < v.A[0]-v.L[0])
