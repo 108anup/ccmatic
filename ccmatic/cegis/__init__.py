@@ -43,6 +43,10 @@ class CegisConfig:
     synth_ss: bool = False
     feasible_response: bool = False
 
+    # For assumption synthesis
+    use_ref_cca: bool = False
+    monotonic_inc_assumption: bool = False
+
     DEBUG: bool = False
 
 

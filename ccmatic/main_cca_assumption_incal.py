@@ -42,6 +42,9 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
+cc.use_ref_cca = True
+cc.monotonic_inc_assumption = True
+
 cc.compose = True
 cc.cca = "copa"
 if(cc.cca == "copa"):
@@ -66,36 +69,38 @@ environment = z3.And(environment, periodic_constriants, cca_definitions)
 poor_utilization = v.S[-1] - v.S[0] < util_frac * c.C * c.T
 
 # Referenece CCA
-prefix_alt = "alt"
-(c_alt, s_alt, v_alt,
- ccac_domain_alt, ccac_definitions_alt, environment_alt,
- verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
-c_alt.cca = "paced"
-vn_alt = VariableNames(v_alt)
+if(cc.use_ref_cca):
+    prefix_alt = "alt"
+    (c_alt, s_alt, v_alt,
+    ccac_domain_alt, ccac_definitions_alt, environment_alt,
+    verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
+    c_alt.cca = "paced"
+    vn_alt = VariableNames(v_alt)
 
-periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
-cca_definitions_alt = get_cca_definition(c_alt, v_alt)
-cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
-    *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
-      for t in range(c.T) for n in range(c.N)]))
-environment_alt = z3.And(
-    environment_alt, periodic_constriants_alt, cca_definitions_alt)
-poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < util_frac * c_alt.C * c_alt.T
+    periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
+    cca_definitions_alt = get_cca_definition(c_alt, v_alt)
+    cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
+        *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
+        for t in range(c.T) for n in range(c.N)]))
+    environment_alt = z3.And(
+        environment_alt, periodic_constriants_alt, cca_definitions_alt)
+    poor_utilization_alt = v_alt.S[-1] - v_alt.S[0] < util_frac * c_alt.C * c_alt.T
 
 # Novel trace (for monotonically increasing CCAs)
-prefix_novel = "novel"
-(c_novel, s_novel, v_novel,
- ccac_domain_novel, ccac_definitions_novel, environment_novel,
- verifier_vars_novel, definition_vars_novel) = setup_cegis_basic(
-    cc, prefix_novel)
-vn_novel = VariableNames(v_novel)
+if(cc.monotonic_inc_assumption):
+    prefix_novel = "novel"
+    (c_novel, s_novel, v_novel,
+    ccac_domain_novel, ccac_definitions_novel, environment_novel,
+    verifier_vars_novel, definition_vars_novel) = setup_cegis_basic(
+        cc, prefix_novel)
+    vn_novel = VariableNames(v_novel)
 
-periodic_constriants_novel = get_periodic_constraints_ccac(
-    cc, c_novel, v_novel)
-cca_definitions_novel = get_cca_definition(c_novel, v_novel)
-environment_novel = z3.And(
-    environment_novel, periodic_constriants_novel, cca_definitions_novel)
-poor_utilization_novel = v_novel.S[-1] - v_novel.S[0] < util_frac * c_novel.C * c_novel.T
+    periodic_constriants_novel = get_periodic_constraints_ccac(
+        cc, c_novel, v_novel)
+    cca_definitions_novel = get_cca_definition(c_novel, v_novel)
+    environment_novel = z3.And(
+        environment_novel, periodic_constriants_novel, cca_definitions_novel)
+    poor_utilization_novel = v_novel.S[-1] - v_novel.S[0] < util_frac * c_novel.C * c_novel.T
 
 
 # ----------------------------------------------------------------
@@ -236,25 +241,28 @@ for t in range(c.T):
 ctx = z3.main_ctx()
 assumption = z3.And(assumption_constraints)
 assert isinstance(assumption, z3.ExprRef)
-assumption_alt = rename_vars(
-    assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
-assumption_novel = rename_vars(
-    assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
-
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
-specification_alt = z3.And(
-    environment_alt, assumption_alt, poor_utilization_alt)
-specification_novel = z3.And(
-    environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
-
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
-# cca_definitions are verifier only. does not matter if they are here...
-definitions_alt = z3.And(
-    ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
-definitions_novel = z3.And(
-    ccac_domain_novel, ccac_definitions_novel, cca_definitions_novel)
 assert isinstance(definitions, z3.ExprRef)
+# cca_definitions are verifier only. does not matter if they are here...
+
+if(cc.use_ref_cca):
+    assumption_alt = rename_vars(
+        assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
+    specification_alt = z3.And(
+        environment_alt, assumption_alt, poor_utilization_alt)
+    definitions_alt = z3.And(
+        ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
+
+if(cc.monotonic_inc_assumption):
+    assumption_novel = rename_vars(
+        assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
+    specification_novel = z3.And(
+        environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
+    definitions_novel = z3.And(
+        ccac_domain_novel, ccac_definitions_novel, cca_definitions_novel)
+
 
 generator_vars: List[z3.ExprRef] = \
     flatten(coeffs) + flatten(consts) + flatten(clauses) + flatten(clausenegs)
@@ -343,17 +351,19 @@ def get_solution_str(solution: z3.ModelRef,
         ret += f"Clause {clausenum}: " + " or ".join(this_clause) + "\n"
 
     if(use_model):
-        df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
-        df_alt['alt_tokens_t'] = [
-            float(get_solution_val(v_alt.C0 + c.C * t).as_fraction())
-            for t in range(c.T)]
-        ret += "\n{}".format(df_alt)
+        if(cc.use_ref_cca):
+            df_alt = get_cex_df(solution, v_alt, vn_alt, c_alt)
+            df_alt['alt_tokens_t'] = [
+                float(get_solution_val(v_alt.C0 + c.C * t).as_fraction())
+                for t in range(c.T)]
+            ret += "\n{}".format(df_alt)
 
-        df_novel = get_cex_df(solution, v_novel, vn_novel, c_novel)
-        df_novel['novel_tokens_t'] = [
-            float(get_solution_val(v_novel.C0 + c.C * t).as_fraction())
-            for t in range(c.T)]
-        ret += "\n\n{}".format(df_novel)
+        if(cc.monotonic_inc_assumption):
+            df_novel = get_cex_df(solution, v_novel, vn_novel, c_novel)
+            df_novel['novel_tokens_t'] = [
+                float(get_solution_val(v_novel.C0 + c.C * t).as_fraction())
+                for t in range(c.T)]
+            ret += "\n\n{}".format(df_novel)
 
     return ret
 
@@ -391,13 +401,14 @@ def override_remove_solution(self: CegisCCAGen, solution: z3.ModelRef):
                     self._n_proved_solutions)
 
     # Monotonically increasing assumption set.
-    name_template = f"Assumption{self._n_proved_solutions}___"+"{}"
-    assumption_assign = substitute_values(
-        self.generator_vars, solution, name_template, ctx)
-    assumption_expr = rename_vars(
-        assumption_novel, self.generator_vars, name_template)
-    self.generator.add(assumption_assign)
-    self.generator.add(z3.Not(assumption_expr))
+    if(cc.monotonic_inc_assumption):
+        name_template = f"Assumption{self._n_proved_solutions}___"+"{}"
+        assumption_assign = substitute_values(
+            self.generator_vars, solution, name_template, ctx)
+        assumption_expr = rename_vars(
+            assumption_novel, self.generator_vars, name_template)
+        self.generator.add(assumption_assign)
+        self.generator.add(z3.Not(assumption_expr))
 
 
 genvar_dict = {x.decl().name(): x
@@ -497,7 +508,7 @@ if (__name__ == "__main__"):
         import sys
         sys.exit(0)
 
-    if(args.solution_seed_path):
+    if(args.solution_seed_path and cc.monotonic_inc_assumption):
         process_seed_assumptions(args.solution_seed_path)
 
     # Debugging:
@@ -522,13 +533,17 @@ if (__name__ == "__main__"):
         # anyway.
 
         # Unused because ^^^
-        all_generator_vars = (generator_vars +
-                              verifier_vars_alt + definition_vars_alt +
-                              verifier_vars_novel + definition_vars_novel)
-        search_constraints = z3.And(search_constraints,
-                                    definitions_alt, specification_alt,
-                                    definitions_novel, specification_novel)
+        # all_generator_vars = (generator_vars +
+        #                       verifier_vars_alt + definition_vars_alt +
+        #                       verifier_vars_novel + definition_vars_novel)
+        if(cc.use_ref_cca):
+            search_constraints = z3.And(search_constraints,
+                                        definitions_alt, specification_alt)
+        if(cc.monotonic_inc_assumption):
+            search_constraints = z3.And(search_constraints,
+                                        definitions_novel, specification_novel)
         assert isinstance(search_constraints, z3.ExprRef)
+
         cg = CegisCCAGen(generator_vars, verifier_vars,
                          definition_vars, search_constraints,
                          definitions, specification, ctx,
