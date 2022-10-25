@@ -27,10 +27,10 @@ cc.N = 1
 cc.history = 4
 cc.cca = "paced"
 
-cc.desired_util_f = 0.33
+cc.desired_util_f = 0.8
 cc.desired_queue_bound_multiplier = 2
 cc.desired_loss_count_bound = 3
-cc.desired_loss_amount_bound_multiplier = 10
+cc.desired_loss_amount_bound_multiplier = 2
 
 cc.ideal_link = True
 cc.loss_alpha = True
@@ -108,12 +108,14 @@ for n in range(c.N):
                 consts['c_f[n]_noloss'], v.alpha, search_range_consts))
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
         assert isinstance(rhs, z3.ArithRef)
-        target_cwnd = z3.If(rhs >= cc.template_cca_lower_bound,
-                            rhs, cc.template_cca_lower_bound)
+        target_cwnd = z3.If(rhs >= v.alpha + cc.template_cca_lower_bound,
+                            rhs, v.alpha + cc.template_cca_lower_bound)
         template_definitions.append(
             v.c_f[n][t] == z3.If(v.c_f[n][t-1] < target_cwnd,
                                  v.c_f[n][t-1] + v.alpha,
                                  v.c_f[n][t-1] - v.alpha))
+        # template_definitions.append(
+        #     v.c_f[n][t] == target_cwnd)
 
 
 def get_solution_str(solution: z3.ModelRef,
@@ -130,9 +132,13 @@ def get_solution_str(solution: z3.ModelRef,
                   f"(S_f[n][t-{c.R}]-S_f[n][t-{cc.history}])"
                   f" + {solution.eval(consts['c_f[n]_noloss'])}alpha")
     ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
-            f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_loss})\n"
+            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_loss})\n"
             f"else:\n"
-            f"\tc_f[n][t] = max({cc.template_cca_lower_bound}, {rhs_noloss})\n")
+            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_noloss})\n")
+    ret += (f"\nif(c_f[n][t-1] < target_cwnd):\n"
+            f"\tc_f[n][t] = c_f[n][t-1] - alpha\n"
+            f"else:\n"
+            f"\tc_f[n][t] = c_f[n][t-1] + alpha\n")
 
     return ret
 

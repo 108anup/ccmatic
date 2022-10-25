@@ -145,9 +145,9 @@ class CCmatic():
         if self.cc.DEBUG:
             debug_known_solution = known_solution
             assert known_solution is not None
-            self.search_constraints = z3.And(
-                self.search_constraints, known_solution)
-            assert(isinstance(self.search_constraints, z3.ExprRef))
+            # self.search_constraints = z3.And(
+            #     self.search_constraints, known_solution)
+            # assert(isinstance(self.search_constraints, z3.ExprRef))
 
             # Definitions (including template)
             with open('tmp/definitions.txt', 'w') as f:

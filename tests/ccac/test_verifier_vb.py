@@ -5,6 +5,7 @@ import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.verifier import (get_cex_df, get_desired_necessary,
                               setup_cegis_basic)
+from ccmatic.verifier.ideal import IdealLink
 from cegis.util import Metric, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -18,7 +19,7 @@ cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 cc.template_mode_switching = False
 
-cc.feasible_response = True
+# cc.feasible_response = True
 cc.D = 1
 cc.C = 100
 
@@ -26,9 +27,13 @@ cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
 cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
+
+cc.loss_alpha = True
+cc.ideal_link = True
+
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
- verifier_vars, definition_vars) = setup_cegis_basic(cc)
+ verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
 
 d = get_desired_necessary(cc, c, v)
 desired = d.desired_in_ss
@@ -103,10 +108,6 @@ for t in range(first, c.T):
         rhs_loss = 0
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
 
-        # AIMD
-        rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        rhs_noloss = v.c_f[0][t-c.R] + 1
-
         # # Hybrid MD no combination
         # rhs_loss = 1/2 * v.c_f[0][t-c.R]
         # rhs_noloss = acked_bytes
@@ -115,6 +116,10 @@ for t in range(first, c.T):
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = 1/2 * acked_bytes
 
+        # AIMD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = v.c_f[0][t-c.R] + 1
+
         # Hybrid MD
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
@@ -122,9 +127,15 @@ for t in range(first, c.T):
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
     assert isinstance(rhs, z3.ArithRef)
+    target_cwnd = z3.If(rhs >= cc.template_cca_lower_bound,
+                        rhs, cc.template_cca_lower_bound)
     template_definitions.append(
-        v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
-                             rhs, cc.template_cca_lower_bound))
+        v.c_f[0][t] == z3.If(v.c_f[0][t-1] < target_cwnd,
+                             v.c_f[0][t-1] + v.alpha,
+                             v.c_f[0][t-1] - v.alpha))
+    # template_definitions.append(
+    #     v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
+    #                          rhs, cc.template_cca_lower_bound))
 
     # template_definitions.append(v.c_f[0][t] == 4096)
     # template_definitions.append(v.c_f[0][t] == 0.01)
@@ -133,7 +144,8 @@ for t in range(first, c.T):
 def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     df = get_cex_df(counter_example, v, vn, c)
     desired_string = d.to_string(cc, c, counter_example)
-    ret = "{}\n{}.".format(df, desired_string)
+    ret = "{}\n{}, alpha={}.".format(df, desired_string,
+                                     counter_example.eval(v.alpha))
     return ret
 
 
@@ -141,7 +153,7 @@ optimization_list = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
     Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
-    Metric(cc.desired_loss_amount_bound_multiplier, 0, 2, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
 ]
 
 verifier = MySolver()

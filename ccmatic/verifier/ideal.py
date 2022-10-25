@@ -35,12 +35,17 @@ class IdealLink:
             if c.buf_min is None:  # no loss case
                 s.add(v.L[t] == v.L[0])
             else:
-                s.add(z3.Implies(
+                s.add(v.L[t] == z3.If(
                     v.A[t] - v.L[t-1] > v.S[t] + c.buf_min,
-                    v.A[t] - v.L[t] == v.S[t] + c.buf_min))
-                s.add(z3.Implies(
-                    v.A[t] - v.L[t-1] <= v.S[t] + c.buf_min,
-                    v.L[t] == v.L[t-1]))
+                    v.A[t] - v.S[t] - c.buf_min,
+                    v.L[t-1]
+                ))
+                # s.add(z3.Implies(
+                #     v.A[t] - v.L[t-1] > v.S[t] + c.buf_min,
+                #     v.A[t] - v.L[t] == v.S[t] + c.buf_min))
+                # s.add(z3.Implies(
+                #     v.A[t] - v.L[t-1] <= v.S[t] + c.buf_min,
+                #     v.L[t] == v.L[t-1]))
         # L[0] is still chosen non-deterministically in an unconstrained fashion.
 
     @staticmethod
@@ -52,9 +57,10 @@ class IdealLink:
             for n in range(c.N):
                 s.add(v.S_f[n][t] <= v.A_f[n][t] - v.L_f[n][t])
 
-            r1 = v.S[t-1] + c.C
-            r2 = v.A[t] - v.L[t-1]
-            s.add(v.S[t] == z3.If(r1 < r2, r1, r2))
+            if(t >= 1):
+                r1 = v.S[t-1] + c.C
+                r2 = v.A[t] - v.L[t-1]
+                s.add(v.S[t] == z3.If(r1 < r2, r1, r2))
 
     @staticmethod
     def get_cegis_vars(
