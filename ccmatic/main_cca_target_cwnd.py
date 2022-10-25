@@ -61,6 +61,7 @@ consts = {
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
 critical_generator_vars = flatten(list(coeffs.values()))
+# critical_generator_vars = generator_vars
 
 # Search constr
 search_range_coeffs = [Fraction(i, 2) for i in range(5)]

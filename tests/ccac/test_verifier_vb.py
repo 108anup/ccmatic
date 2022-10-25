@@ -19,7 +19,6 @@ cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 cc.template_mode_switching = False
 
-# cc.feasible_response = True
 cc.D = 1
 cc.C = 100
 
@@ -28,12 +27,18 @@ cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
 cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 
-cc.loss_alpha = True
-cc.ideal_link = True
+# cc.loss_alpha = True
+# cc.ideal_link = True
 
-(c, s, v,
- ccac_domain, ccac_definitions, environment,
- verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
+if(cc.ideal_link):
+    (c, s, v,
+     ccac_domain, ccac_definitions, environment,
+     verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
+else:
+    cc.feasible_response = True
+    (c, s, v,
+     ccac_domain, ccac_definitions, environment,
+     verifier_vars, definition_vars) = setup_cegis_basic(cc)
 
 d = get_desired_necessary(cc, c, v)
 desired = d.desired_in_ss
@@ -122,7 +127,7 @@ for t in range(first, c.T):
 
         # Hybrid MD
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
-        rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R]
+        rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R] + v.alpha
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
@@ -151,7 +156,7 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 optimization_list = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
-    Metric(cc.desired_queue_bound_multiplier, 1, 2, 0.001, False),
+    Metric(cc.desired_queue_bound_multiplier, 1, 4, 0.001, False),
     Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
     Metric(cc.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
 ]
@@ -191,6 +196,7 @@ sat = verifier.check()
 if(str(sat) == "sat"):
     model = verifier.model()
     print(get_counter_example_str(model))
+    import ipdb; ipdb.set_trace()
 
 else:
     # # Unsat core

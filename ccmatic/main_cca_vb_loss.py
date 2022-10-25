@@ -34,7 +34,7 @@ cc.buffer_size_multiplier = 1
 # cc.template_queue_bound = True
 
 cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 2
+cc.desired_queue_bound_multiplier = 3
 cc.desired_loss_count_bound = 3
 cc.desired_loss_amount_bound_multiplier = 2
 (c, s, v,
@@ -89,14 +89,14 @@ consts = {
 }
 
 # Search constr
-search_range_coeff = [Fraction(i, 2) for i in range(5)]
+search_range_coeffs = [Fraction(i, 2) for i in range(5)]
 # search_range_const = [Fraction(i, 2) for i in range(-4, 5)]
-search_range_const = [-1, 0, 1]
+search_range_consts = [-1, 0, 1]
 # search_range = [-1, 0, 1]
 for coeff in flatten(list(coeffs.values())):
-    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeff]))
+    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeffs]))
 for const in flatten(list(consts.values())):
-    domain_clauses.append(z3.Or(*[const == val for val in search_range_const]))
+    domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
@@ -104,24 +104,32 @@ assert(isinstance(search_constraints, z3.ExprRef))
 template_definitions = []
 first = cc.history
 for t in range(first, c.T):
-    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-1]
     acked_bytes = v.S_f[0][t-c.R] - v.S_f[0][t-cc.history]
-    rhs_loss = (get_product_ite(coeffs['c_f[0]_loss'], v.c_f[0][t-c.R],
-                                search_range_coeff)
-                + get_product_ite(coeffs['ack_f[0]_loss'], acked_bytes,
-                                  search_range_coeff)
-                + consts['c_f[0]_loss'])
-    rhs_noloss = (get_product_ite(coeffs['c_f[0]_noloss'], v.c_f[0][t-c.R],
-                                  search_range_coeff)
-                  + get_product_ite(coeffs['ack_f[0]_noloss'], acked_bytes,
-                                    search_range_coeff)
-                  + consts['c_f[0]_noloss'])
+    loss_detected = v.Ld_f[0][t] > v.Ld_f[0][t-c.R]
+    rhs_loss = (
+        get_product_ite(
+            coeffs['c_f[0]_loss'], v.c_f[0][t-c.R], search_range_coeffs)
+        + get_product_ite(
+            coeffs['ack_f[0]_loss'], acked_bytes, search_range_coeffs)
+        + get_product_ite(
+            consts['c_f[0]_loss'], v.alpha, search_range_consts))
+    rhs_noloss = (
+        get_product_ite(
+            coeffs['c_f[0]_noloss'], v.c_f[0][t-c.R], search_range_coeffs)
+        + get_product_ite(
+            coeffs['ack_f[0]_noloss'], acked_bytes, search_range_coeffs)
+        + get_product_ite(
+            consts['c_f[0]_noloss'], v.alpha, search_range_consts))
     rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
+    target_cwnd = z3.If(rhs >= v.alpha + cc.template_cca_lower_bound,
+                        rhs, v.alpha + cc.template_cca_lower_bound)
     template_definitions.append(
-        v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
-                             rhs, cc.template_cca_lower_bound)
-    )
+        v.c_f[0][t] == z3.If(v.c_f[0][t-1] < target_cwnd,
+                             v.c_f[0][t-1] + v.alpha,
+                             v.c_f[0][t-1] - v.alpha))
+    # template_definitions.append(
+    #     v.c_f[0][t] == target_cwnd)
 
 # CCmatic inputs
 ctx = z3.main_ctx()
@@ -136,6 +144,7 @@ if(d.steady_state_variables):
         generator_vars.append(sv.lo)
         generator_vars.append(sv.hi)
 critical_generator_vars = flatten(list(coeffs.values()))
+# critical_generator_vars = generator_vars
 
 
 # Method overrides
@@ -153,20 +162,27 @@ def get_counter_example_str(counter_example: z3.ModelRef,
 
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
+    ret = ""
     rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
-                f"v.c_f[0][t-{c.R}]"
+                f"c_f[0][t-{c.R}]"
                 f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
                 f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
-                f" + {solution.eval(consts['c_f[0]_loss'])}")
+                f" + {solution.eval(consts['c_f[0]_loss'])}alpha")
     rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
-                  f"v.c_f[0][t-{c.R}]"
+                  f"c_f[0][t-{c.R}]"
                   f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
                   f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
-                  f" + {solution.eval(consts['c_f[0]_noloss'])}")
-    ret = (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
-           f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_loss})\n"
-           f"else:\n"
-           f"\tc_f[0][t] = max({cc.template_cca_lower_bound}, {rhs_noloss})")
+                  f" + {solution.eval(consts['c_f[0]_noloss'])}alpha")
+    ret += (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_loss})\n"
+            f"else:\n"
+            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_noloss})\n")
+    ret += (f"\nif(c_f[0][t-1] < target_cwnd):\n"
+            f"\tc_f[0][t] = c_f[0][t-1] - alpha\n"
+            f"else:\n"
+            f"\tc_f[0][t] = c_f[0][t-1] + alpha\n")
+
+    return ret
 
     if d.steady_state_variables:
         for sv in d.steady_state_variables:
