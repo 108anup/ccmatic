@@ -1,0 +1,498 @@
+[10/25 14:17:43]  --------------------------------------------------------------------------------
+[10/25 14:17:43]  Iteration: 1 (0 solution, 0 counterexamples)
+[10/25 14:17:43]  Generator returned sat in 0.004164 secs.
+[10/25 14:17:43]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 2c_f[0][t-1] + 2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+else:
+	target_cwnd = 2c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:43]  Improved number of small numbers from 108 to 108 out of a max of 108
+[10/25 14:17:43]  Verifer returned sat in 0.202921 secs.
+[10/25 14:17:43]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t  cwnd_0,t  rate_0,t  service_0,t  losts_0,t  tot_service_choice_t  wasted_t  queue_t  bottle_queue_t
+0       -300.750       -400.750     -300.750     0.125     0.125     -400.750      0.000                 0.000    300.75  100.000           0.000
+1       -300.750       -300.750     -300.750     0.125     0.125     -300.750      0.000              -300.875    300.75    0.000        -100.000
+2        200.375       -199.875      200.375   501.125   501.125     -199.875      0.125              -199.875    300.75  400.125         301.000
+3        300.500       -100.000      300.500   500.250   500.250     -100.000      0.250              -100.000    300.75  400.250         301.000
+4        400.625         99.250      400.625   500.375   500.375       99.250      0.375                99.250    300.75  301.000         301.000
+5        600.125         99.750      600.125   500.500   500.500       99.750     99.875                99.750    300.75  400.500         301.000
+6        700.250        199.375      700.250   500.625   500.625      199.375    100.000               199.375    300.75  400.875         301.000
+7        800.125        399.250      800.125   500.750   500.750      399.250    100.000               399.250    300.75  300.875         300.875
+8       1000.125        399.250     1000.125   500.875   500.875      399.250    199.875               499.375    300.75  401.000         301.000
+fefficient=True, bounded_queue=False, bounded_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, loss_amount=399/2, 
+, buffer=301.[0m
+[10/25 14:17:43]  --------------------------------------------------------------------------------
+[10/25 14:17:43]  Iteration: 2 (0 solution, 1 counterexamples)
+[10/25 14:17:43]  Generator returned sat in 0.053947 secs.
+[10/25 14:17:43]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + -1alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 3/2(S_f[0][t-1]-S_f[0][t-4]) + -1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:44]  Improved number of small numbers from 108 to 108 out of a max of 108
+[10/25 14:17:44]  Verifer returned sat in 0.198057 secs.
+[10/25 14:17:44]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t   cwnd_0,t   rate_0,t  service_0,t  losts_0,t  tot_service_choice_t  wasted_t    queue_t  bottle_queue_t
+0    -233.937744    -333.937744  -233.937744    0.12500    0.12500  -333.937744    0.00000             -0.000244    300.75  100.00000         0.00000
+1    -233.937744    -233.937744  -233.937744    0.12500    0.12500  -233.937744    0.00000           -300.875000    300.75    0.00000      -100.00000
+2     266.312256     -40.156494   266.312256  500.25000  500.25000   -40.156494    0.12500            -40.156494    300.75  306.34375       300.12500
+3     366.343506      59.843506   366.343506  406.37500  406.37500    59.843506    0.15625             59.843506    300.75  306.34375       300.12500
+4     466.343506     159.843506   466.343506  406.34375  406.34375   159.843506    0.15625            159.843506    300.75  306.34375       300.12500
+5     566.374756     259.843506   566.374756  406.37500  406.37500   259.843506    0.18750            259.843506    300.75  306.34375       300.12500
+6     666.374756     330.781006   666.374756  406.34375  406.34375   330.781006    0.18750            330.781006    300.75  335.40625       300.12500
+7     737.343506     466.062256   737.343506  406.37500  406.37500   466.062256    0.18750            466.062256    300.75  271.09375       271.09375
+8     872.656006     466.062256   872.656006  406.40625  406.40625   466.062256    6.46875            566.093506    300.75  400.12500       300.12500
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=2, loss_amount=101/16, 
+, buffer=2401/8.[0m
+[10/25 14:17:44]  --------------------------------------------------------------------------------
+[10/25 14:17:44]  Iteration: 3 (0 solution, 2 counterexamples)
+[10/25 14:17:44]  Generator returned sat in 0.103907 secs.
+[10/25 14:17:44]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:45]  Improved number of small numbers from 71 to 108 out of a max of 108
+[10/25 14:17:45]  Verifer returned sat in 0.305636 secs.
+[10/25 14:17:45]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t   losts_0,t  tot_service_choice_t  wasted_t     queue_t  bottle_queue_t
+0    -133.750488    -233.750488  -133.750488    0.124512    0.124512  -233.750488    0.000000             -0.000488    300.75  100.000000        0.000000
+1    -133.750488    -133.750488  -133.750488    0.125000    0.125000  -133.750488    0.000000           -300.875244    300.75    0.000000     -100.000000
+2     265.249756     -33.687988   265.249756  399.000244  399.000244   -33.687988    0.125000            -33.687988    300.75  298.812744      198.875244
+3     365.312012      66.312012   365.312012  398.875000  398.875000    66.312012    0.187256             66.312012    300.75  298.812744      198.875244
+4     465.312012     167.436523   465.312012  398.812744  398.812744   167.436523    0.187256            167.436523    300.75  297.688232      198.875244
+5     566.374268     362.499023   566.374268  398.750488  398.750488   362.499023    1.249512            362.499023    300.75  202.625732      198.875244
+6     762.436768     466.249512   762.436768  398.688232  398.688232   466.249512   97.312012            466.249512    300.75  198.875244      198.875244
+7     962.312012     566.249512   962.312012  398.750488  398.750488   566.249512  197.187256            566.249512    300.75  198.875244      198.875244
+8    1162.249512     566.249512  1162.249512  398.812744  398.812744   566.249512  297.124756            666.311768    300.75  298.875244      198.875244
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=False, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, loss_amount=4751/16, 
+, buffer=814593/4096.[0m
+[10/25 14:17:45]  --------------------------------------------------------------------------------
+[10/25 14:17:45]  Iteration: 4 (0 solution, 3 counterexamples)
+[10/25 14:17:45]  Generator returned sat in 0.059684 secs.
+[10/25 14:17:45]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:45]  Improved gap from 0.0 to 32.8125
+[10/25 14:17:45]  Improved number of small numbers from 89 to 109 out of a max of 109
+[10/25 14:17:45]  Verifer returned sat in 0.372054 secs.
+[10/25 14:17:45]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t  losts_0,t  tot_service_choice_t    wasted_t     queue_t  bottle_queue_t
+0     282.843018     182.843018   282.843018    0.124268    0.124268   182.843018   0.000000            282.864014  300.750000  100.000000        0.000000
+1     282.843018     282.843018   282.843018    0.020833    0.020833   282.843018   0.000000           -300.875244  300.750000    0.000000     -100.000000
+2     616.363770     482.842773   616.363770  333.520752  333.520752   482.842773   0.020752            482.842773  300.750000  133.500244      133.500000
+3     616.363770     582.843018   616.363770   32.937256   32.937256   582.843018   0.020752            582.843018  300.750000   33.500000       33.500000
+4     616.363770     582.863770   616.363770   32.916504   32.916504   582.863770   0.020752            582.863770  367.250000   33.479248        0.000000
+5     616.363770     616.343018   616.363770   32.895752   32.895752   616.343018   0.020752            616.342773  434.437500    0.000000      -32.812500
+6     649.238770     649.155518   649.238770   32.875000   32.875000   649.155518   0.020752            682.009766  501.604248    0.062500      -32.770752
+7     682.030518     681.988770   682.030518   32.854248   32.854248   681.988770   0.020752            681.967773  568.791504    0.020996      -32.791748
+8     714.843018     714.822021   714.843018   32.833496   32.833496   714.822021   0.020752            714.822021  568.791504    0.000244      -99.979248
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, ramp_down_cwnd=True, 
+, ramp_up_bq=True, ramp_down_bq=True, ramp_up_queue=True, ramp_down_queue=True, loss_count=0, loss_amount=0, 
+, buffer=267/2.[0m
+[10/25 14:17:46]  --------------------------------------------------------------------------------
+[10/25 14:17:46]  Iteration: 5 (0 solution, 4 counterexamples)
+[10/25 14:17:46]  Generator returned sat in 0.040126 secs.
+[10/25 14:17:46]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:48]  Improved gap from 0.010416666666666666 to 28.125
+[10/25 14:17:49]  Improved number of small numbers from 44 to 109 out of a max of 109
+[10/25 14:17:49]  Verifer returned sat in 2.826354 secs.
+[10/25 14:17:49]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t  losts_0,t  tot_service_choice_t    wasted_t     queue_t  bottle_queue_t
+0     382.843018     182.843018   382.843018    0.124023    0.124023   182.843018    0.00000            382.874268  300.749756  200.000000      100.000000
+1     382.843018     382.843018   382.843018    0.031006    0.031006   382.843018    0.00000            382.843018  300.749756    0.000000        0.000000
+2     611.030273     482.843018   611.030273  228.187256  228.187256   482.843018    0.03125            482.843018  300.749756  128.156006      128.156006
+3     611.030273     563.467285   611.030273   47.469727   47.469727   563.467285    0.03125            563.467285  300.749756   47.531738       28.156006
+4     611.030273     582.874023   611.030273   47.500732   47.500732   582.874023    0.03125            582.874023  372.593750   28.125000        0.000000
+5     630.437012     611.030029   630.437012   47.531738   47.531738   611.030029    0.03125            611.030029  444.437744   19.375732       -8.749268
+6     658.624023     639.155029   658.624023   47.562744   47.562744   639.155029    0.03125            639.124023  516.312744   19.437744       -8.687256
+7     686.718018     667.311035   686.718018   47.531738   47.531738   667.311035    0.03125            667.311035  588.156738   19.375732       -8.749268
+8     714.843018     695.436035   714.843018   47.500732   47.500732   695.436035    0.03125            795.436035  588.187988   19.375732      -80.593018
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, ramp_down_cwnd=False, 
+, ramp_up_bq=True, ramp_down_bq=True, ramp_up_queue=True, ramp_down_queue=True, loss_count=0, loss_amount=0, 
+, buffer=524927/4096.[0m
+[10/25 14:17:49]  --------------------------------------------------------------------------------
+[10/25 14:17:49]  Iteration: 6 (0 solution, 5 counterexamples)
+[10/25 14:17:49]  Generator returned sat in 0.071905 secs.
+[10/25 14:17:49]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:51]  Improved gap from 0.0 to 18.75
+[10/25 14:17:51]  Improved number of small numbers from 109 to 109 out of a max of 109
+[10/25 14:17:51]  Verifer returned sat in 1.532514 secs.
+[10/25 14:17:51]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t   cwnd_0,t   rate_0,t  service_0,t  losts_0,t  tot_service_choice_t    wasted_t     queue_t  bottle_queue_t
+0     417.973877     285.035889   417.973877   0.124023   0.124023   285.035889        0.0            285.035889  126.460938  132.937988      100.000000
+1     417.973877     417.911865   417.973877   0.062012   0.062012   417.911865        0.0            417.911865  126.460938    0.062012        0.000000
+2     417.973877     417.973877   417.973877   0.062012   0.062012   417.973877        0.0            436.785889  207.710938    0.000000      -18.750000
+3     438.909912     436.723877   438.909912  20.936035  20.936035   436.723877        0.0            436.661865  286.774902    2.186035      -18.750000
+4     476.533936     457.721924   476.533936  39.810059  39.810059   457.721924        0.0            457.721924  367.900879   18.812012        0.000000
+5     478.657959     476.533936   478.657959  20.936035  20.936035   476.533936        0.0            497.656006  446.840820    2.124023      -18.936035
+6     516.343994     497.593994   516.343994  39.810059  39.810059   497.593994        0.0            497.531982  528.090820   18.750000        0.000000
+7     556.278076     516.406006   556.278076  58.684082  58.684082   516.406006        0.0            516.406006  588.156738   39.872070        0.000000
+8     556.278076     556.278076   556.278076  39.810059  39.810059   556.278076        0.0            556.278076  588.156738    0.000000     -100.000000
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, ramp_down_cwnd=False, 
+, ramp_up_bq=True, ramp_down_bq=True, ramp_up_queue=True, ramp_down_queue=True, loss_count=0, loss_amount=0, 
+, buffer=100.[0m
+[10/25 14:17:51]  --------------------------------------------------------------------------------
+[10/25 14:17:51]  Iteration: 7 (0 solution, 6 counterexamples)
+[10/25 14:17:52]  Generator returned sat in 0.081628 secs.
+[10/25 14:17:52]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:52]  Verifer returned unsat in 0.497364 secs.
+[10/25 14:17:52]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:52]  --------------------------------------------------------------------------------
+[10/25 14:17:52]  Iteration: 8 (1 solution, 6 counterexamples)
+[10/25 14:17:52]  Generator returned sat in 0.014970 secs.
+[10/25 14:17:52]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:53]  Verifer returned unsat in 0.388965 secs.
+[10/25 14:17:53]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:53]  --------------------------------------------------------------------------------
+[10/25 14:17:53]  Iteration: 9 (2 solution, 6 counterexamples)
+[10/25 14:17:53]  Generator returned sat in 0.013986 secs.
+[10/25 14:17:53]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:53]  Improved gap from 8.031005859375 to 100
+[10/25 14:17:53]  Improved number of small numbers from 109 to 109 out of a max of 109
+[10/25 14:17:53]  Verifer returned sat in 0.391411 secs.
+[10/25 14:17:53]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t  losts_0,t  tot_service_choice_t    wasted_t     queue_t  bottle_queue_t
+0     475.477539     475.446533   475.477539    0.124023    0.124023   475.446533   0.000000            475.446533  286.774658    0.031006      -37.217041
+1     512.725586     512.694580   512.725586   37.279053   37.279053   512.694580   0.000000            512.663574  286.774658    0.031006      -99.968994
+2     812.725586     712.694580   812.725586  300.031006  300.031006   712.694580   0.031006            712.694580  286.774658  100.000000      100.000000
+3     917.787598     712.694580   917.787598  205.062012  205.062012   712.694580   5.093018            812.725586  286.774658  200.000000      100.000000
+4     917.787598     912.663574   917.787598  188.968994  188.968994   912.663574   5.093018            912.663574  286.774658    0.031006        0.000000
+5    1122.818604     991.570557  1122.818604  205.062012  205.062012   991.570557  10.124023            991.570557  286.774658  121.124023      100.000000
+6    1222.849609    1075.477539  1222.849609  221.155029  221.155029  1075.477539  10.155029           1075.477539  286.774658  137.217041      100.000000
+7    1322.880615    1212.694580  1322.880615  237.248047  237.248047  1212.694580  10.186035           1212.694580  286.774658  100.000000      100.000000
+8    1476.221680    1212.725586  1476.221680  253.341064  253.341064  1212.725586  63.527100           1212.725586  286.774658  199.968994      100.000000
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, loss_amount=119673/2048, 
+, buffer=100.[0m
+[10/25 14:17:54]  --------------------------------------------------------------------------------
+[10/25 14:17:54]  Iteration: 10 (2 solution, 7 counterexamples)
+[10/25 14:17:54]  Generator returned sat in 0.145771 secs.
+[10/25 14:17:54]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:54]  Verifer returned unsat in 0.538574 secs.
+[10/25 14:17:54]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:54]  --------------------------------------------------------------------------------
+[10/25 14:17:54]  Iteration: 11 (3 solution, 7 counterexamples)
+[10/25 14:17:55]  Generator returned sat in 0.011744 secs.
+[10/25 14:17:55]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:55]  Improved gap from 2.0 to 100
+[10/25 14:17:56]  Improved number of small numbers from 30 to 42 out of a max of 109
+[10/25 14:17:56]  Verifer returned sat in 1.535385 secs.
+[10/25 14:17:56]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t  losts_0,t  tot_service_choice_t    wasted_t    queue_t  bottle_queue_t
+0    1259.166748    1259.135498  1259.166748    0.123535    0.123535  1259.135498   0.000000           1259.135498  286.774414   0.031250        0.031016
+1    1259.166748    1259.135732  1259.166748    0.030762    0.030762  1259.135732   0.000000            512.663086  286.774414   0.031016      -99.968984
+2    1459.228566    1387.166677  1459.228566  200.092834  200.092834  1387.166677   0.030945           1387.166677  286.774414  72.030945        0.061890
+3    1544.438121    1544.376231  1544.438121  157.240499  157.240499  1544.376231   0.030945           1544.376231  286.774414   0.030945      -14.728556
+4    1701.678619    1601.926178  1701.678619  157.271444  157.271444  1601.926178  42.480998           1601.926178  286.774414  57.271444        0.061890
+5    1801.709564    1701.833344  1801.709564  157.302389  157.302389  1701.833344  42.511943           1701.833344  286.774414  57.364278        0.061890
+6    1901.678619    1801.864288  1901.678619  157.333333  157.333333  1801.864288  42.511943           1801.864288  286.774414  57.302389        0.030945
+7    2001.740509    1933.135732  2001.740509  157.364278  157.364278  1933.135732  42.542887           1933.135732  286.774414  26.061890        0.061890
+8    2133.073842    2001.926025  2133.073842  157.395223  157.395223  2001.926025  73.876221           2001.926025  286.774414  57.271596        0.061890
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, loss_amount=771569/24576, 
+, buffer=507/8192.[0m
+[10/25 14:17:56]  --------------------------------------------------------------------------------
+[10/25 14:17:56]  Iteration: 12 (3 solution, 8 counterexamples)
+[10/25 14:17:57]  Generator returned sat in 0.104853 secs.
+[10/25 14:17:57]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:57]  Verifer returned unsat in 0.363314 secs.
+[10/25 14:17:57]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:57]  --------------------------------------------------------------------------------
+[10/25 14:17:57]  Iteration: 13 (4 solution, 8 counterexamples)
+[10/25 14:17:57]  Generator returned sat in 0.018711 secs.
+[10/25 14:17:57]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:58]  Verifer returned unsat in 0.435145 secs.
+[10/25 14:17:58]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:58]  --------------------------------------------------------------------------------
+[10/25 14:17:58]  Iteration: 14 (5 solution, 8 counterexamples)
+[10/25 14:17:58]  Generator returned sat in 0.026096 secs.
+[10/25 14:17:58]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + -1alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:17:58]  Improved gap from 19.7529296875 to 100
+[10/25 14:17:59]  Improved number of small numbers from 70 to 88 out of a max of 109
+[10/25 14:17:59]  Verifer returned sat in 1.108986 secs.
+[10/25 14:17:59]  Counter example: 
+[93m   tot_arrival_t  tot_service_t  arrival_0,t    cwnd_0,t    rate_0,t  service_0,t   losts_0,t  tot_service_choice_t   wasted_t     queue_t  bottle_queue_t
+0    1677.728516    1677.666992  1677.728516    0.123291    0.123291  1677.666992    0.000000           1677.666992  244.32373    0.061523        0.061279
+1    1677.728760    1677.697754  1677.728760    0.061768    0.061768  1677.697754    0.000000           1677.697754  244.32373    0.031006      -99.938477
+2    1892.697754    1808.099365  1892.697754  215.000000  215.000000  1808.099365    0.000000           1808.099365  244.32373   84.598389       15.030518
+3    1992.759644    1877.697876  1992.759644  184.660278  184.660278  1877.697876    0.030884           1877.697876  244.32373  115.030884       15.061523
+4    2062.358154    2008.099121  2062.358154  184.629395  184.629395  2008.099121    0.030884           2008.099121  244.32373   54.228149      -15.339966
+5    2192.790283    2177.666992  2192.790283  184.660278  184.660278  2177.666992    0.061523           2177.666992  244.32373   15.061768       15.061523
+6    2362.419678    2247.203735  2362.419678  184.691162  184.691162  2247.203735   69.690918           2247.203735  244.32373   45.525024       15.061523
+7    2501.616699    2377.666992  2501.616699  184.722046  184.722046  2377.666992  108.887939           2377.666992  244.32373   15.061768       15.061523
+8    2671.307861    2377.697754  2671.307861  184.752930  184.752930  2377.697754  178.579102           2377.697754  244.32373  115.031006       15.061523
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, ramp_down_cwnd=False, 
+, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, loss_amount=1462667/8192, 
+, buffer=15423/1024.[0m
+[10/25 14:17:59]  --------------------------------------------------------------------------------
+[10/25 14:17:59]  Iteration: 15 (5 solution, 9 counterexamples)
+[10/25 14:18:00]  Generator returned sat in 0.109353 secs.
+[10/25 14:18:00]  Candidate solution: 
+[1m[94mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  Verifer returned unsat in 0.433855 secs.
+[10/25 14:18:00]  Proved solution: 
+[1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  --------------------------------------------------------------------------------
+[10/25 14:18:00]  Iteration: 16 (6 solution, 9 counterexamples)
+[10/25 14:18:00]  Generator returned unsat in 0.022852 secs.
+[10/25 14:18:00]  [96mNo more solutions found[0m
+[10/25 14:18:00]  Final solutions:
+[10/25 14:18:00]  0: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  1: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  2: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  3: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 1/2c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  4: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 0c_f[0][t-1] + 1(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  5: [1m[92mif(Ld_f[0][t] > Ld_f[0][t-1]):
+	target_cwnd = 0c_f[0][t-1] + 0(S_f[0][t-1]-S_f[0][t-4]) + 0alpha
+else:
+	target_cwnd = 1/2c_f[0][t-1] + 1/2(S_f[0][t-1]-S_f[0][t-4]) + 1alpha
+
+if(c_f[0][t-1] < target_cwnd):
+	c_f[0][t] = c_f[0][t-1] + alpha
+else:
+	c_f[0][t] = max(alpha, c_f[0][t-1] - alpha)
+[0m
+[10/25 14:18:00]  Took 17.976355 secs.

@@ -25,7 +25,7 @@ cc.synth_ss = False
 cc.feasible_response = True
 cc.R = 1
 cc.D = 1
-cc.history = 4
+cc.history = 3
 cc.T = 9
 
 cc.infinite_buffer = False
@@ -34,9 +34,10 @@ cc.buffer_size_multiplier = 1
 # cc.template_queue_bound = True
 
 cc.desired_util_f = 0.33
-cc.desired_queue_bound_multiplier = 3
+cc.desired_queue_bound_multiplier = 2
+cc.desired_queue_bound_alpha = 3
 cc.desired_loss_count_bound = 3
-cc.desired_loss_amount_bound_multiplier = 2
+cc.desired_loss_amount_bound_multiplier = 3
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -122,12 +123,20 @@ for t in range(first, c.T):
             consts['c_f[0]_noloss'], v.alpha, search_range_consts))
     rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
-    target_cwnd = z3.If(rhs >= v.alpha + cc.template_cca_lower_bound,
-                        rhs, v.alpha + cc.template_cca_lower_bound)
+    target_cwnd = rhs
+    next_cwnd = z3.If(v.c_f[0][t-1] < target_cwnd,
+                      v.c_f[0][t-1] + v.alpha,
+                      v.c_f[0][t-1] - v.alpha)
     template_definitions.append(
-        v.c_f[0][t] == z3.If(v.c_f[0][t-1] < target_cwnd,
-                             v.c_f[0][t-1] + v.alpha,
-                             v.c_f[0][t-1] - v.alpha))
+        v.c_f[0][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
+
+    # target_cwnd = z3.If(rhs >= v.alpha + cc.template_cca_lower_bound,
+    #                     rhs, v.alpha + cc.template_cca_lower_bound)
+    # template_definitions.append(
+    #     v.c_f[0][t] == z3.If(v.c_f[0][t-1] < target_cwnd,
+    #                          v.c_f[0][t-1] + v.alpha,
+    #                          v.c_f[0][t-1] - v.alpha))
+
     # template_definitions.append(
     #     v.c_f[0][t] == target_cwnd)
 
@@ -174,13 +183,13 @@ def get_solution_str(solution: z3.ModelRef,
                   f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
                   f" + {solution.eval(consts['c_f[0]_noloss'])}alpha")
     ret += (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
-            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_loss})\n"
+            f"\ttarget_cwnd = {rhs_loss}\n"
             f"else:\n"
-            f"\ttarget_cwnd = max({cc.template_cca_lower_bound}+alpha, {rhs_noloss})\n")
+            f"\ttarget_cwnd = {rhs_noloss}\n")
     ret += (f"\nif(c_f[0][t-1] < target_cwnd):\n"
-            f"\tc_f[0][t] = c_f[0][t-1] - alpha\n"
+            f"\tc_f[0][t] = c_f[0][t-1] + alpha\n"
             f"else:\n"
-            f"\tc_f[0][t] = c_f[0][t-1] + alpha\n")
+            f"\tc_f[0][t] = max(alpha, c_f[0][t-1] - alpha)\n")
 
     return ret
 
@@ -210,7 +219,7 @@ known_solution = None
 known_solution_list = [
     coeffs['c_f[0]_loss'] == 1/2,
     coeffs['ack_f[0]_loss'] == 0,
-    consts['c_f[0]_loss'] == 0,
+    consts['c_f[0]_loss'] == -1,
 
     coeffs['c_f[0]_noloss'] == 1/2,
     coeffs['ack_f[0]_noloss'] == 1/2,

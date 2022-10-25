@@ -839,7 +839,8 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         # more than desired_queue_bound
         cond_list.append(
             v.A[t] - v.L[t] - v.S[t] <=
-            cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
+            cc.desired_queue_bound_multiplier * c.C * (c.R + c.D)
+            + cc.desired_queue_bound_alpha * v.alpha)
     d.bounded_queue = z3.And(*cond_list)
 
     assert first >= 1

@@ -19,11 +19,13 @@ cc.buffer_size_multiplier = 1
 cc.template_queue_bound = False
 cc.template_mode_switching = False
 
+cc.history = 3
 cc.D = 1
 cc.C = 100
 
 cc.desired_util_f = z3.Real('desired_util_f')
 cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
+cc.desired_queue_bound_alpha = z3.Real('desired_queue_bound_alpha')
 cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
 cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 
@@ -125,19 +127,25 @@ for t in range(first, c.T):
         rhs_loss = 1/2 * v.c_f[0][t-c.R]
         rhs_noloss = v.c_f[0][t-c.R] + 1
 
+        # RoCC + MD
+        rhs_loss = 1/2 * v.c_f[0][t-c.R] - v.alpha
+        rhs_noloss = 1/2 * acked_bytes + v.alpha
+
         # Hybrid MD
-        rhs_loss = 1/2 * v.c_f[0][t-c.R]
+        rhs_loss = 1/2 * v.c_f[0][t-c.R] - v.alpha
         rhs_noloss = 1/2 * acked_bytes + 1/2 * v.c_f[0][t-c.R] + v.alpha
 
         rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
 
     assert isinstance(rhs, z3.ArithRef)
-    target_cwnd = z3.If(rhs >= cc.template_cca_lower_bound,
-                        rhs, cc.template_cca_lower_bound)
+    # target_cwnd = z3.If(rhs >= cc.template_cca_lower_bound+v.alpha,
+    #                     rhs, cc.template_cca_lower_bound+v.alpha)
+    target_cwnd = rhs
+    next_cwnd = z3.If(v.c_f[0][t-1] < target_cwnd,
+                      v.c_f[0][t-1] + v.alpha,
+                      v.c_f[0][t-1] - v.alpha)
     template_definitions.append(
-        v.c_f[0][t] == z3.If(v.c_f[0][t-1] < target_cwnd,
-                             v.c_f[0][t-1] + v.alpha,
-                             v.c_f[0][t-1] - v.alpha))
+        v.c_f[0][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
     # template_definitions.append(
     #     v.c_f[0][t] == z3.If(rhs >= cc.template_cca_lower_bound,
     #                          rhs, cc.template_cca_lower_bound))
@@ -156,9 +164,10 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 optimization_list = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
-    Metric(cc.desired_queue_bound_multiplier, 1, 4, 0.001, False),
+    Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+    Metric(cc.desired_queue_bound_alpha, 0, 4, 0.001, False),
     Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
-    Metric(cc.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
 ]
 
 verifier = MySolver()
