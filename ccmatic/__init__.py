@@ -68,6 +68,7 @@ class CCmatic():
         self.search_constraints = search_constraints
         self.ctx = z3.main_ctx()
         self.specification = z3.Implies(self.environment, self.desired)
+        assert(isinstance(self.specification, z3.ExprRef))
         self.definitions = z3.And(
             self.ccac_domain, self.ccac_definitions, *template_definitions)
         assert(isinstance(self.definitions, z3.ExprRef))

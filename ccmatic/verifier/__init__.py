@@ -667,9 +667,11 @@ def setup_ccac_for_cegis(cc: CegisConfig):
 
 
 def setup_cegis_basic(cc: CegisConfig, name=None):
+    if(name is not None):
+        cc.name = name
     c = setup_ccac_for_cegis(cc)
     s = MySolver()
-    v = Variables(c, s, name)
+    v = Variables(c, s, cc.name)
 
     ccac_domain = z3.And(*s.assertion_list)
     sd = setup_ccac_definitions(c, v)

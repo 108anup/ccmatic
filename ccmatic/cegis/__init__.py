@@ -12,6 +12,8 @@ class CegisMetaData:
 
 
 class CegisConfig:
+    name: Optional[str] = None
+
     # template
     history: int = 4
     template_cca_lower_bound: float = 0.01
@@ -28,7 +30,6 @@ class CegisConfig:
     desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
     desired_loss_amount_bound_alpha: Union[float, z3.ArithRef] = 0
 
-    loss_alpha: bool = False
     ideal_link: bool = False
 
     # environment

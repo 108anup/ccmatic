@@ -35,8 +35,6 @@ cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_amount_bound_alpha = 3
 
 cc.ideal_link = True
-cc.loss_alpha = True
-
 cc.feasible_response = False
 
 ccmatic = CCmatic(cc)
