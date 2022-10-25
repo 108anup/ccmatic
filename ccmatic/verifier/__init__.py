@@ -854,14 +854,10 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
     d.bounded_loss_count = d.loss_count <= cc.desired_loss_count_bound
 
     d.loss_amount = v.L[-1] - v.L[first]
-    if(cc.loss_alpha):
-        d.bounded_loss_amount = \
-            d.loss_amount <= \
-            cc.desired_loss_amount_bound_multiplier * v.alpha
-    else:
-        d.bounded_loss_amount = \
-            d.loss_amount <= \
-            cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+    d.bounded_loss_amount = (
+        d.loss_amount <=
+        cc.desired_loss_amount_bound_multiplier * (c.C * (c.R + c.D))
+        + cc.desired_loss_amount_bound_alpha * v.alpha)
 
 
     d.desired_in_ss = z3.And(d.fefficient, d.bounded_queue,

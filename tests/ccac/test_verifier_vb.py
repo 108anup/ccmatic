@@ -28,6 +28,7 @@ cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
 cc.desired_queue_bound_alpha = z3.Real('desired_queue_bound_alpha')
 cc.desired_loss_count_bound = z3.Real('desired_loss_count_bound')
 cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
+cc.desired_loss_amount_bound_alpha = z3.Real('desired_loss_amount_alpha')
 
 # cc.loss_alpha = True
 # cc.ideal_link = True
@@ -163,11 +164,12 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
 
 
 optimization_list = [
-    Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
+    Metric(cc.desired_util_f, 0.5, 0.5, 0.001, True),
     Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
     Metric(cc.desired_queue_bound_alpha, 0, 4, 0.001, False),
-    Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
+    Metric(cc.desired_loss_count_bound, 3, 3, 0.001, False),
     Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
 ]
 
 verifier = MySolver()

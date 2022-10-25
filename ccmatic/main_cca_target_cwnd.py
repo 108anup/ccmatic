@@ -31,7 +31,8 @@ cc.desired_util_f = 0.8
 cc.desired_queue_bound_multiplier = 1/2
 cc.desired_queue_bound_alpha = 3
 cc.desired_loss_count_bound = 3
-cc.desired_loss_amount_bound_multiplier = 3
+cc.desired_loss_amount_bound_multiplier = 0
+cc.desired_loss_amount_bound_alpha = 3
 
 cc.ideal_link = True
 cc.loss_alpha = True
