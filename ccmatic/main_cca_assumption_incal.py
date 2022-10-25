@@ -207,7 +207,7 @@ def get_pdt_from_sym(ineqnum: int, vnum: int, shift: int, vname: str, t: int):
         return coeffs[ineqnum][vnum][shift] * eval(f'v.{vname}[t-shift]')
 
 
-for t in range(c.T):
+for t in range(nshift-1, c.T):
     # Truth value of ineq at time t
     evaluation_ineq: List[z3.ExprRef] = []
     for ineqnum in range(nineq):
