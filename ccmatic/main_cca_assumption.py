@@ -102,7 +102,7 @@ def get_pdt_from_sym(var_sym, t, i):
         return coeffs[i] * eval(f'v.{var_sym}[t]')
 
 
-for t in range(c.T):
+for t in range(1, c.T):
     lhs = z3.Sum(*[get_pdt_from_sym(var, t, i)
                    for i, var in enumerate(ineq_var_symbols)])
     # Basically assumption encodes when waste is allowed

@@ -493,7 +493,7 @@ if (__name__ == "__main__"):
         parser.add_argument('--solution-seed-path', type=str,
                             action='store', default=None)
         parser.add_argument('--sort-assumptions', action='store_true', default=False)
-        parser.add_argument('--simplify-assumptions', action='store_true', default=False)
+        # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
         args = parser.parse_args()
         return args
 

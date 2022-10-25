@@ -31,7 +31,7 @@ cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 cc.desired_loss_amount_bound_alpha = z3.Real('desired_loss_amount_alpha')
 
 # cc.loss_alpha = True
-# cc.ideal_link = True
+cc.ideal_link = True
 
 if(cc.ideal_link):
     (c, s, v,

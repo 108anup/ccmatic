@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import logging
 import z3
@@ -118,6 +119,23 @@ def test_copa_composition():
     #     )
     # known_assumption = z3.And(known_assumption_list)
 
+    # Monotonic assumption 21 (weakest)
+    known_assumption_list = []
+    for t in range(c.T):
+        # known_assumption_list.append(
+        #     z3.Or(
+        #         v.A[t] - v.A[t-1] + c.C <= 0,
+        #         v.S[t] - v.S[t-1] + v.A[t] - v.A[t-1] >= 0
+        #     ))
+        known_assumption_list.append(
+            z3.Or(
+                +v.A[t-0] - v.A[t-1] +
+                (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0,
+                - v.S[t-0] + v.S[t-1] - v.A[t-0] + v.A[t-1] <= 0
+            )
+        )
+    known_assumption_ccmatic_monotonic21 = z3.And(known_assumption_list)
+
     verifier = MySolver()
     verifier.warn_undeclared = False
     verifier.add(ccac_domain)
@@ -126,9 +144,10 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(known_assumption_ccac)
-    verifier.add(z3.Not(known_assumption_ccmatic2))
-    # verifier.add(z3.Not(desired))
+    # verifier.add(known_assumption_ccac)
+    # verifier.add(z3.Not(known_assumption_ccmatic2))
+    verifier.add(known_assumption_ccmatic_monotonic21)
+    verifier.add(z3.Not(desired))
     # verifier.add(desired50)
     # verifier.add(desired)
     # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
@@ -139,7 +158,7 @@ def test_copa_composition():
         # Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
         # Metric(delay_f, 0, 1, 0.001, True)
     ]
-    verifier.add(cc.desired_util_f == 0.3)
+    verifier.add(cc.desired_util_f == 0.1)
 
     verifier.push()
     for metric in optimization_list:
