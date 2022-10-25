@@ -194,10 +194,10 @@ class IdealLink:
         return s
 
     @staticmethod
-    def setup_cegis_basic(cc: CegisConfig, name=None):
+    def setup_cegis_basic(cc: CegisConfig):
         c = setup_ccac_for_cegis(cc)
         s = MySolver()
-        v = Variables(c, s, name)
+        v = Variables(c, s, cc.name)
 
         verifier_vars, definition_vars = IdealLink.get_cegis_vars(cc, c, v)
 

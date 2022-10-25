@@ -219,12 +219,16 @@ joint.definition_vars = ideal.definition_vars + adv.definition_vars
 joint.definitions = z3.And(ideal.definitions, adv.definitions)
 joint.specification = z3.And(ideal.specification, adv.specification)
 
+# Dereference the ptr first, to avoid inf recursion.
+ideal_get_counter_example_str = ideal.get_counter_example_str
+ideal_get_generator_view = ideal.get_generator_view
+
 
 def get_counter_example_str(*args, **kwargs):
     ret = "Ideal" + "-"*32 + "\n"
-    ret = ideal.get_counter_example_str(*args, **kwargs)
+    ret += ideal_get_counter_example_str(*args, **kwargs)
 
-    ret = "\nAdversarial" + "-"*(32-6) + "\n"
+    ret += "\nAdversarial" + "-"*(32-6) + "\n"
     ret += adv.get_counter_example_str(*args, **kwargs)
     return ret
 
@@ -235,9 +239,9 @@ def get_verifier_view(*args, **kwargs):
 
 def get_generator_view(*args, **kwargs):
     ret = "Ideal" + "-"*32 + "\n"
-    ret = ideal.get_generator_view(*args, **kwargs)
+    ret += ideal_get_generator_view(*args, **kwargs)
 
-    ret = "\nAdversarial" + "-"*(32-6) + "\n"
+    ret += "\nAdversarial" + "-"*(32-6) + "\n"
     ret += adv.get_generator_view(*args, **kwargs)
     return ret
 
@@ -246,4 +250,7 @@ joint.get_counter_example_str = get_counter_example_str
 joint.get_verifier_view = get_verifier_view
 joint.get_generator_view = get_generator_view
 # ccmatic_joint.search_constraints = z3.And(search_constraints, known_solution)
+
+logger.info("Ideal: " + cc_ideal.desire_tag())
+logger.info("Adver: " + cc_adv.desire_tag())
 joint.run_cegis(known_solution)

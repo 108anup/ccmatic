@@ -55,6 +55,17 @@ class CegisConfig:
 
     DEBUG: bool = False
 
+    def desire_tag(self) -> str:
+        items = [
+            'desired_util_f', 'desired_queue_bound_multiplier',
+            'desired_queue_bound_alpha', 'desired_loss_count_bound',
+            'desired_loss_amount_bound_multiplier',
+            'desired_loss_amount_bound_alpha']
+        item_strs = []
+        for item in items:
+            item_strs.append(f"{item}={getattr(self, item)}")
+        return ", ".join(item_strs)
+
 
 class CegisCCAGen(Cegis):
 
