@@ -2,7 +2,7 @@ import os
 import pickle
 import networkx as nx
 import pandas as pd
-from ccmatic.generator.analyse_assumptions import build_adj_matrix, get_graph, parse_and_create_assumptions
+from ccmatic.generator.analyse_assumptions import build_adj_matrix, get_graph, parse_and_create_assumptions, write_draw_graph
 from ccmatic.main_cca_assumption_incal import get_solution_str
 
 
@@ -103,5 +103,7 @@ if(args.compare_known):
     new_to_old = {i: x for i, x in enumerate(filtered_assumptions)}
     new_to_old[len(filtered_assumptions)] = len(assumption_records)
     g = nx.relabel_nodes(g, new_to_old)
+
+    write_draw_graph(g, args.out_dir, "-compare_known")
 
     import ipdb; ipdb.set_trace()

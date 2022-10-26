@@ -1,3 +1,4 @@
+import os
 import gc
 import itertools
 import logging
@@ -259,18 +260,19 @@ def get_graph(nodes, adj):
     return g
 
 
-def write_draw_graph(g: nx.DiGraph):
-    f = open('tmp/graph.pickle', 'wb')
+def write_draw_graph(g: nx.DiGraph, outdir: str = "tmp", suffix: str = ""):
+    f = open(os.path.join(outdir, f'graph{suffix}.pickle'), 'wb')
     pickle.dump(g, f)
     f.close()
     nx.draw(g, with_labels=True)
-    plt.savefig('tmp/tmp.pdf')
+    plt.savefig(os.path.join(outdir, f'graph{suffix}.pdf'))
 
 
 def sort_print_assumptions(
         assumption_records: pd.DataFrame,
         assumption_template: z3.ExprRef, lemmas: z3.ExprRef,
-        get_solution_str: Callable):
+        get_solution_str: Callable,
+        outdir: str = "tmp", suffix: str = ""):
     # sort assumption assignments
     # sorted_assumption_records = assumption_records.sort_values(
     #     by=list(assumption_records.columns))
@@ -294,7 +296,7 @@ def sort_print_assumptions(
     # Stronger to weaker (as adj matrix encodes implication relation)
     g = get_graph(unique_assumption_ids, adj)
     rg = nx.transitive_reduction(g)
-    write_draw_graph(rg)
+    write_draw_graph(rg, outdir, suffix)
     sorted_order = nx.topological_sort(rg)
 
     solution_strs = []

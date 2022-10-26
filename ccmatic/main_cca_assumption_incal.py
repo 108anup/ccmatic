@@ -493,6 +493,10 @@ if (__name__ == "__main__"):
         parser.add_argument('--solution-seed-path', type=str,
                             action='store', default=None)
         parser.add_argument('--sort-assumptions', action='store_true', default=False)
+        parser.add_argument('-o', '--outdir', type=str,
+                            action='store', default="tmp")
+        parser.add_argument('--suffix', type=str,
+                            action='store', default="")
         # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
         args = parser.parse_args()
         return args
@@ -506,7 +510,7 @@ if (__name__ == "__main__"):
         f.close()
 
         sort_print_assumptions(assumption_records, assumption, lemmas,
-                               get_solution_str)
+                               get_solution_str, args.outdir, args.suffix)
 
         import sys
         sys.exit(0)
