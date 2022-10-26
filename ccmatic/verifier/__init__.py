@@ -318,6 +318,12 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
                 v.L[t] == v.L[t-1]))
     # L[0] is still chosen non-deterministically in an unconstrained fashion.
 
+    if(c.buf_min is None):
+        # For multiflow, L_f is ideally non-deterministic
+        # When there is inf buffer however, L_f should be deterministic
+        for n in range(c.N):
+            for t in range(1, c.T):
+                s.add(v.L_f[n][t] == v.L_f[n][0])
 
 def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
     assert not c.deterministic_loss

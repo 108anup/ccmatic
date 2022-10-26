@@ -217,6 +217,8 @@ cc_mf.name = "multiflow"
 cc_mf.N = 2
 cc_mf.T = 15
 
+cc_mf.infinite_buffer = True  # lossless for multi-flow
+
 cc_mf.desired_util_f = 0.5
 cc_mf.desired_queue_bound_multiplier = 3
 cc_mf.desired_queue_bound_alpha = 3
@@ -235,7 +237,6 @@ template_definitions_mf = get_template_definitions(cc_mf, c, v)
 mf.setup_cegis_loop(
     search_constraints,
     template_definitions_mf, generator_vars, get_solution_str)
-
 
 # ----------------------------------------------------------------
 # MULTI VERIFIER
