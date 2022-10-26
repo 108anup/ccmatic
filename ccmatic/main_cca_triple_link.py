@@ -187,7 +187,7 @@ ideal.setup_cegis_loop(
     template_definitions_ideal, generator_vars, get_solution_str)
 
 # ----------------------------------------------------------------
-# ADVERSARIAL LINK
+# ADVERSARIAL (ADV) LINK
 cc_adv = copy.copy(cc_ideal)
 cc_adv.name = "adv"
 
@@ -211,13 +211,40 @@ adv.setup_cegis_loop(
     template_definitions_adv, generator_vars, get_solution_str)
 
 # ----------------------------------------------------------------
+# MULTIFLOW (MF) LINK
+cc_mf = copy.copy(cc_adv)
+cc_mf.name = "multiflow"
+cc_mf.N = 2
+cc_mf.T = 15
+
+cc_mf.desired_util_f = 0.5
+cc_mf.desired_queue_bound_multiplier = 3
+cc_mf.desired_queue_bound_alpha = 3
+cc_mf.desired_loss_count_bound = 0
+cc_mf.desired_loss_amount_bound_multiplier = 0
+cc_mf.desired_loss_amount_bound_alpha = 0
+
+cc_mf.ideal_link = False
+cc_mf.feasible_response = False  # Don't have this for c.N > 1
+
+mf = CCmatic(cc_mf)
+mf.setup_config_vars()
+c, _, v = mf.c, mf.s, mf.v
+template_definitions_mf = get_template_definitions(cc_mf, c, v)
+
+mf.setup_cegis_loop(
+    search_constraints,
+    template_definitions_mf, generator_vars, get_solution_str)
+
+
+# ----------------------------------------------------------------
 # MULTI VERIFIER
 joint = ideal
 joint.critical_generator_vars = critical_generator_vars
-joint.verifier_vars = ideal.verifier_vars + adv.verifier_vars
-joint.definition_vars = ideal.definition_vars + adv.definition_vars
-joint.definitions = z3.And(ideal.definitions, adv.definitions)
-joint.specification = z3.And(ideal.specification, adv.specification)
+joint.verifier_vars = ideal.verifier_vars + adv.verifier_vars + mf.verifier_vars
+joint.definition_vars = ideal.definition_vars + adv.definition_vars + mf.definition_vars
+joint.definitions = z3.And(ideal.definitions, adv.definitions, mf.definitions)
+joint.specification = z3.And(ideal.specification, adv.specification, mf.specification)
 
 # Dereference the ptr first, to avoid inf recursion.
 ideal_get_counter_example_str = ideal.get_counter_example_str
@@ -230,6 +257,10 @@ def get_counter_example_str(*args, **kwargs):
 
     ret += "\nAdversarial" + "-"*(32-6) + "\n"
     ret += adv.get_counter_example_str(*args, **kwargs)
+
+    ret += "\nMultiflow" + "-"*(32-6) + "\n"
+    ret += mf.get_counter_example_str(*args, **kwargs)
+
     return ret
 
 
@@ -240,12 +271,16 @@ def get_verifier_view(
     return get_counter_example_str(counter_example, verifier_vars)
 
 
-def get_generator_view(*args, **kwargs):
+def get_generator_view(*args, **kwargs) -> str:
     ret = "Ideal" + "-"*32 + "\n"
     ret += ideal_get_generator_view(*args, **kwargs)
 
     ret += "\nAdversarial" + "-"*(32-6) + "\n"
     ret += adv.get_generator_view(*args, **kwargs)
+
+    ret += "\nMultiflow" + "-"*(32-6) + "\n"
+    ret += mf.get_generator_view(*args, **kwargs)
+
     return ret
 
 
@@ -256,4 +291,5 @@ joint.get_generator_view = get_generator_view
 
 logger.info("Ideal: " + cc_ideal.desire_tag())
 logger.info("Adver: " + cc_adv.desire_tag())
+logger.info("Mflow: " + cc_adv.desire_tag())
 joint.run_cegis(known_solution)
