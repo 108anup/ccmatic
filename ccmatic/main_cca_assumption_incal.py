@@ -45,6 +45,7 @@ cc.monotonic_inc_assumption = True
 
 cc.compose = True
 cc.cca = "copa"
+# cc.cca = "bbr"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
 elif(cc.cca == "bbr"):
@@ -110,6 +111,9 @@ domain_clauses = []
 
 vn = VariableNames(v)
 ineq_var_symbols = ['S', 'A', 'W', 'C', 'mmBDP']
+vname2vnum = {}
+for vnum, vname in enumerate(ineq_var_symbols):
+    vname2vnum[vname] = vnum
 nineq = 2
 nclause = 1
 nshift = 2
@@ -187,6 +191,10 @@ for clausenum in range(nclause):
                 z3.And(z3.Not(clauses[clausenum][ineqnum]),
                        z3.Not(clausenegs[clausenum][ineqnum]))
                 for ineqnum in range(1, 0)])))
+
+# # Don't use A[t]
+# domain_clauses.extend([coeffs[ineqnum][vname2vnum['A']][0] == 0
+#                        for ineqnum in range(nineq)])
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
@@ -437,9 +445,6 @@ def process_seed_assumptions(seed_assumptions_path: str):
 # Known solution
 known_solution = None
 known_solution_list = []
-vname2vnum = {}
-for vnum, vname in enumerate(ineq_var_symbols):
-    vname2vnum[vname] = vnum
 
 # Ineq 1
 known_solution_list.append(coeffs[1][vname2vnum['W']][0] == 1)

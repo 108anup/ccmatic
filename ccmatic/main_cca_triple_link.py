@@ -1,3 +1,4 @@
+import sys
 import copy
 import logging
 from fractions import Fraction
@@ -237,6 +238,9 @@ template_definitions_mf = get_template_definitions(cc_mf, c, v)
 mf.setup_cegis_loop(
     search_constraints,
     template_definitions_mf, generator_vars, get_solution_str)
+
+mf.run_cegis(known_solution)
+sys.exit(0)
 
 # ----------------------------------------------------------------
 # MULTI VERIFIER
