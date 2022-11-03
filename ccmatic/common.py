@@ -22,6 +22,20 @@ def flatten(l) -> list:
         return [l]
 
 
+def flatten_dict(l: Union[dict, list]) -> list:
+    ret = []
+    if(isinstance(l, dict)):
+        for item in l.values():
+            ret.extend(flatten_dict(item))
+        return ret
+    if(isinstance(l, list) or isinstance(l, np.ndarray)):
+        for item in l:
+            ret.extend(flatten(item))
+        return ret
+    else:
+        return [l]
+
+
 def lcs(arr: Union[List[str], np.ndarray]) -> str:
     """
     Least common substring of a list of strings

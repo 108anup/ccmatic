@@ -8,7 +8,7 @@ from ccac.variables import VariableNames
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
-from ccmatic.cegis import CegisCCAGen, CegisConfig
+from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import flatten, get_product_ite
 from cegis.util import get_raw_value
 
@@ -31,10 +31,13 @@ cc.compose = False
 
 cc.infinite_buffer = True
 
-cc.desired_util_f = 0.5
-cc.desired_queue_bound_multiplier = 2
+cc.desired_util_f = 0.4
+cc.desired_queue_bound_multiplier = 3
+cc.desired_queue_bound_alpha = 4
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_count_bound = 0
+cc.desired_loss_amount_bound_alpha = 0
+
 (c, s, v,
  ccac_domain, ccac_definitions, environment,
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -91,11 +94,11 @@ if(cc.synth_ss):
     ])
 
 vn = VariableNames(v)
-# rhs_var_symbols = ['S_f']
-rhs_var_symbols = ['c_f', 'S_f']
+rhs_var_symbols = ['S_f']
+# rhs_var_symbols = ['c_f', 'S_f']
 lhs_var_symbols = ['c_f']
 lvar_lower_bounds = {
-    'c_f': 0.01
+    'c_f': v.alpha
 }
 n_coeffs = len(rhs_var_symbols) * cc.history
 n_const = 1
@@ -137,7 +140,8 @@ def get_expr(lvar_symbol, t, n) -> z3.ArithRef:
             this_term = get_product_ite(
                 this_coeff, rvar[time_idx], search_range)
             term_list.append(this_term)
-    expr = z3.Sum(*term_list) + consts[lvar_symbol]
+    expr = z3.Sum(*term_list) \
+        + get_product_ite(consts[lvar_symbol], v.alpha, search_range)
     assert isinstance(expr, z3.ArithRef)
     return expr
 
@@ -160,6 +164,7 @@ assert(isinstance(definitions, z3.ExprRef))
 
 generator_vars = (flatten(list(coeffs.values())) +
                   flatten(list(consts.values())))
+critical_generator_vars = flatten(list(coeffs.values()))
 if(d.steady_state_variables):
     for sv in d.steady_state_variables:
         generator_vars.append(sv.lo)
@@ -194,9 +199,9 @@ def get_solution_str(solution: z3.ModelRef,
                     this_coeff_val, rvar_symbol, h+1)
     this_const = consts[lvar_symbol]
     this_const_val = solution.eval(this_const)
-    rhs_expr += "+ {}".format(this_const_val)
+    rhs_expr += "+ {}alpha".format(this_const_val)
     ret = "{}[t] = max({}, {})".format(
-        lvar_symbol, lvar_lower_bounds[lvar_symbol], rhs_expr)
+        lvar_symbol, lvar_lower_bounds[lvar_symbol].decl().name(), rhs_expr)
 
     if d.steady_state_variables:
         for sv in d.steady_state_variables:
@@ -225,16 +230,27 @@ known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
                         coeffs[lvar_symbol][rvar_idx][2] == 0,
                         coeffs[lvar_symbol][rvar_idx][3] == -1,
                         consts[lvar_symbol] == 0)
+known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+                        coeffs[lvar_symbol][rvar_idx][1] == 1,
+                        coeffs[lvar_symbol][rvar_idx][2] == -1,
+                        coeffs[lvar_symbol][rvar_idx][3] == -1,
+                        consts[lvar_symbol] == 0)
+known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+                        coeffs[lvar_symbol][rvar_idx][1] == -1,
+                        coeffs[lvar_symbol][rvar_idx][2] == 0,
+                        coeffs[lvar_symbol][rvar_idx][3] == 0,
+                        consts[lvar_symbol] == 1)
 assert isinstance(known_solution, z3.ExprRef)
+search_constraints = z3.And(search_constraints, known_solution)
 
-# Search for non-zero cwnd
-rvar_idx = 1
-search_constraints = z3.And(search_constraints,
-                            z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
-                                   coeffs[lvar_symbol][rvar_idx][1] == 0,
-                                   coeffs[lvar_symbol][rvar_idx][2] == 0,
-                                   coeffs[lvar_symbol][rvar_idx][3] == -1))
-assert(isinstance(search_constraints, z3.ExprRef))
+# # Search for non-zero cwnd
+# rvar_idx = 1
+# search_constraints = z3.And(search_constraints,
+#                             z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
+#                                    coeffs[lvar_symbol][rvar_idx][1] == 0,
+#                                    coeffs[lvar_symbol][rvar_idx][2] == 0,
+#                                    coeffs[lvar_symbol][rvar_idx][3] == -1))
+# assert(isinstance(search_constraints, z3.ExprRef))
 
 if(cc.synth_ss):
     search_constraints = z3.And(search_constraints, known_solution)
@@ -253,10 +269,10 @@ if DEBUG:
         f.write(definitions.sexpr())
 
 try:
-
+    md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     debug_known_solution)
+                     debug_known_solution, md, solution_log_path='tmp/hotnets.csv')
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

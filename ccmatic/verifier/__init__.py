@@ -12,7 +12,7 @@ from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
-from cegis import NAME_TEMPLATE, rename_vars
+from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
 from cegis.util import get_raw_value
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
@@ -175,9 +175,9 @@ class DesiredContainer:
             "bounded_loss_amount": self.bounded_loss_amount,
             "ramp_up_cwnd": self.ramp_up_cwnd,
             "ramp_down_cwnd": self.ramp_down_cwnd,
-            "ramp_up_bq": self.ramp_down_bq,
+            "ramp_up_bq": self.ramp_up_bq,
             "ramp_down_bq": self.ramp_down_bq,
-            "ramp_up_queue": self.ramp_down_queue,
+            "ramp_up_queue": self.ramp_up_queue,
             "ramp_down_queue": self.ramp_down_queue,
             "loss_count": self.loss_count,
             "loss_amount": self.loss_amount,

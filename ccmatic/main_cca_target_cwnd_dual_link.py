@@ -1,7 +1,7 @@
 import copy
 import logging
 from fractions import Fraction
-from typing import List
+from typing import Dict, List, Union
 
 import z3
 from ccac.config import ModelConfig
@@ -11,7 +11,7 @@ from pyz3_utils.common import GlobalConfig
 import ccmatic.common  # Used for side effects
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, get_product_ite
+from ccmatic.common import flatten, flatten_dict, get_product_ite
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
