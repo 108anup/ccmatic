@@ -24,8 +24,7 @@ def test_copa_composition():
     cc.template_qdel = True
 
     cc.compose = True
-    # cc.cca = "copa"
-    cc.cca = "copa"
+    cc.cca = "bbr"
     if(cc.cca == "copa"):
         cc.history = cc.R + cc.D
     elif(cc.cca == "bbr"):
@@ -34,6 +33,7 @@ def test_copa_composition():
     cc.feasible_response = True
 
     cc.desired_util_f = z3.Real('desired_util_f')
+    cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
     (c, s, v,
      ccac_domain, ccac_definitions, environment,
      verifier_vars, definition_vars) = setup_cegis_basic(cc)
@@ -43,6 +43,12 @@ def test_copa_composition():
 
     # 10% utilization. Can be made arbitrarily small
     desired = v.S[-1] - v.S[0] >= cc.desired_util_f * c.C * c.T
+
+    # bdd_queue = []
+    # for t in range(cc.history, cc.T):
+    #     bdd_queue.append(v.A[t] - v.L[t] - v.S[t] <=
+    #                      cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))
+    # desired = z3.And(*bdd_queue)
 
     def get_counter_example_str(counter_example: z3.ModelRef) -> str:
         df = get_cex_df(counter_example, v, vn, c)
@@ -148,19 +154,21 @@ def test_copa_composition():
     # verifier.add(z3.Not(known_assumption_ccmatic2))
     # verifier.add(z3.Not(known_assumption_ccmatic_monotonic21))
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
-    # verifier.add(z3.Not(desired))
+    verifier.add(z3.Not(desired))
     # verifier.add(desired50)
-    verifier.add(z3.Not(v.A[-1] >= v.A[0] + c.C))
-    verifier.add(desired)
+    # verifier.add(z3.Not(v.A[-1] >= v.A[0] + c.C))
+    # verifier.add(desired)
     # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
     # verifier.add(v.c_f[0][4] == 100)
     # verifier.add(v.L[0] == 0)
 
     optimization_list = [
-        # Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
+        Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
         # Metric(delay_f, 0, 1, 0.001, True)
+        Metric(cc.desired_queue_bound_multiplier, 0, 8, 0.001, False)
     ]
-    verifier.add(cc.desired_util_f == 0.1)
+    # verifier.add(cc.desired_util_f == 0.1)
+    # verifier.add(cc.desired_queue_bound_multiplier == 8)
 
     verifier.push()
     for metric in optimization_list:
@@ -177,7 +185,7 @@ def test_copa_composition():
         import ipdb; ipdb.set_trace()
 
     else:
-        sys.exit(1)
+        # sys.exit(1)
         # # Unsat core
         # dummy = MySolver()
         # dummy.warn_undeclared = False

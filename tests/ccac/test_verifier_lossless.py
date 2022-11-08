@@ -5,10 +5,10 @@ import logging
 import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+from ccmatic.verifier import (get_cex_df, get_desired_necessary, get_periodic_constraints,
                               setup_cegis_basic)
 from ccmatic.verifier.assumptions import get_cca_definition
-from cegis.util import Metric, optimize_multi_var, quick_optimize_multi_var, unroll_assertions
+from cegis.util import Metric, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -16,8 +16,10 @@ from ccac.variables import VariableNames
 
 cc = CegisConfig()
 cc.history = 4
+# cc.history = cc.R + cc.D
+# cc.T = 15
 # cc.T = 8 + cc.history * 2
-cc.compose = False
+# cc.compose = False
 cc.infinite_buffer = True
 
 cc.desired_util_f = z3.Real('desired_util_f')
@@ -28,9 +30,9 @@ cc.desired_loss_amount_bound_multiplier = z3.Real('desired_loss_amount_bound')
 cc.desired_loss_amount_bound_alpha = z3.Real('desired_loss_amount_alpha')
 
 # cc.template_qdel = True
-cc.template_loss_oracle = False
+# cc.template_loss_oracle = False
 
-# cc.cca = 'aimd'
+cc.cca = 'paced'
 if(cc.cca == 'copa'):
     cc.template_qdel = True
 if(cc.cca == 'aimd'):
@@ -70,9 +72,9 @@ def check_solution(solution: pd.Series):
         # rhs = 3/2*v.S_f[0][t-c.R] - 1/2*v.S_f[0][t-2] - v.S_f[0][t-3]
         # rhs = v.S_f[0][t-c.R] - v.S_f[0][t-4]
         # rhs = 1/2*v.S_f[0][t-c.R] + 1/2*v.S_f[0][t-2] + 1*v.S_f[0][t-3] - 2*v.S_f[0][t-4] +1/2
-        # rhs = v.S_f[0][t-c.R] + v.S_f[0][t-2] - v.S_f[0][t-3] - v.S_f[0][t-4]
         if(solution is None):
-            rhs = v.S_f[0][t-c.R] - v.S_f[0][t-2] + v.alpha
+            # rhs = v.S_f[0][t-c.R] + v.S_f[0][t-2] - v.S_f[0][t-3] - v.S_f[0][t-4]
+            rhs = v.S_f[0][t-c.R] - v.S_f[0][t-3] + v.alpha
 
         else:
             rhs = v.alpha * solution['Gen__const_c_f']
@@ -107,13 +109,14 @@ def check_solution(solution: pd.Series):
     #         verifier.add(v.c_f[n][h] == v.c_f[n][last+h])
     #     verifier.add(v.A[h] - v.L[h] - v.S[h] ==
     #                  v.A[last+h] - v.L[last+h] - v.S[last+h])
+    # verifier.add(get_periodic_constraints(cc, c, v))
 
     verifier.add(cc.desired_loss_count_bound == 0)
     verifier.add(cc.desired_loss_amount_bound_multiplier == 0)
     verifier.add(cc.desired_loss_amount_bound_alpha == 0)
 
     optimization_list = [
-        Metric(cc.desired_util_f, 0.5, 1, 0.001, True),
+        Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
         Metric(cc.desired_queue_bound_multiplier, 0, 100, 0.001, False),
         Metric(cc.desired_queue_bound_alpha, 0, 100, 0.001, False),
     ]
@@ -126,17 +129,14 @@ def check_solution(solution: pd.Series):
             verifier.add(metric.z3ExprRef == metric.hi)
 
     sat = verifier.check()
-    if(str(sat) == "sat"):
-        f = open('tmp/test_verifier.txt', 'w')
-        f.write(verifier.assertions().sexpr())
-        f.close()
 
+    # f = open('tmp/test_verifier_oracle.txt', 'w')
+    # f.write(verifier.assertions().sexpr())
+    # f.close()
+
+    if(str(sat) == "sat"):
         model = verifier.model()
         print(get_counter_example_str(model))
-
-        import ipdb; ipdb.set_trace()
-        import sys
-        sys.exit(1)
 
     # import ipdb; ipdb.set_trace()
 
@@ -163,7 +163,7 @@ def check_solution(solution: pd.Series):
     logger = logging.getLogger('cegis')
     GlobalConfig().default_logger_setup(logger)
 
-    ret = quick_optimize_multi_var(verifier, optimization_list)
+    ret = optimize_multi_var(verifier, optimization_list, quick=True)
     df = pd.DataFrame(ret)
     sort_columns = [x.name() for x in optimization_list]
     sort_order = [x.maximize for x in optimization_list]
@@ -177,22 +177,20 @@ def check_solution(solution: pd.Series):
     return ret
 
 
-import sys
-check_solution(None)
-sys.exit(0)
-
-fpath = 'tmp/hotnets.csv'
-f = open(fpath, 'r')
-df = pd.read_csv(f)
-solutions = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-f.close()
+# import sys
+# check_solution(None)
+# sys.exit(0)
 
 all_records = []
+
+ret = check_solution(None)
+ret['name'] = 'RoCC'
+all_records.append(ret)
 
 all_records.append({
     'name': 'Copa',
     f'{cc.desired_util_f.decl().name()}': 0,
-    f'{cc.desired_queue_bound_multiplier.decl().name()}': np.inf,
+    f'{cc.desired_queue_bound_multiplier.decl().name()}': 3.5,
     f'{cc.desired_queue_bound_alpha.decl().name()}': np.NaN})
 
 all_records.append({
@@ -206,6 +204,12 @@ all_records.append({
     f'{cc.desired_util_f.decl().name()}': 1,
     f'{cc.desired_queue_bound_multiplier.decl().name()}': np.inf,
     f'{cc.desired_queue_bound_alpha.decl().name()}': np.NaN})
+
+fpath = 'tmp/hotnets-composeTrue.csv'
+f = open(fpath, 'r')
+df = pd.read_csv(f)
+solutions = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+f.close()
 
 for i, solution in solutions.iterrows():
     # if(i != 9):
@@ -229,5 +233,5 @@ for i, solution in solutions.iterrows():
     all_records.append(ret)
 
 df = pd.DataFrame(all_records)
-df.to_csv('tmp/hotnets-pareto.csv', header=True)
-import ipdb; ipdb.set_trace()
+df.to_csv('tmp/hotnets-composeTrue-pareto.csv', header=True)
+# import ipdb; ipdb.set_trace()

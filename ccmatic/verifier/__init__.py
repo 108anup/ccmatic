@@ -325,6 +325,7 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
             for t in range(1, c.T):
                 s.add(v.L_f[n][t] == v.L_f[n][0])
 
+
 def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
     assert not c.deterministic_loss
     for t in range(c.T):

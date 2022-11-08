@@ -23,7 +23,7 @@ GlobalConfig().default_logger_setup(logger)
 
 DEBUG = False
 cc = CegisConfig()
-cc.compose = False
+# cc.compose = False
 # cc.synth_ss = True
 # cc.T = 5 + cc.history * 2
 # cc.T = 15
@@ -241,7 +241,7 @@ known_solution = z3.And(coeffs[lvar_symbol][rvar_idx][0] == 1,
                         coeffs[lvar_symbol][rvar_idx][3] == 0,
                         consts[lvar_symbol] == 1)
 assert isinstance(known_solution, z3.ExprRef)
-search_constraints = z3.And(search_constraints, known_solution)
+# search_constraints = z3.And(search_constraints, known_solution)
 
 # # Search for non-zero cwnd
 # rvar_idx = 1
@@ -272,7 +272,7 @@ try:
     md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     debug_known_solution, md, solution_log_path='tmp/hotnets.csv')
+                     debug_known_solution, md, solution_log_path='tmp/hotnets-composeTrue.csv')
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

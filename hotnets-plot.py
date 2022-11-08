@@ -30,7 +30,7 @@ update_sizes = {
 }
 plt.rcParams.update(update_sizes)
 
-fpath = 'tmp/hotnets-custom.csv'
+fpath = 'tmp/hotnets-composeTrue-pareto.csv'
 f = open(fpath, 'r')
 df = pd.read_csv(f)
 solutions = df.loc[:, ~df.columns.str.contains('^Unnamed')]
@@ -72,9 +72,12 @@ for _, solution in solutions.iterrows():
     if(name in markers):
         ret = ax.scatter(x, y, label=name, marker=markers[name])
         # import ipdb; ipdb.set_trace()
-        ax.text(x-7, y-2, name)
+        if(name == 'Copa'):
+            ax.text(x-7, y+1, name)
+        else:
+            ax.text(x-7, y-2, name)
 
-ax.text(25, 4, 'Synthesized')
+ax.text(40, 4, 'Synthesized')
 
 ax.set_xlim(-10, 110)
 ax.set_ylim(-1, 11)
@@ -96,4 +99,4 @@ labels[-2] = '...'
 ax.set_yticklabels(labels)
 # import ipdb; ipdb.set_trace()
 
-fig.savefig('tmp/scatter.png', dpi=300, bbox_inches='tight')
+fig.savefig('tmp/scatter-composeTrue.png', dpi=300, bbox_inches='tight')
