@@ -990,6 +990,11 @@ def maximize_gap(
     if(cur_min == np.inf):
         return orig_sat, orig_model
 
+    if(cur_min < 0):
+        # This is basically in case of multi-link. Where this link may not be
+        # satisfying the environment constraints.
+        return orig_sat, orig_model
+
     eps = max(1, c.C * c.D)/64
     binary_search = BinarySearch(0, c.C * c.D, eps)
     min_gap = z3.Real('min_gap', ctx=ctx)
@@ -1141,6 +1146,9 @@ def get_cex_df(
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})
+        # cex_dict.update({
+        #     'non-wasted-tokens': _get_model_value(
+        #         [v.C0 + c.C * t - v.W[t] for t in range(c.T)])})
     df = pd.DataFrame(cex_dict).astype(float)
     # Can remove this by adding queue_t as a definition variable...
     # This would also allow easily quiering this from generator
