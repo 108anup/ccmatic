@@ -314,6 +314,50 @@ known_solution_list = [
     consts['s_f[n]']['noloss'] == 1
 ]
 
+# MD possible?
+known_solution_list = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0,
+
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 1/2,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    # coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    # consts['c_f[n]']['loss'] == -1,
+
+    # coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    # coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    # consts['c_f[n]']['noloss'] == 1,
+]
+
+# Fixed response on cwnd high
+known_solution_list = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0,
+
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 1,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == 0,
+
+    # coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+    # coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    # coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    # consts['c_f[n]']['noloss'] == 1,
+
+    # coeffs['s_f[n]']['loss']['c_f[n]'] == 1/2,
+    # coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
+    # consts['s_f[n]']['loss'] == 0,
+
+    # coeffs['s_f[n]']['noloss']['c_f[n]'] == 1/2,
+    # coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1/2,
+    # consts['s_f[n]']['noloss'] == 1
+]
+
 # # Full known solution
 # known_solution_list = [
 #     coeffs['cond']['c_f[n]'] == 1,
