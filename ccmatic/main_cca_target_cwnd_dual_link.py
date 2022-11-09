@@ -157,39 +157,39 @@ def get_template_definitions(
             cond = (
                 get_product_ite(
                     coeffs['cond']['c_f[n]'], v.c_f[n][t-c.R],
-                    search_range_coeffs)
+                    search_range_conds)
                 + get_product_ite(
                     coeffs['cond']['ack_f[n]'], acked_bytes,
-                    search_range_coeffs)
+                    search_range_conds)
                 + get_product_ite(
                     coeffs['cond']['s_f[n]'], rhs_expr,
-                    search_range_coeffs)
+                    search_range_conds)
                 + coeffs['cond']['losses'] * loss_detected > 0)
 
             # RHS for cwnd
             rhs_cond = (
                 get_product_ite(
                     coeffs['c_f[n]']['loss']['c_f[n]'], v.c_f[n][t-c.R],
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     coeffs['c_f[n]']['loss']['s_f[n]'], rhs_expr,
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     coeffs['c_f[n]']['loss']['ack_f[n]'], acked_bytes,
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     consts['c_f[n]']['loss'], v.alpha,
                     search_range_consts))
             rhs_nocond = (
                 get_product_ite(
                     coeffs['c_f[n]']['noloss']['c_f[n]'], v.c_f[n][t-c.R],
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     coeffs['c_f[n]']['noloss']['s_f[n]'], rhs_expr,
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     coeffs['c_f[n]']['noloss']['ack_f[n]'], acked_bytes,
-                    search_range_conds)
+                    search_range_coeffs)
                 + get_product_ite(
                     consts['c_f[n]']['noloss'], v.alpha,
                     search_range_consts))
