@@ -1,7 +1,7 @@
 import z3
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Callable
 
 from cegis import NAME_TEMPLATE
 
@@ -109,3 +109,16 @@ def substitute_values_df(assumption_record: pd.Series,
         new_name = name_template.format(v.decl().name())
         expr_list.append(z3.Const(new_name, v.sort()) == val)
     return z3.And(*expr_list)
+
+
+def try_except(function: Callable):
+    try:
+        function()
+    except Exception:
+        import sys
+        import traceback
+
+        import ipdb
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        ipdb.post_mortem(tb)

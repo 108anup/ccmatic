@@ -11,7 +11,8 @@ from pyz3_utils.common import GlobalConfig
 import ccmatic.common  # Used for side effects
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, flatten_dict, get_product_ite
+from ccmatic.common import flatten_dict, get_product_ite, try_except
+from cegis.multi_cegis import MultiCegis
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -412,52 +413,63 @@ adv.setup_cegis_loop(
     search_constraints,
     template_definitions_adv, generator_vars, get_solution_str)
 
-# ----------------------------------------------------------------
-# MULTI VERIFIER
-joint = ideal  # Joint must be adv, so that we can have max gap optimization for adv.
-joint.critical_generator_vars = critical_generator_vars
-joint.verifier_vars = ideal.verifier_vars + adv.verifier_vars
-joint.definition_vars = ideal.definition_vars + adv.definition_vars
-joint.definitions = z3.And(ideal.definitions, adv.definitions)
-joint.specification = z3.And(ideal.specification, adv.specification)
-
-# Dereference the ptr first, to avoid inf recursion.
-ideal_get_counter_example_str = ideal.get_counter_example_str
-ideal_get_generator_view = ideal.get_generator_view
-adv_get_counter_example_str = adv.get_counter_example_str
-adv_get_generator_view = adv.get_generator_view
-
-
-def get_counter_example_str(*args, **kwargs):
-    ret = "Ideal" + "-"*32 + "\n"
-    ret += ideal_get_counter_example_str(*args, **kwargs)
-
-    ret += "\nAdversarial" + "-"*(32-6) + "\n"
-    ret += adv_get_counter_example_str(*args, **kwargs)
-    return ret
-
-
-def get_verifier_view(
-        counter_example: z3.ModelRef,
-        verifier_vars: List[z3.ExprRef],
-        definition_vars: List[z3.ExprRef]) -> str:
-    return get_counter_example_str(counter_example, verifier_vars)
-
-
-def get_generator_view(*args, **kwargs):
-    ret = "Ideal" + "-"*32 + "\n"
-    ret += ideal_get_generator_view(*args, **kwargs)
-
-    ret += "\nAdversarial" + "-"*(32-6) + "\n"
-    ret += adv_get_generator_view(*args, **kwargs)
-    return ret
-
-
-joint.get_counter_example_str = get_counter_example_str
-joint.get_verifier_view = get_verifier_view
-joint.get_generator_view = get_generator_view
-# ccmatic_joint.search_constraints = z3.And(search_constraints, known_solution)
-
 logger.info("Ideal: " + cc_ideal.desire_tag())
 logger.info("Adver: " + cc_adv.desire_tag())
-joint.run_cegis(known_solution)
+
+# # ----------------------------------------------------------------
+# # MULTI VERIFIER
+# joint = ideal  # Joint must be adv, so that we can have max gap optimization for adv.
+# joint.critical_generator_vars = critical_generator_vars
+# joint.verifier_vars = ideal.verifier_vars + adv.verifier_vars
+# joint.definition_vars = ideal.definition_vars + adv.definition_vars
+# joint.definitions = z3.And(ideal.definitions, adv.definitions)
+# joint.specification = z3.And(ideal.specification, adv.specification)
+
+# # Dereference the ptr first, to avoid inf recursion.
+# ideal_get_counter_example_str = ideal.get_counter_example_str
+# ideal_get_generator_view = ideal.get_generator_view
+# adv_get_counter_example_str = adv.get_counter_example_str
+# adv_get_generator_view = adv.get_generator_view
+
+
+# def get_counter_example_str(*args, **kwargs):
+#     ret = "Ideal" + "-"*32 + "\n"
+#     ret += ideal_get_counter_example_str(*args, **kwargs)
+
+#     ret += "\nAdversarial" + "-"*(32-6) + "\n"
+#     ret += adv_get_counter_example_str(*args, **kwargs)
+#     return ret
+
+
+# def get_verifier_view(
+#         counter_example: z3.ModelRef,
+#         verifier_vars: List[z3.ExprRef],
+#         definition_vars: List[z3.ExprRef]) -> str:
+#     return get_counter_example_str(counter_example, verifier_vars)
+
+
+# def get_generator_view(*args, **kwargs):
+#     ret = "Ideal" + "-"*32 + "\n"
+#     ret += ideal_get_generator_view(*args, **kwargs)
+
+#     ret += "\nAdversarial" + "-"*(32-6) + "\n"
+#     ret += adv_get_generator_view(*args, **kwargs)
+#     return ret
+
+
+# joint.get_counter_example_str = get_counter_example_str
+# joint.get_verifier_view = get_verifier_view
+# joint.get_generator_view = get_generator_view
+# # ccmatic_joint.search_constraints = z3.And(search_constraints, known_solution)
+# # joint.run_cegis(known_solution)
+
+# ----------------------------------------------------------------
+# MULTI CEGIS
+verifier_structs = [
+    ideal.get_verifier_struct('ideal'), adv.get_verifier_struct('adv')]
+
+multicegis = MultiCegis(
+    generator_vars, search_constraints, critical_generator_vars,
+    verifier_structs, ideal.ctx, None, None)
+multicegis.get_solution_str = get_solution_str
+try_except(multicegis.run)

@@ -6,12 +6,13 @@ import z3
 from ccac.variables import VariableNames
 
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.common import get_renamed_vars
+from ccmatic.common import get_renamed_vars, try_except
 from ccmatic.verifier import (get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
+from cegis.multi_cegis import VerifierStruct
 
 
 class CCmatic():
@@ -69,9 +70,10 @@ class CCmatic():
         self.ctx = z3.main_ctx()
         self.specification = z3.Implies(self.environment, self.desired)
         assert(isinstance(self.specification, z3.ExprRef))
-        self.definitions = z3.And(
+        _definitions = z3.And(
             self.ccac_domain, self.ccac_definitions, *template_definitions)
-        assert(isinstance(self.definitions, z3.ExprRef))
+        assert(isinstance(_definitions, z3.ExprRef))
+        self.definitions = _definitions
 
         if(self.d.steady_state_variables):
             for sv in self.d.steady_state_variables:
@@ -91,8 +93,11 @@ class CCmatic():
                 verifier_vars: List[z3.ExprRef]) -> str:
             df = get_cex_df(counter_example, v, vn, c)
             desired_string = d.to_string(cc, c, counter_example)
-            ret = "{}\n{}, alpha={}.".format(df, desired_string,
-                                             counter_example.eval(v.alpha))
+            buf_size = c.buf_min
+            if(cc.dynamic_buffer):
+                buf_size = counter_example.eval(c.buf_min)
+            ret = "{}\n{}, alpha={}, buf_size={}.".format(
+                df, desired_string, counter_example.eval(v.alpha), buf_size)
             return ret
 
         def get_verifier_view(
@@ -112,8 +117,12 @@ class CCmatic():
             desired_string = dcopy.to_string(cc, c, solution)
 
             renamed_alpha = get_renamed_vars([v.alpha], n_cex)[0]
-            gen_view_str = "{}\n{}, alpha={}.".format(df, desired_string,
-                                                      solution.eval(renamed_alpha))
+            buf_size = c.buf_min
+            if(cc.dynamic_buffer):
+                renamed_buffer = get_renamed_vars([c.buf_min], n_cex)[0]
+                buf_size = solution.eval(renamed_buffer)
+            gen_view_str = "{}\n{}, alpha={}, buf_size={}.".format(
+                df, desired_string, solution.eval(renamed_alpha), buf_size)
             return gen_view_str
 
         self.get_counter_example_str = get_counter_example_str
@@ -155,26 +164,30 @@ class CCmatic():
                 assert(isinstance(self.definitions, z3.ExprRef))
                 f.write(self.definitions.sexpr())
 
-        try:
-            md = CegisMetaData(self.critical_generator_vars)
-            cg = CegisCCAGen(
-                self.generator_vars, self.verifier_vars, self.definition_vars,
-                self.search_constraints, self.definitions, self.specification,
-                self.ctx, debug_known_solution, md)
-            cg.get_solution_str = self.get_solution_str
-            cg.get_counter_example_str = self.get_counter_example_str
-            cg.get_generator_view = self.get_generator_view
-            cg.get_verifier_view = self.get_verifier_view
-            run_verifier = functools.partial(
-                run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
-            cg.run_verifier = run_verifier
-            cg.run()
+        md = CegisMetaData(self.critical_generator_vars)
+        cg = CegisCCAGen(
+            self.generator_vars, self.verifier_vars, self.definition_vars,
+            self.search_constraints, self.definitions, self.specification,
+            self.ctx, debug_known_solution, md)
+        cg.get_solution_str = self.get_solution_str
+        cg.get_counter_example_str = self.get_counter_example_str
+        cg.get_generator_view = self.get_generator_view
+        cg.get_verifier_view = self.get_verifier_view
+        run_verifier = functools.partial(
+            run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
+        cg.run_verifier = run_verifier
+        try_except(cg.run)
 
-        except Exception:
-            import sys
-            import traceback
+    def get_verifier_struct(self, name: str):
+        # Directly update any closures or any other expression before calling
+        # this function.
 
-            import ipdb
-            extype, value, tb = sys.exc_info()
-            traceback.print_exc()
-            ipdb.post_mortem(tb)
+        vs = VerifierStruct(
+            name, self.verifier_vars, self.definition_vars,
+            self.definitions, self.specification)
+        vs.run_verifier = functools.partial(
+            run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
+        vs.get_counter_example_str = self.get_counter_example_str
+        vs.get_verifier_view = self.get_verifier_view
+        vs.get_generator_view = self.get_generator_view
+        return vs

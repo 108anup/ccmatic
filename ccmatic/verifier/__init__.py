@@ -196,8 +196,6 @@ class DesiredContainer:
             else:
                 return model.eval(cond)
 
-        if(cc.dynamic_buffer):
-            conds["buffer"] = c.buf_min
         cond_list = []
         term_count = 0
         for cond_name, cond in conds.items():
@@ -649,6 +647,13 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.D = cc.D
     c.compose = cc.compose
 
+    # Add a prefix to all names so we can have multiple Variables instances
+    # in one solver
+    if cc.name is None:
+        pre = ""
+    else:
+        pre = cc.name + "__"
+
     # Signals
     c.loss_oracle = cc.template_loss_oracle
 
@@ -657,7 +662,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     if(cc.infinite_buffer):
         c.buf_max = None
     elif(cc.dynamic_buffer):
-        c.buf_max = z3.Real('buf_size')
+        c.buf_max = z3.Real(f'{pre}buf_size')
     else:
         c.buf_max = cc.buffer_size_multiplier * c.C * (c.R + c.D)
     c.buf_min = c.buf_max
