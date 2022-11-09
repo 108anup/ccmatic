@@ -30,7 +30,7 @@ def flatten_dict(l: Union[dict, list]) -> list:
         return ret
     if(isinstance(l, list) or isinstance(l, np.ndarray)):
         for item in l:
-            ret.extend(flatten(item))
+            ret.extend(flatten_dict(item))
         return ret
     else:
         return [l]

@@ -21,30 +21,87 @@ GlobalConfig().default_logger_setup(logger)
 # Generator search space
 domain_clauses = []
 
-coeffs = {
-    'c_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_loss'),
-    'c_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_noloss'),
-    'ack_f[n]_loss': z3.Real('Gen__coeff_ack_f[n]_loss'),
-    'ack_f[n]_noloss': z3.Real('Gen__coeff_ack_f[n]_noloss'),
+# For determining lhs, under cond, the coeff of rhs is:
+# Gen__coeff_lhs_rhs_cond
+
+rhss_cwnd = ['c_f[n]', 's_f[n]', 'ack_f[n]']
+rhss_expr = ['c_f[n]', 'ack_f[n]']
+rhss_cond = ['c_f[n]', 's_f[n]', 'ack_f[n]', 'losses']
+conds = ['loss', 'noloss']
+
+coeffs: Dict[str, Dict[str, Union[Dict[str, z3.ArithRef], z3.ArithRef]]] = {
+    f'{lhs}': {
+        f'{cond}': {
+            f'{rhs}': z3.Real(f'Gen__coeff_{lhs}_{cond}_{rhs}')
+            for rhs in rhss_cwnd
+        } for cond in conds
+    } for lhs in ['c_f[n]']
 }
+coeffs.update({
+    f'{lhs}': {
+        f'{cond}': {
+            f'{rhs}': z3.Real(f'Gen__coeff_{lhs}_{cond}_{rhs}')
+            for rhs in rhss_expr
+        } for cond in conds
+    } for lhs in ['s_f[n]']
+})
+coeffs.update({
+    f'{lhs}': {
+        f'{rhs}': z3.Real(f'Gen__coeff_{lhs}_{rhs}')
+        for rhs in rhss_cond
+    } for lhs in ['cond']
+})
+
+# coeffs = {}
+# coeffs['c_f[n]'] = {
+#     's_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_s_f[n]_loss'),
+#     's_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_s_f[n]_noloss'),
+#     'c_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_c_f[n]_loss'),
+#     'c_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_c_f[n]_noloss'),
+#     'ack_f[n]_loss': z3.Real('Gen__coeff_c_f[n]_ack_f[n]_loss'),
+#     'ack_f[n]_noloss': z3.Real('Gen__coeff_c_f[n]_ack_f[n]_noloss'),
+# }
+# coeffs['s_f[n]'] = {
+#     's_f[n]_loss': z3.Real('Gen__coeff_s_f[n]_s_f[n]_loss'),
+#     's_f[n]_noloss': z3.Real('Gen__coeff_s_f[n]_s_f[n]_noloss'),
+#     'c_f[n]_loss': z3.Real('Gen__coeff_s_f[n]_c_f[n]_loss'),
+#     'c_f[n]_noloss': z3.Real('Gen__coeff_s_f[n]_c_f[n]_noloss'),
+#     'ack_f[n]_loss': z3.Real('Gen__coeff_s_f[n]_ack_f[n]_loss'),
+#     'ack_f[n]_noloss': z3.Real('Gen__coeff_s_f[n]_ack_f[n]_noloss'),
+# }
 
 consts = {
-    'c_f[n]_loss': z3.Real('Gen__const_c_f[n]_loss'),
-    'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_noloss'),
+    f'{lhs}': {
+        f'{cond}': z3.Real(f'Gen__const_{lhs}_{cond}')
+        for cond in conds
+    } for lhs in ['c_f[n]', 's_f[n]']
 }
 
-generator_vars = (flatten(list(coeffs.values())) +
-                  flatten(list(consts.values())))
-critical_generator_vars = flatten(list(coeffs.values()))
-# critical_generator_vars = generator_vars
+# consts['c_f[n]'] = {
+#     'c_f[n]_loss': z3.Real('Gen__const_c_f[n]_c_f[n]_loss'),
+#     'c_f[n]_noloss': z3.Real('Gen__const_c_f[n]_c_f[n]_noloss'),
+# }
+# consts['s_f[n]'] = {
+#     'c_f[n]_loss': z3.Real('Gen__const_s_f[n]_c_f[n]_loss'),
+#     'c_f[n]_noloss': z3.Real('Gen__const_s_f[n]_c_f[n]_noloss'),
+# }
+
+generator_vars = (flatten_dict(coeffs) +
+                  flatten_dict(consts))
+critical_generator_vars = flatten_dict(coeffs)
 
 # Search constr
+search_range_conds = [-1, 0, 1]
+# search_range_coeffs = [Fraction(i, 2) for i in range(-4, 5)]
 search_range_coeffs = [Fraction(i, 2) for i in range(5)]
-search_range_consts = [-1, 0, 1]
+search_range_consts = [Fraction(i, 2) for i in range(-4, 5)]
+# search_range_consts = [-1, 0, 1]
 domain_clauses = []
-for coeff in flatten(list(coeffs.values())):
+for coeff in flatten_dict([coeffs[x] for x in ['c_f[n]', 's_f[n]']]):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeffs]))
-for const in flatten(list(consts.values())):
+for coeff in flatten_dict([coeffs[x] for x in ['cond']]):
+    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_conds]))
+for const in flatten_dict(consts):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 
 # # All expressions should be different. Otherwise that expression is not needed.
@@ -71,33 +128,77 @@ def get_template_definitions(
 
             acked_bytes = v.S_f[n][t-c.R] - v.S_f[n][t-cc_ideal.history]
             loss_detected = v.Ld_f[n][t] > v.Ld_f[n][t-c.R]
+
+            # RHS for expr
             rhs_loss = (
                 get_product_ite(
-                    coeffs['c_f[n]_loss'], v.c_f[n][t-c.R],
+                    coeffs['s_f[n]']['loss']['c_f[n]'], v.c_f[n][t-c.R],
                     search_range_coeffs)
                 + get_product_ite(
-                    coeffs['ack_f[n]_loss'], acked_bytes,
+                    coeffs['s_f[n]']['loss']['ack_f[n]'], acked_bytes,
                     search_range_coeffs)
                 + get_product_ite(
-                    consts['c_f[n]_loss'], v.alpha,
+                    consts['s_f[n]']['loss'], v.alpha,
                     search_range_consts))
             rhs_noloss = (
                 get_product_ite(
-                    coeffs['c_f[n]_noloss'], v.c_f[n][t-c.R],
+                    coeffs['s_f[n]']['noloss']['c_f[n]'], v.c_f[n][t-c.R],
                     search_range_coeffs)
                 + get_product_ite(
-                    coeffs['ack_f[n]_noloss'], acked_bytes,
+                    coeffs['s_f[n]']['noloss']['ack_f[n]'], acked_bytes,
                     search_range_coeffs)
                 + get_product_ite(
-                    consts['c_f[n]_noloss'], v.alpha,
+                    consts['s_f[n]']['noloss'], v.alpha,
                     search_range_consts))
-            rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
-            assert isinstance(rhs, z3.ArithRef)
+            rhs_expr = z3.If(loss_detected, rhs_loss, rhs_noloss)
+            assert isinstance(rhs_expr, z3.ArithRef)
 
-            target_cwnd = rhs
-            next_cwnd = z3.If(v.c_f[n][t-1] < target_cwnd,
-                              v.c_f[n][t-1] + v.alpha,
-                              v.c_f[n][t-1] - v.alpha)
+            # cond
+            cond = (
+                get_product_ite(
+                    coeffs['cond']['c_f[n]'], v.c_f[n][t-c.R],
+                    search_range_coeffs)
+                + get_product_ite(
+                    coeffs['cond']['ack_f[n]'], acked_bytes,
+                    search_range_coeffs)
+                + get_product_ite(
+                    coeffs['cond']['s_f[n]'], rhs_expr,
+                    search_range_coeffs)
+                + coeffs['cond']['losses'] * loss_detected > 0)
+
+            # RHS for cwnd
+            rhs_cond = (
+                get_product_ite(
+                    coeffs['c_f[n]']['loss']['c_f[n]'], v.c_f[n][t-c.R],
+                    search_range_conds)
+                + get_product_ite(
+                    coeffs['c_f[n]']['loss']['s_f[n]'], rhs_expr,
+                    search_range_conds)
+                + get_product_ite(
+                    coeffs['c_f[n]']['loss']['ack_f[n]'], acked_bytes,
+                    search_range_conds)
+                + get_product_ite(
+                    consts['c_f[n]']['loss'], v.alpha,
+                    search_range_consts))
+            rhs_nocond = (
+                get_product_ite(
+                    coeffs['c_f[n]']['noloss']['c_f[n]'], v.c_f[n][t-c.R],
+                    search_range_conds)
+                + get_product_ite(
+                    coeffs['c_f[n]']['noloss']['s_f[n]'], rhs_expr,
+                    search_range_conds)
+                + get_product_ite(
+                    coeffs['c_f[n]']['noloss']['ack_f[n]'], acked_bytes,
+                    search_range_conds)
+                + get_product_ite(
+                    consts['c_f[n]']['noloss'], v.alpha,
+                    search_range_consts))
+            next_cwnd = z3.If(cond, rhs_cond, rhs_nocond)
+            assert isinstance(next_cwnd, z3.ArithRef)
+
+            # next_cwnd = z3.If(v.c_f[n][t-1] < target_cwnd,
+            #                   v.c_f[n][t-1] + v.alpha,
+            #                   v.c_f[n][t-1] - v.alpha)
             template_definitions.append(
                 v.c_f[n][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
 
@@ -115,47 +216,148 @@ def get_template_definitions(
 def get_solution_str(solution: z3.ModelRef,
                      generator_vars: List[z3.ExprRef], n_cex: int) -> str:
     ret = ""
-    rhs_loss = (f"{solution.eval(coeffs['c_f[n]_loss'])}"
+    # RHS for expr
+    rhs_loss = (f"{solution.eval(coeffs['s_f[n]']['loss']['c_f[n]'])}"
                 f"c_f[n][t-{c.R}]"
-                f" + {solution.eval(coeffs['ack_f[n]_loss'])}"
+                f" + {solution.eval(coeffs['s_f[n]']['loss']['ack_f[n]'])}"
                 f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
-                f" + {solution.eval(consts['c_f[n]_loss'])}alpha")
-    rhs_noloss = (f"{solution.eval(coeffs['c_f[n]_noloss'])}"
+                f" + {solution.eval(consts['s_f[n]']['loss'])}alpha")
+    rhs_noloss = (f"{solution.eval(coeffs['s_f[n]']['noloss']['c_f[n]'])}"
                   f"c_f[n][t-{c.R}]"
-                  f" + {solution.eval(coeffs['ack_f[n]_noloss'])}"
+                  f" + {solution.eval(coeffs['s_f[n]']['noloss']['ack_f[n]'])}"
                   f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
-                  f" + {solution.eval(consts['c_f[n]_noloss'])}alpha")
+                  f" + {solution.eval(consts['s_f[n]']['noloss'])}alpha")
+
+    # cond
+    cond = (f"{solution.eval(coeffs['cond']['c_f[n]'])}"
+            f"c_f[n][t-{c.R}]"
+            f" + {solution.eval(coeffs['cond']['ack_f[n]'])}"
+            f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
+            f" + {solution.eval(coeffs['cond']['s_f[n]'])}"
+            f"expr"
+            f" + {solution.eval(coeffs['cond']['losses'])}"
+            f"Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0")
+
+    # RHS for cwnd
+    rhs_cond = (f"{solution.eval(coeffs['c_f[n]']['loss']['c_f[n]'])}"
+                f"c_f[n][t-{c.R}]"
+                f" + {solution.eval(coeffs['c_f[n]']['loss']['s_f[n]'])}"
+                f"expr"
+                f" + {solution.eval(coeffs['c_f[n]']['loss']['ack_f[n]'])}"
+                f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
+                f" + {solution.eval(consts['c_f[n]']['loss'])}alpha")
+    rhs_nocond = (f"{solution.eval(coeffs['c_f[n]']['noloss']['c_f[n]'])}"
+                  f"c_f[n][t-{c.R}]"
+                  f" + {solution.eval(coeffs['c_f[n]']['noloss']['s_f[n]'])}"
+                  f"expr"
+                  f" + {solution.eval(coeffs['c_f[n]']['noloss']['ack_f[n]'])}"
+                  f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
+                  f" + {solution.eval(consts['c_f[n]']['noloss'])}alpha")
+
     ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
-            f"\ttarget_cwnd = {rhs_loss}\n"
+            f"\texpr = {rhs_loss}\n"
             f"else:\n"
-            f"\ttarget_cwnd = {rhs_noloss}\n")
-    ret += (f"\nif(c_f[n][t-1] < target_cwnd):\n"
-            f"\tc_f[n][t] = c_f[n][t-1] + alpha\n"
+            f"\texpr = {rhs_noloss}\n")
+
+    ret += (f"\nif({cond}):\n"
+            f"\tc_f[n][t] = max(alpha, {rhs_cond})\n"
             f"else:\n"
-            f"\tc_f[n][t] = max(alpha, c_f[n][t-1] - alpha)\n")
+            f"\tc_f[n][t] = max(alpha, {rhs_nocond})\n")
 
     return ret
 
 
 known_solution = None
-known_solution_list = [
-    coeffs['c_f[n]_loss'] == 1/2,
-    coeffs['ack_f[n]_loss'] == 0,
-    consts['c_f[n]_loss'] == 0,
 
-    coeffs['c_f[n]_noloss'] == 1/2,
-    coeffs['ack_f[n]_noloss'] == 1/2,
-    consts['c_f[n]_noloss'] == 0,
+# AIAD
+known_solution_list = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0,
+
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == -1,
+
+    coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['noloss'] == 1
 ]
+
+# Fixed target
+known_solution_list = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0,
+
+    # coeffs['c_f[n]']['loss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    # coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    # consts['c_f[n]']['loss'] == -1,
+
+    # coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    # coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    # consts['c_f[n]']['noloss'] == 1,
+
+    coeffs['s_f[n]']['loss']['c_f[n]'] == 1/2,
+    coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['s_f[n]']['loss'] == 0,
+
+    coeffs['s_f[n]']['noloss']['c_f[n]'] == 1/2,
+    coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1/2,
+    consts['s_f[n]']['noloss'] == 1
+]
+
+# # Full known solution
+# known_solution_list = [
+#     coeffs['cond']['c_f[n]'] == 1,
+#     coeffs['cond']['s_f[n]'] == -1,
+#     coeffs['cond']['ack_f[n]'] == 0,
+#     coeffs['cond']['losses'] == 0,
+
+#     coeffs['c_f[n]']['loss']['c_f[n]'] == 1,
+#     coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+#     coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+#     consts['c_f[n]']['loss'] == -1,
+
+#     coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+#     coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+#     coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+#     consts['c_f[n]']['noloss'] == 1,
+
+#     coeffs['s_f[n]']['loss']['c_f[n]'] == 1,
+#     coeffs['s_f[n]']['loss']['ack_f[n]'] == -1/2,
+#     consts['s_f[n]']['loss'] == 3/2,
+
+#     coeffs['s_f[n]']['noloss']['c_f[n]'] == 0,
+#     coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1,
+#     consts['s_f[n]']['noloss'] == 3/2
+# ]
+
+# known_solution_list = [
+#     coeffs['c_f[n]_loss'] == 1/2,
+#     coeffs['ack_f[n]_loss'] == 0,
+#     consts['c_f[n]_loss'] == 0,
+
+#     coeffs['c_f[n]_noloss'] == 1/2,
+#     coeffs['ack_f[n]_noloss'] == 1/2,
+#     consts['c_f[n]_noloss'] == 0,
+# ]
 known_solution = z3.And(*known_solution_list)
 assert(isinstance(known_solution, z3.ExprRef))
 
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert(isinstance(search_constraints, z3.ExprRef))
+search_constraints = z3.And(search_constraints, known_solution)
+assert(isinstance(search_constraints, z3.ExprRef))
 
 # ----------------------------------------------------------------
 # IDEAL LINK
 cc_ideal = CegisConfig()
+# cc_ideal.DEBUG = True
 cc_ideal.name = "ideal"
 cc_ideal.synth_ss = False
 cc_ideal.infinite_buffer = False
@@ -212,7 +414,7 @@ adv.setup_cegis_loop(
 
 # ----------------------------------------------------------------
 # MULTI VERIFIER
-joint = ideal
+joint = ideal  # Joint must be adv, so that we can have max gap optimization for adv.
 joint.critical_generator_vars = critical_generator_vars
 joint.verifier_vars = ideal.verifier_vars + adv.verifier_vars
 joint.definition_vars = ideal.definition_vars + adv.definition_vars
@@ -222,6 +424,8 @@ joint.specification = z3.And(ideal.specification, adv.specification)
 # Dereference the ptr first, to avoid inf recursion.
 ideal_get_counter_example_str = ideal.get_counter_example_str
 ideal_get_generator_view = ideal.get_generator_view
+adv_get_counter_example_str = adv.get_counter_example_str
+adv_get_generator_view = adv.get_generator_view
 
 
 def get_counter_example_str(*args, **kwargs):
@@ -229,7 +433,7 @@ def get_counter_example_str(*args, **kwargs):
     ret += ideal_get_counter_example_str(*args, **kwargs)
 
     ret += "\nAdversarial" + "-"*(32-6) + "\n"
-    ret += adv.get_counter_example_str(*args, **kwargs)
+    ret += adv_get_counter_example_str(*args, **kwargs)
     return ret
 
 
@@ -245,7 +449,7 @@ def get_generator_view(*args, **kwargs):
     ret += ideal_get_generator_view(*args, **kwargs)
 
     ret += "\nAdversarial" + "-"*(32-6) + "\n"
-    ret += adv.get_generator_view(*args, **kwargs)
+    ret += adv_get_generator_view(*args, **kwargs)
     return ret
 
 
