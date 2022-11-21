@@ -251,6 +251,9 @@ assumption = z3.And(assumption_constraints)
 assert isinstance(assumption, z3.ExprRef)
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
+# Try synth assumption that breaks CCA.
+specification = z3.Implies(
+    z3.And(environment, assumption), poor_utilization)
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
 assert isinstance(definitions, z3.ExprRef)
 # cca_definitions are verifier only. does not matter if they are here...
@@ -268,6 +271,9 @@ if(cc.monotonic_inc_assumption):
         assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
     specification_novel = z3.And(
         environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
+    # Try synth assumption that breaks CCA.
+    specification_novel = z3.And(
+        environment_novel, assumption_novel, poor_utilization_novel)
     definitions_novel = z3.And(
         ccac_domain_novel, ccac_definitions_novel, cca_definitions_novel)
 
