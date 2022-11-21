@@ -936,3 +936,16 @@ fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_loss_amou
 , alpha=321939/17408, buf_size=644847/34816.[0m
 [11/21 17:21:52]  --------------------------------------------------------------------------------
 [11/21 17:21:52]  Iteration: 32 (1 solution, 30 counterexamples)
+[11/21 17:28:42]  Generator returned sat in 409.057717 secs.
+[11/21 17:28:42]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = 1/2c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-3]) + 0alpha
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-3]) + 1alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-3]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0):
+	c_f[n][t] = max(alpha, 1/2c_f[n][t-1] + 1/2expr + 0(S_f[n][t-1]-S_f[n][t-3]) + 0alpha)
+else:
+	c_f[n][t] = max(alpha, 1/2c_f[n][t-1] + 1/2expr + 0(S_f[n][t-1]-S_f[n][t-3]) + 0alpha)
+[0m
+[11/21 17:28:52]  Verifer returned unsat in 9.812940 secs.
