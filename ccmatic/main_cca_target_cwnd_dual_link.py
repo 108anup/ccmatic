@@ -1,3 +1,4 @@
+import argparse
 import copy
 import logging
 from fractions import Fraction
@@ -11,7 +12,7 @@ from pyz3_utils.common import GlobalConfig
 import ccmatic.common  # Used for side effects
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten_dict, get_product_ite, try_except
+from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from cegis.multi_cegis import MultiCegis
 
 logger = logging.getLogger('cca_gen')
@@ -268,6 +269,9 @@ def get_solution_str(solution: z3.ModelRef,
     return ret
 
 
+# ----------------------------------------------------------------
+# KNOWN SOLUTIONS
+# (for debugging)
 known_solution = None
 
 # AIAD
@@ -384,6 +388,32 @@ known_solution_list = [
 #     consts['s_f[n]']['noloss'] == 3/2
 # ]
 
+# Full known solution
+known_solution_list = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0,
+
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 1/2,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == 1,
+
+    coeffs['c_f[n]']['noloss']['c_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['noloss'] == 1/2,
+
+    coeffs['s_f[n]']['loss']['c_f[n]'] == 2,
+    coeffs['s_f[n]']['loss']['ack_f[n]'] == 1,
+    consts['s_f[n]']['loss'] == -3/2,
+
+    coeffs['s_f[n]']['noloss']['c_f[n]'] == 2,
+    coeffs['s_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['s_f[n]']['noloss'] == -2
+]
+
 # known_solution_list = [
 #     coeffs['c_f[n]_loss'] == 1/2,
 #     coeffs['ack_f[n]_loss'] == 0,
@@ -393,6 +423,97 @@ known_solution_list = [
 #     coeffs['ack_f[n]_noloss'] == 1/2,
 #     consts['c_f[n]_noloss'] == 0,
 # ]
+
+# ----------------------------------------------------------------
+# SEARCH SPACE EXPLORATION
+# (explore pieces of the search space)
+fixed_cond = [
+    coeffs['cond']['c_f[n]'] == 1,
+    coeffs['cond']['s_f[n]'] == -1,
+    coeffs['cond']['ack_f[n]'] == 0,
+    coeffs['cond']['losses'] == 0]
+
+# Increments
+ai = [
+    coeffs['c_f[n]']['noloss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['noloss'] == 1]
+
+miai = [
+    coeffs['c_f[n]']['noloss']['c_f[n]'] == 3/2,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['noloss'] == 1/2]
+
+ti = [
+    coeffs['c_f[n]']['noloss']['c_f[n]'] == 0,
+    coeffs['c_f[n]']['noloss']['s_f[n]'] == 1,
+    coeffs['c_f[n]']['noloss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['noloss'] == 0]
+
+# Decrements
+ad = [
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 1,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == -1]
+
+md = [
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 1/2,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == 0]
+
+td = [
+    coeffs['c_f[n]']['loss']['c_f[n]'] == 0,
+    coeffs['c_f[n]']['loss']['s_f[n]'] == 1,
+    coeffs['c_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['c_f[n]']['loss'] == 0]
+
+# Fixed target
+target = [
+    coeffs['s_f[n]']['loss']['c_f[n]'] == 1/2,
+    coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['s_f[n]']['loss'] == 0,
+
+    coeffs['s_f[n]']['noloss']['c_f[n]'] == 1/2,
+    coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1/2,
+    consts['s_f[n]']['noloss'] == 1
+]
+
+spaces = {
+    # Fixed responses (9 cases: [ai, mi, ti] x [ad, md, td])
+    'aimd': [ai, md],
+    'aiad': [ai, ad],
+    'aitd': [ai, td],
+
+    'miaimd': [miai, md],
+    # Skip miad: miad does not make much sense
+    # Skip mitd
+
+    # Skip tiad
+    'timd': [ti, md],
+    # Skip titd: this basically means that we don't need target cwnd template
+    # at all. This is however, not the case.
+
+    # Fixed target
+    'target': target
+}
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-s', '--space', default=None,
+    type=str, action='store',
+    help=f'Search space restriction. Options include: {list(spaces.keys())}')
+args = parser.parse_args()
+
+if(args.space and args.space in spaces):
+    logger.info(f"Using search space: {args.space}")
+    known_solution_list = flatten([fixed_cond, spaces[args.space]])
+else:
+    known_solution_list = flatten([fixed_cond])
+
 known_solution = z3.And(*known_solution_list)
 assert(isinstance(known_solution, z3.ExprRef))
 
@@ -509,8 +630,16 @@ logger.info("Adver: " + cc_adv.desire_tag())
 
 # ----------------------------------------------------------------
 # MULTI CEGIS
-verifier_structs = [
-    ideal.get_verifier_struct('ideal'), adv.get_verifier_struct('adv')]
+vs_adv = adv.get_verifier_struct('adv')
+vs_ideal = ideal.get_verifier_struct('ideal')
+# env = z3.And(ideal.environment,
+#              ideal.v.c_f[0][2] == 1.9,
+#              ideal.v.c_f[0][1] == 1.9,
+#              ideal.v.c_f[0][0] == 1.9,
+#              ideal.v.alpha == 1,
+#              ideal.v.A[0] - ideal.v.L[0] - ideal.v.S[0] == 0)
+# vs_ideal.specification = z3.Not(env)
+verifier_structs = [vs_ideal, vs_adv]
 
 multicegis = MultiCegis(
     generator_vars, search_constraints, critical_generator_vars,
