@@ -113,7 +113,7 @@ def substitute_values_df(assumption_record: pd.Series,
 
 def try_except(function: Callable):
     try:
-        function()
+        return function()
     except Exception:
         import sys
         import traceback

@@ -66,6 +66,20 @@ class CegisConfig:
             item_strs.append(f"{item}={getattr(self, item)}")
         return ", ".join(item_strs)
 
+    def reset_desired_z3(self, pre: str):
+        self.desired_util_f = \
+            z3.Real(f'{pre}Desired__util_f')
+        self.desired_queue_bound_multiplier = \
+            z3.Real(f'{pre}Desired__queue_bound_multiplier')
+        self.desired_queue_bound_alpha = \
+            z3.Real(f'{pre}Desired__queue_bound_alpha')
+        self.desired_loss_count_bound = \
+            z3.Real(f'{pre}Desired__loss_count_bound')
+        self.desired_loss_amount_bound_multiplier = \
+            z3.Real(f'{pre}Desired__loss_amount_bound')
+        self.desired_loss_amount_bound_alpha = \
+            z3.Real(f'{pre}Desired__loss_amount_alpha')
+
 
 class CegisCCAGen(Cegis):
 

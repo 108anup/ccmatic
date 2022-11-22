@@ -1,4 +1,5 @@
 import copy
+from dataclasses import dataclass
 import functools
 from typing import Callable, List, Optional
 
@@ -13,6 +14,7 @@ from ccmatic.verifier import (get_cex_df, get_desired_necessary,
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
+from cegis.util import Metric
 
 
 class CCmatic():
@@ -29,6 +31,21 @@ class CCmatic():
 
     def __init__(self, cc: CegisConfig):
         self.cc = cc
+
+    def get_desired(self):
+        cc = self.cc
+        c = self.c
+        v = self.v
+
+        if(cc.synth_ss):
+            d = get_desired_ss_invariant(cc, c, v)
+            desired = d.desired_invariant
+        else:
+            d = get_desired_necessary(cc, c, v)
+            desired = d.desired_necessary
+
+        assert isinstance(desired, z3.ExprRef)
+        return d, desired
 
     def setup_config_vars(self):
         cc = self.cc
@@ -50,12 +67,7 @@ class CCmatic():
         self.verifier_vars = verifier_vars
         self.definition_vars = definition_vars
 
-        if(cc.synth_ss):
-            d = get_desired_ss_invariant(cc, c, v)
-            desired = d.desired_invariant
-        else:
-            d = get_desired_necessary(cc, c, v)
-            desired = d.desired_necessary
+        d, desired = self.get_desired()
         self.d = d
         self.desired = desired
 
@@ -178,9 +190,12 @@ class CCmatic():
         cg.run_verifier = run_verifier
         try_except(cg.run)
 
-    def get_verifier_struct(self, name: str):
+    def get_verifier_struct(self):
         # Directly update any closures or any other expression before calling
         # this function.
+
+        name = self.cc.name
+        assert name
 
         vs = VerifierStruct(
             name, self.verifier_vars, self.definition_vars,
@@ -191,3 +206,12 @@ class CCmatic():
         vs.get_verifier_view = self.get_verifier_view
         vs.get_generator_view = self.get_generator_view
         return vs
+
+
+@dataclass
+class OptimizationStruct:
+    ccmatic: CCmatic
+    vs: VerifierStruct
+
+    fixed_metrics: List[Metric]
+    optimize_metrics: List[Metric]

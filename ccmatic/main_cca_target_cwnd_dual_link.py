@@ -1,19 +1,23 @@
 import argparse
 import copy
+import functools
 import logging
 from fractions import Fraction
 from typing import Dict, List, Union
 
+import pandas as pd
 import z3
-from ccac.config import ModelConfig
-from ccac.variables import Variables
-from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
-from ccmatic import CCmatic
+from ccac.config import ModelConfig
+from ccac.variables import Variables
+from ccmatic import CCmatic, OptimizationStruct
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from cegis.multi_cegis import MultiCegis
+from cegis.util import Metric, fix_metrics, optimize_multi_var
+from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -506,6 +510,10 @@ parser.add_argument(
     '-s', '--space', default=None,
     type=str, action='store',
     help=f'Search space restriction. Options include: {list(spaces.keys())}')
+parser.add_argument(
+    '--optimize', default=None,
+    type=int, action='store',
+    help=f'Find bounds for solution OPTIMIZE using binary search.')
 args = parser.parse_args()
 
 if(args.space and args.space in spaces):
@@ -539,7 +547,7 @@ cc_ideal.desired_util_f = 1
 cc_ideal.desired_queue_bound_multiplier = 1/2
 cc_ideal.desired_queue_bound_alpha = 3
 cc_ideal.desired_loss_count_bound = 3
-cc_ideal.desired_loss_amount_bound_multiplier = 1/2
+cc_ideal.desired_loss_amount_bound_multiplier = 0
 cc_ideal.desired_loss_amount_bound_alpha = 3
 
 cc_ideal.ideal_link = True
@@ -630,8 +638,9 @@ logger.info("Adver: " + cc_adv.desire_tag())
 
 # ----------------------------------------------------------------
 # MULTI CEGIS
-vs_adv = adv.get_verifier_struct('adv')
-vs_ideal = ideal.get_verifier_struct('ideal')
+links = [ideal, adv]
+verifier_structs = [x.get_verifier_struct() for x in links]
+# vs_ideal = verifier_structs[0]
 # env = z3.And(ideal.environment,
 #              ideal.v.c_f[0][2] == 1.9,
 #              ideal.v.c_f[0][1] == 1.9,
@@ -639,10 +648,109 @@ vs_ideal = ideal.get_verifier_struct('ideal')
 #              ideal.v.alpha == 1,
 #              ideal.v.A[0] - ideal.v.L[0] - ideal.v.S[0] == 0)
 # vs_ideal.specification = z3.Not(env)
-verifier_structs = [vs_ideal, vs_adv]
 
-multicegis = MultiCegis(
-    generator_vars, search_constraints, critical_generator_vars,
-    verifier_structs, ideal.ctx, None, None)
-multicegis.get_solution_str = get_solution_str
-try_except(multicegis.run)
+if(args.optimize is None):
+    multicegis = MultiCegis(
+        generator_vars, search_constraints, critical_generator_vars,
+        verifier_structs, ideal.ctx, None, None)
+    multicegis.get_solution_str = get_solution_str
+    try_except(multicegis.run)
+
+# ----------------------------------------------------------------
+# OPTIMIZE METRICS
+# (using binary search)
+else:
+
+    # ----------------------------------------------------------------
+    # Metrics
+
+    # Ideal
+    cc_ideal.reset_desired_z3(ideal.v.pre)
+    ideal_metrics_fixed = [
+        Metric(cc_ideal.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        Metric(cc_ideal.desired_loss_amount_bound_multiplier, 0, 0, 0.001, False),
+        Metric(cc_ideal.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
+    ]
+
+    ideal_metrics_optimize = [
+        Metric(cc_ideal.desired_util_f, 0.9, 1, 0.001, True),
+        Metric(cc_ideal.desired_queue_bound_multiplier, 0, 1, 0.001, False),
+        Metric(cc_ideal.desired_loss_count_bound, 0, 4, 0.001, False),
+    ]
+
+    ideal_os = OptimizationStruct(
+        ideal, verifier_structs[0], ideal_metrics_fixed, ideal_metrics_optimize)
+
+    # Adv
+    cc_adv.reset_desired_z3(adv.v.pre)
+    adv_metrics_fixed = [
+        Metric(cc_adv.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        Metric(cc_adv.desired_loss_count_bound, 0, 3, 0.001, False),
+        Metric(cc_adv.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
+    ]
+
+    adv_metrics_optimize = [
+        Metric(cc_adv.desired_loss_amount_bound_multiplier, 0, 1.5, 0.001, False),
+        Metric(cc_adv.desired_util_f, 0.5, 1, 0.001, True),
+        Metric(cc_adv.desired_queue_bound_multiplier, 0, 1.5, 0.001, False),
+    ]
+
+    adv_os = OptimizationStruct(
+        adv, verifier_structs[1], adv_metrics_fixed, adv_metrics_optimize)
+
+    optimization_structs = [ideal_os, adv_os]
+
+    # ----------------------------------------------------------------
+    # Solutions
+    solutions = [
+        z3.And(*flatten([fixed_cond, ai, ad, target]))
+    ]
+    solution = solutions[args.optimize]
+
+    # ----------------------------------------------------------------
+    # Check
+    logger.info(f"Testing solution: {args.optimize}")
+    for ops in optimization_structs:
+        link = ops.ccmatic
+        vs = ops.vs
+        cc = link.cc
+        _, desired = link.get_desired()
+        logger.info(f"Testing link: {cc.name}")
+
+        verifier = MySolver()
+        verifier.warn_undeclared = False
+        verifier.add(link.definitions)
+        verifier.add(link.environment)
+        verifier.add(z3.Not(desired))
+        fix_metrics(verifier, ops.fixed_metrics)
+        verifier.add(solution)
+
+        verifier.push()
+        fix_metrics(verifier, ops.optimize_metrics)
+        sat = verifier.check()
+
+        if(str(sat) == "sat"):
+            model = verifier.model()
+            logger.error(vs.get_counter_example_str(model, link.verifier_vars))
+            logger.critical("Note, the desired string in above output is based "
+                            "on cegis metrics instead of optimization metrics.")
+            import ipdb; ipdb.set_trace()
+
+        else:
+            logger.info(f"Solver gives {str(sat)} with loosest bounds.")
+            verifier.pop()
+            GlobalConfig().logging_levels['cegis'] = logging.INFO
+            logger = logging.getLogger('cegis')
+            GlobalConfig().default_logger_setup(logger)
+
+            def try_fun():
+                ret = optimize_multi_var(verifier, ops.optimize_metrics)
+                assert len(ret) > 0
+                df = pd.DataFrame(ret)
+                sort_columns = [x.name() for x in ops.optimize_metrics]
+                sort_order = [x.maximize for x in ops.optimize_metrics]
+                df = df.sort_values(by=sort_columns, ascending=sort_order)
+                print(df)
+
+            try_except(try_fun)
+            print("-"*80)
