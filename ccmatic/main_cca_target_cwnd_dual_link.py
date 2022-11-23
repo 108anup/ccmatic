@@ -476,7 +476,7 @@ td = [
     consts['c_f[n]']['loss'] == 0]
 
 # Fixed target
-target = [
+comb_md = [
     coeffs['s_f[n]']['loss']['c_f[n]'] == 1/2,
     coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
     consts['s_f[n]']['loss'] == 0,
@@ -486,7 +486,18 @@ target = [
     consts['s_f[n]']['noloss'] == 1
 ]
 
+comb_ad = [
+    coeffs['s_f[n]']['loss']['c_f[n]'] == 1,
+    coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['s_f[n]']['loss'] == -1,
+
+    coeffs['s_f[n]']['noloss']['c_f[n]'] == 1/2,
+    coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1/2,
+    consts['s_f[n]']['noloss'] == 1
+]
+
 spaces = {
+    # --------------------------------------------------
     # Fixed responses (9 cases: [ai, mi, ti] x [ad, md, td])
     'aimd': [ai, md],
     'aiad': [ai, ad],
@@ -501,8 +512,14 @@ spaces = {
     # Skip titd: this basically means that we don't need target cwnd template
     # at all. This is however, not the case.
 
-    # Fixed target
-    'target': target
+    # --------------------------------------------------
+    # Fixed targets
+    'comb_md': comb_md,  # titd for adv link
+    'comb_ad': comb_ad,  # synthesized by this file
+
+    # --------------------------------------------------
+    # Just check if we can ever do ti or mi.
+    'ti_or_miai': z3.Or(*[z3.And(ti), z3.And(miai)])
 }
 
 parser = argparse.ArgumentParser()
@@ -703,7 +720,8 @@ else:
     # ----------------------------------------------------------------
     # Solutions
     solutions = [
-        z3.And(*flatten([fixed_cond, ai, ad, target]))
+        z3.And(*flatten([fixed_cond, ai, ad, comb_md])),
+        z3.And(*flatten([fixed_cond, ai, td, comb_ad])),
     ]
     solution = solutions[args.optimize]
 
@@ -750,7 +768,7 @@ else:
                 sort_columns = [x.name() for x in ops.optimize_metrics]
                 sort_order = [x.maximize for x in ops.optimize_metrics]
                 df = df.sort_values(by=sort_columns, ascending=sort_order)
-                print(df)
+                logger.info(df)
 
             try_except(try_fun)
-            print("-"*80)
+            logger.info("-"*80)
