@@ -19,14 +19,15 @@ logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 
-DEBUG = False
+DEBUG = True
 cc = CegisConfig()
 cc.synth_ss = False
 cc.feasible_response = True
-cc.R = 1
-cc.D = 1
+
 cc.history = 3
-cc.T = 9
+cc.D = 1
+cc.C = 100
+# cc.T = 9
 
 cc.infinite_buffer = False
 cc.dynamic_buffer = True
@@ -125,9 +126,10 @@ for t in range(first, c.T):
     rhs = z3.If(loss_detected, rhs_loss, rhs_noloss)
     assert isinstance(rhs, z3.ArithRef)
     target_cwnd = rhs
-    next_cwnd = z3.If(v.c_f[0][t-1] < target_cwnd,
-                      v.c_f[0][t-1] + v.alpha,
-                      v.c_f[0][t-1] - v.alpha)
+    # next_cwnd = z3.If(v.c_f[0][t-1] < target_cwnd,
+    #                   v.c_f[0][t-1] + v.alpha,
+    #                   v.c_f[0][t-1] - v.alpha)
+    next_cwnd = target_cwnd
     template_definitions.append(
         v.c_f[0][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
 
@@ -191,6 +193,22 @@ def get_solution_str(solution: z3.ModelRef,
             f"\tc_f[0][t] = c_f[0][t-1] + alpha\n"
             f"else:\n"
             f"\tc_f[0][t] = max(alpha, c_f[0][t-1] - alpha)\n")
+
+    ret = ""
+    rhs_loss = (f"{solution.eval(coeffs['c_f[0]_loss'])}"
+                f"c_f[0][t-{c.R}]"
+                f" + {solution.eval(coeffs['ack_f[0]_loss'])}"
+                f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
+                f" + {solution.eval(consts['c_f[0]_loss'])}alpha")
+    rhs_noloss = (f"{solution.eval(coeffs['c_f[0]_noloss'])}"
+                  f"c_f[0][t-{c.R}]"
+                  f" + {solution.eval(coeffs['ack_f[0]_noloss'])}"
+                  f"(S_f[0][t-{c.R}]-S_f[0][t-{cc.history}])"
+                  f" + {solution.eval(consts['c_f[0]_noloss'])}alpha")
+    ret += (f"if(Ld_f[0][t] > Ld_f[0][t-1]):\n"
+            f"\tc_f[0][t] = max(alpha, ({rhs_loss})\n"
+            f"else:\n"
+            f"\tc_f[0][t] = max(alpha, {rhs_noloss})\n")
 
     return ret
 
