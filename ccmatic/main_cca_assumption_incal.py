@@ -11,7 +11,7 @@ import ccmatic.common  # Used for side effects
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisCCAGen, CegisConfig
 from ccmatic.common import flatten, substitute_values_df
-from ccmatic.generator.analyse_assumptions import sort_print_assumptions
+from ccmatic.generator.analyse_assumptions import filter_print_assumptions, sort_print_assumptions
 from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
@@ -504,6 +504,7 @@ if (__name__ == "__main__"):
         parser.add_argument('--solution-seed-path', type=str,
                             action='store', default=None)
         parser.add_argument('--sort-assumptions', action='store_true', default=False)
+        parser.add_argument('--filter-assumptions', action='store_true', default=False)
         parser.add_argument('-o', '--outdir', type=str,
                             action='store', default="tmp")
         parser.add_argument('--suffix', type=str,
@@ -513,15 +514,22 @@ if (__name__ == "__main__"):
         return args
 
     args = get_args()
-    if(args.sort_assumptions):
+    if(args.sort_assumptions or args.filter_assumptions):
         import pandas as pd
         f = open(args.solution_log_path, 'r')
         df = pd.read_csv(f)
         assumption_records = df.loc[:, ~df.columns.str.contains('^Unnamed')]
         f.close()
 
-        sort_print_assumptions(assumption_records, assumption, lemmas,
-                               get_solution_str, args.outdir, args.suffix)
+        if(args.sort_assumptions):
+            sort_print_assumptions(assumption_records, assumption, lemmas,
+                                   get_solution_str, args.outdir, args.suffix)
+        elif(args.filter_assumptions):
+            filter_print_assumptions(assumption_records, assumption, lemmas,
+                                     get_solution_str, args.outdir,
+                                     args.suffix)
+        else:
+            assert False
 
         import sys
         sys.exit(0)

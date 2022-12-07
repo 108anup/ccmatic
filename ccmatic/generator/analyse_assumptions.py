@@ -120,7 +120,7 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
 
 def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
                             assumption_expressions: List[z3.ExprRef],
-                            lemmas: z3.ExprRef) -> Set[int]:
+                            lemmas: z3.ExprRef) -> List[int]:
     assert len(assumption_expressions) == len(assumption_assignments)
     n = len(assumption_expressions)
     logger.info(f"Finding weakest assumptions ({n})")
@@ -196,7 +196,7 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
             ret = check(ia, nodelist)
             filtered = filtered.intersection(ret)
 
-    return filtered
+    return list(filtered)
 
 
 def build_adj_matrix(assumption_assignments: List[z3.ExprRef],
@@ -349,6 +349,19 @@ def write_draw_graph(g: nx.DiGraph, outdir: str = "tmp", suffix: str = ""):
     plt.savefig(os.path.join(outdir, f'graph{suffix}.pdf'))
 
 
+def write_assumptions(
+        assumption_ids: List[int],
+        assumption_records: pd.DataFrame,
+        get_solution_str: Callable,
+        outdir: str = "tmp", suffix: str = ""):
+    f = open(os.path.join(outdir, f'assumptions{suffix}.txt'), 'w')
+    for i, ia in enumerate(assumption_ids):
+        assumption_str = get_solution_str(
+            assumption_records.iloc[ia], None, None)
+        f.write(f"{ia}, {i}.\n{assumption_str}\n")
+    f.close()
+
+
 def sort_print_assumptions(
         assumption_records: pd.DataFrame,
         assumption_template: z3.ExprRef, lemmas: z3.ExprRef,
@@ -387,3 +400,31 @@ def sort_print_assumptions(
             get_solution_str(sorted_assumption_records.iloc[uid],
                              None, None))
     logger.info("Sorted solutions: \n"+"\n".join(solution_strs))
+
+
+def filter_print_assumptions(
+        assumption_records: pd.DataFrame,
+        assumption_template: z3.ExprRef, lemmas: z3.ExprRef,
+        get_solution_str: Callable,
+        outdir: str = "tmp", suffix: str = ""):
+    assumption_assignments, assumption_expressions = \
+        parse_and_create_assumptions(assumption_records,
+                                     assumption_template)
+    filtered_list = get_weakest_assumptions(
+        assumption_assignments, assumption_expressions, lemmas)
+
+    solution_strs = []
+    for i, uid in enumerate(filtered_list):
+        solution_strs.append(
+            f"{uid}, {i} -- \n" +
+            get_solution_str(assumption_records.iloc[uid],
+                             None, None))
+    logger.info("Sorted solutions: \n"+"\n".join(solution_strs))
+
+    write_assumptions(
+        filtered_list, assumption_records,
+        get_solution_str, outdir, f'_filtered{suffix}')
+    # For reference write all assumptions also:
+    write_assumptions(
+        list(range(len(assumption_records))), assumption_records,
+        get_solution_str, outdir, f'_all{suffix}')
