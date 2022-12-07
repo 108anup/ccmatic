@@ -7,7 +7,7 @@ import time
 from concurrent import futures
 from concurrent.futures import Future, ThreadPoolExecutor
 from enum import unique
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -116,6 +116,87 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
     del lemmas
     del ctx
     return a_implies_b
+
+
+def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
+                            assumption_expressions: List[z3.ExprRef],
+                            lemmas: z3.ExprRef) -> Set[int]:
+    assert len(assumption_expressions) == len(assumption_assignments)
+    n = len(assumption_expressions)
+    logger.info(f"Finding weakest assumptions ({n})")
+    filtered = set([i for i in range(n)])
+
+    # TODO: duplicate function!
+    def create_inputs(ia, ib):
+        ctx = z3.Context()
+        assert ctx != z3.main_ctx
+        _a = assumption_expressions[ia].translate(ctx)
+        _b = assumption_expressions[ib].translate(ctx)
+        _lemmas = lemmas.translate(ctx)
+        assignments = z3.And(assumption_assignments[ia],
+                             assumption_assignments[ib])
+        assert isinstance(assignments, z3.ExprRef)
+        _assignments = assignments.translate(ctx)
+        _all_lemmas = z3.And(_lemmas, _assignments)
+        assert isinstance(_all_lemmas, z3.ExprRef)
+        del assignments
+        del _assignments
+        del _lemmas
+        return _a, _b, _all_lemmas, ctx
+
+    PARALLEL = False
+    WORKERS = 54
+
+    def check(ia: int, nodelist: List[int]) -> Set[int]:
+        ib_implies_ia: List[Union[bool, Future]] = [
+            False for _ in range(len(nodelist))]
+
+        if(not PARALLEL):
+            for iib, ib in enumerate(nodelist):
+                assert ib != ib
+                ib_implies_ia[iib] = threadsafe_compare(*create_inputs(ib, ia))
+        else:
+            thread_pool_executor = ThreadPoolExecutor(max_workers=WORKERS)
+
+            def create_and_submit_job(iib, ib):
+                assert ia != ib
+                inputs = create_inputs(ib, ia)
+                # * ^ order of input is reversed
+                # ib implies ia
+                ib_implies_ia[iib] = thread_pool_executor.submit(
+                    threadsafe_compare, *inputs)
+
+            def post_process_job(iib):
+                future = ib_implies_ia[iib]
+                assert isinstance(future, Future)
+                ib_implies_ia[iib] = future.result()
+                del future
+
+            for iib, ib, in enumerate(nodelist):
+                create_and_submit_job(iib, ib)
+
+            for iib, ib, in enumerate(nodelist):
+                post_process_job(iib)
+
+            thread_pool_executor.shutdown()
+
+        ret = set()
+        for iib, ib in enumerate(nodelist):
+            if(ib_implies_ia[iib]):
+                # ib implies ia, remove ib
+                pass
+            else:
+                # keep ib
+                ret.add(ib)
+        return ret
+
+    for ia in range(n):
+        if(ia in filtered):
+            nodelist = list(filtered - set([ia]))
+            ret = check(ia, nodelist)
+            filtered = filtered.intersection(ret)
+
+    return filtered
 
 
 def build_adj_matrix(assumption_assignments: List[z3.ExprRef],
