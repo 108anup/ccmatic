@@ -38,6 +38,7 @@ filtered_assumptions = [x for x, d in g.out_degree() if d == 0]
 
 if(args.out_dir):
 
+    # TODO: remove redundancy here
     def write_assumptions(assumption_ids, filename):
         f = open(os.path.join(args.out_dir, filename), 'w')
         for i, ia in enumerate(assumption_ids):

@@ -144,7 +144,7 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
         del _lemmas
         return _a, _b, _all_lemmas, ctx
 
-    PARALLEL = False
+    PARALLEL = True
     WORKERS = 54
 
     def check(ia: int, nodelist: List[int]) -> Set[int]:
@@ -153,7 +153,7 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
 
         if(not PARALLEL):
             for iib, ib in enumerate(nodelist):
-                assert ib != ib
+                assert ia != ib
                 ib_implies_ia[iib] = threadsafe_compare(*create_inputs(ib, ia))
         else:
             thread_pool_executor = ThreadPoolExecutor(max_workers=WORKERS)
@@ -172,6 +172,10 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
                 ib_implies_ia[iib] = future.result()
                 del future
 
+            # Since we check at most one row of adj matrix at a time. We can
+            # create keep all jobs in memory before processing any job. If we
+            # face physical memory issues, then we need to start processing jobs
+            # before starting new ones, similar to the adj matrix creation.
             for iib, ib, in enumerate(nodelist):
                 create_and_submit_job(iib, ib)
 
@@ -191,10 +195,14 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
         return ret
 
     for ia in range(n):
+        logger.info(f"Checking {ia}. Current filtered size: {len(filtered)}")
         if(ia in filtered):
             nodelist = list(filtered - set([ia]))
             ret = check(ia, nodelist)
-            filtered = filtered.intersection(ret)
+            remainder = ret.union(set([ia]))
+            filtered = filtered.intersection(remainder)
+        else:
+            logger.info(f"{ia} already pruned.")
 
     return list(filtered)
 
@@ -419,7 +427,7 @@ def filter_print_assumptions(
             f"{uid}, {i} -- \n" +
             get_solution_str(assumption_records.iloc[uid],
                              None, None))
-    logger.info("Sorted solutions: \n"+"\n".join(solution_strs))
+    logger.info("Filtered solutions: \n"+"\n".join(solution_strs))
 
     write_assumptions(
         filtered_list, assumption_records,
