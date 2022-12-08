@@ -31,6 +31,8 @@ Though, need to ensure that each def var takes exactly one value.
 """
 
 DEBUG = False
+dummy_cca = "bbr"
+dummy_cca = "paced"
 cc = CegisConfig()
 cc.T = 10
 cc.infinite_buffer = True  # No loss for simplicity
@@ -73,14 +75,15 @@ if(cc.use_ref_cca):
     (c_alt, s_alt, v_alt,
      ccac_domain_alt, ccac_definitions_alt, environment_alt,
      verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
-    c_alt.cca = "paced"
+    c_alt.cca = dummy_cca
     vn_alt = VariableNames(v_alt)
 
     periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
     cca_definitions_alt = get_cca_definition(c_alt, v_alt)
-    cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
-        *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
-          for t in range(c.T) for n in range(c.N)]))
+    if(c_alt.cca == "paced"):
+        cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
+            *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
+              for t in range(c.T) for n in range(c.N)]))
     environment_alt = z3.And(
         environment_alt, periodic_constriants_alt, cca_definitions_alt)
     poor_utilization_alt = v_alt.S[-1] - \
