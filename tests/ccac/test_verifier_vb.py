@@ -3,10 +3,11 @@ import logging
 import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
+from ccmatic.common import flatten
 from ccmatic.verifier import (get_cex_df, get_desired_necessary,
                               setup_cegis_basic)
 from ccmatic.verifier.ideal import IdealLink
-from cegis.util import Metric, optimize_multi_var, write_solver
+from cegis.util import Metric, fix_metrics, optimize_multi_var, write_solver
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -164,10 +165,14 @@ def get_counter_example_str(counter_example: z3.ModelRef) -> str:
     return ret
 
 
-optimization_list = [
-    Metric(cc.desired_util_f, 0.33, 1, 0.001, True),
+metric_util = [
+    Metric(cc.desired_util_f, 0.33, 1, 0.001, True)
+]
+metric_queue = [
     Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
     Metric(cc.desired_queue_bound_alpha, 0, 4, 0.001, False),
+]
+metric_loss = [
     Metric(cc.desired_loss_count_bound, 3, 3, 0.001, False),
     Metric(cc.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
     Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
@@ -198,6 +203,7 @@ verifier.add(z3.Not(desired))
 # verifier.add(v.A[first] - v.L[first] - v.S[first] > 1.5 * c.C * (c.R + c.D))
 
 verifier.push()
+optimization_list = metric_util + metric_queue + metric_loss
 for metric in optimization_list:
     if(metric.maximize):
         verifier.add(metric.z3ExprRef == metric.lo)
@@ -233,9 +239,16 @@ else:
     logger = logging.getLogger('cegis')
     GlobalConfig().default_logger_setup(logger)
 
-    ret = optimize_multi_var(verifier, optimization_list)
-    df = pd.DataFrame(ret)
-    sort_columns = [x.name() for x in optimization_list]
-    sort_order = [x.maximize for x in optimization_list]
-    df = df.sort_values(by=sort_columns, ascending=sort_order)
-    print(df)
+    list_metric_lists = [metric_util, metric_queue, metric_loss]
+    for metric_list in list_metric_lists:
+        verifier.push()
+        other_metrics = list_metric_lists.copy()
+        other_metrics.remove(metric_list)
+        fix_metrics(verifier, flatten(other_metrics))
+        ret = optimize_multi_var(verifier, metric_list)
+        verifier.pop()
+        df = pd.DataFrame(ret)
+        sort_columns = [x.name() for x in metric_list]
+        sort_order = [x.maximize for x in metric_list]
+        df = df.sort_values(by=sort_columns, ascending=sort_order)
+        print(df)
