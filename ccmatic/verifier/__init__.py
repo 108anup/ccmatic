@@ -145,6 +145,9 @@ class DesiredContainer:
     init_inside: Optional[z3.BoolRef] = None
     final_inside: Optional[z3.BoolRef] = None
 
+    fast_decrease: Optional[z3.BoolRef] = None
+    fast_increase: Optional[z3.BoolRef] = None
+
     def rename_vars(self, var_list: List[z3.ExprRef], template: str):
         conds = {
             "fefficient": self.fefficient,
@@ -187,7 +190,10 @@ class DesiredContainer:
             "atleast_one_moves_inside": self.atleast_one_moves_inside,
 
             "init_inside": self.init_inside,
-            "final_inside": self.final_inside
+            "final_inside": self.final_inside,
+
+            "fast_decrease": self.fast_decrease,
+            "fast_increase": self.fast_increase
         }
 
         def get_val(cond):

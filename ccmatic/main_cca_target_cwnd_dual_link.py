@@ -156,7 +156,9 @@ def get_template_definitions(
                 + get_product_ite(
                     consts['s_f[n]']['noloss'], v.alpha,
                     search_range_consts))
-            rhs_expr = z3.If(loss_detected, rhs_loss, rhs_noloss)
+            min_rhs = z3.If(rhs_noloss < rhs_loss, rhs_noloss, rhs_loss)
+            # min_rhs = rhs_loss  # In this case, fast decrease is violated
+            rhs_expr = z3.If(loss_detected, min_rhs, rhs_noloss)
             assert isinstance(rhs_expr, z3.ArithRef)
 
             # cond
@@ -261,7 +263,7 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(consts['c_f[n]']['noloss'])}alpha")
 
     ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
-            f"\texpr = {rhs_loss}\n"
+            f"\texpr = min({rhs_loss}, {rhs_noloss})\n"
             f"else:\n"
             f"\texpr = {rhs_noloss}\n")
 
@@ -567,6 +569,9 @@ cc_ideal.desired_loss_count_bound = 3
 cc_ideal.desired_loss_amount_bound_multiplier = 0
 cc_ideal.desired_loss_amount_bound_alpha = 3
 
+cc_ideal.desired_fast_decrease = True
+cc_ideal.desired_fast_increase = False
+
 cc_ideal.ideal_link = True
 cc_ideal.feasible_response = False
 
@@ -735,11 +740,20 @@ else:
         _, desired = link.get_desired()
         logger.info(f"Testing link: {cc.name}")
 
+        # v = link.v
+        # c = link.c
+        # first = cc.history
+        # mmBDP = c.C * (c.R + c.D)
+
         verifier = MySolver()
         verifier.warn_undeclared = False
         verifier.add(link.definitions)
         verifier.add(link.environment)
         verifier.add(z3.Not(desired))
+        # import ipdb; ipdb.set_trace()
+        # verifier.add(v.c_f[0][first] >= 20 * mmBDP)
+        # verifier.add(z3.Not(v.c_f[0][c.T-1] <= v.c_f[0][first]/2))
+        # verifier.add(c.buf_min <= 0.1 * mmBDP)
         fix_metrics(verifier, ops.fixed_metrics)
         verifier.add(solution)
 
@@ -749,7 +763,8 @@ else:
 
         if(str(sat) == "sat"):
             model = verifier.model()
-            logger.error(vs.get_counter_example_str(model, link.verifier_vars))
+            logger.error("Objective violted. Cex:\n" +
+                vs.get_counter_example_str(model, link.verifier_vars))
             logger.critical("Note, the desired string in above output is based "
                             "on cegis metrics instead of optimization metrics.")
             import ipdb; ipdb.set_trace()

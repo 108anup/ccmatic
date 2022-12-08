@@ -32,6 +32,26 @@ class CCmatic():
     def __init__(self, cc: CegisConfig):
         self.cc = cc
 
+    def get_fast_convergence(self):
+        # Increases and decreases must be fast during link rate variations. In
+        # case of multi-flow, just putting at least one flow has fast
+        # variations.
+
+        cc = self.cc
+        v = self.v
+        c = self.c
+        first = cc.history
+        mmBDP = c.C * (c.R + c.D)
+        fast_decrease = z3.Or(*[z3.Implies(
+            v.c_f[n][first] >= 20 * mmBDP,
+            v.c_f[n][c.T-1] <= v.c_f[n][first]/2) for n in range(c.N)])
+        fast_increase = z3.Or(*[z3.Implies(
+            v.c_f[n][first] < 0.1 * mmBDP,
+            v.c_f[n][c.T-1] >= 2 * v.c_f[n][first]) for n in range(c.N)])
+        assert isinstance(fast_decrease, z3.BoolRef)
+        assert isinstance(fast_increase, z3.BoolRef)
+        return fast_decrease, fast_increase
+
     def get_desired(self):
         cc = self.cc
         c = self.c
@@ -43,6 +63,14 @@ class CCmatic():
         else:
             d = get_desired_necessary(cc, c, v)
             desired = d.desired_necessary
+
+        fd, fi = self.get_fast_convergence()
+        if(cc.desired_fast_decrease):
+            d.fast_decrease = fd
+            desired = z3.And(desired, fd)
+        if(cc.desired_fast_increase):
+            d.fast_increase = fi
+            desired = z3.And(desired, fi)
 
         assert isinstance(desired, z3.ExprRef)
         return d, desired

@@ -30,6 +30,9 @@ class CegisConfig:
     desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
     desired_loss_amount_bound_alpha: Union[float, z3.ArithRef] = 0
 
+    desired_fast_decrease: bool = False
+    desired_fast_increase: bool = False
+
     ideal_link: bool = False
 
     # environment
