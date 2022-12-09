@@ -1,16 +1,20 @@
+import sys
 import functools
 import logging
 from fractions import Fraction
+import time
 from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from cegis.quantified_smt import ExistsForall
+from cegis.util import write_solver
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.common import flatten, get_product_ite
+from ccmatic.common import flatten, get_product_ite, try_except
 
 from .verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
@@ -19,12 +23,12 @@ logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 
-DEBUG = True
+DEBUG = False
 cc = CegisConfig()
 cc.synth_ss = False
 cc.feasible_response = True
 
-cc.history = 3
+cc.history = 4
 cc.D = 1
 cc.C = 100
 # cc.T = 9
@@ -271,6 +275,14 @@ if DEBUG:
     # Definitions (including template)
     with open('tmp/definitions.txt', 'w') as f:
         f.write(definitions.sexpr())
+
+ef = ExistsForall(
+    generator_vars, verifier_vars + definition_vars, search_constraints,
+    z3.Implies(definitions, specification), critical_generator_vars,
+    get_solution_str)
+# try_except(ef.run)
+try_except(ef.run_all)
+sys.exit(0)
 
 try:
     md = CegisMetaData(critical_generator_vars)

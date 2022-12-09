@@ -169,12 +169,12 @@ metric_util = [
     Metric(cc.desired_util_f, 0.33, 1, 0.001, True)
 ]
 metric_queue = [
-    Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
-    Metric(cc.desired_queue_bound_alpha, 0, 4, 0.001, False),
+    Metric(cc.desired_queue_bound_multiplier, 0, 2, 0.001, False),
+    Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
 ]
 metric_loss = [
     Metric(cc.desired_loss_count_bound, 3, 3, 0.001, False),
-    Metric(cc.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
+    Metric(cc.desired_loss_amount_bound_multiplier, 0, 2, 0.001, False),
     Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
 ]
 

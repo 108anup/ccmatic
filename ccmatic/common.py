@@ -63,6 +63,14 @@ def get_name_for_list(l: Union[np.ndarray, List[str], str]) -> str:
         raise TypeError("Expected list or str")
 
 
+def remove_none(l: List) -> List:
+    ret = []
+    for x in l:
+        if(x is not None):
+            ret.append(x)
+    return ret
+
+
 def get_val_list(model: z3.ModelRef, l: List) -> List:
     ret = []
     for x in l:

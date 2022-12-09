@@ -1,16 +1,21 @@
+import sys
 import functools
 import logging
 from fractions import Fraction
+import time
 from typing import List
 
 import z3
 from ccac.variables import VariableNames
+from cegis import get_unsat_core
+from cegis.quantified_smt import ExistsForall
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.common import flatten, get_product_ite
+from ccmatic.common import flatten, get_product_ite, try_except
 from cegis.util import get_raw_value
+from pyz3_utils.my_solver import MySolver
 
 from .verifier import (get_cex_df, get_desired_necessary,
                        get_desired_ss_invariant, get_gen_cex_df,
@@ -267,6 +272,15 @@ if DEBUG:
     with open('tmp/definitions.txt', 'w') as f:
         assert(isinstance(definitions, z3.ExprRef))
         f.write(definitions.sexpr())
+
+ef = ExistsForall(
+    generator_vars, verifier_vars + definition_vars, search_constraints,
+    z3.Implies(definitions, specification), critical_generator_vars,
+    get_solution_str)
+# try_except(ef.run)
+try_except(ef.run_all)
+import sys
+sys.exit(0)
 
 try:
     md = CegisMetaData(critical_generator_vars)
