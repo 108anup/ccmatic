@@ -3,6 +3,7 @@ import copy
 import functools
 import logging
 from fractions import Fraction
+import time
 from typing import Dict, List, Union
 
 import pandas as pd
@@ -13,9 +14,10 @@ from ccac.config import ModelConfig
 from ccac.variables import Variables
 from ccmatic import CCmatic, OptimizationStruct
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
+from ccmatic.common import flatten, flatten_dict, get_product_ite, remove_none, try_except
 from cegis.multi_cegis import MultiCegis
-from cegis.util import Metric, fix_metrics, optimize_multi_var
+from cegis.quantified_smt import ExistsForall
+from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -25,6 +27,7 @@ GlobalConfig().default_logger_setup(logger)
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
+HISTORY = 3
 domain_clauses = []
 
 # For determining lhs, under cond, the coeff of rhs is:
@@ -33,14 +36,18 @@ domain_clauses = []
 rhss_cwnd = ['c_f[n]', 's_f[n]', 'ack_f[n]']
 rhss_expr = ['c_f[n]', 'ack_f[n]']
 rhss_cond = ['c_f[n]', 's_f[n]', 'ack_f[n]', 'losses']
-conds = ['loss', 'noloss']
+rhss_condfi = ['c_f[n]', 'S_f[n]', 'A_f[n]']
+conds = {
+    's_f[n]': ['loss', 'noloss'],
+    'c_f[n]': ['loss', 'noloss', 'fi']
+}
 
 coeffs: Dict[str, Dict[str, Union[Dict[str, z3.ArithRef], z3.ArithRef]]] = {
     f'{lhs}': {
         f'{cond}': {
             f'{rhs}': z3.Real(f'Gen__coeff_{lhs}_{cond}_{rhs}')
             for rhs in rhss_cwnd
-        } for cond in conds
+        } for cond in conds[lhs]
     } for lhs in ['c_f[n]']
 }
 coeffs.update({
@@ -48,7 +55,7 @@ coeffs.update({
         f'{cond}': {
             f'{rhs}': z3.Real(f'Gen__coeff_{lhs}_{cond}_{rhs}')
             for rhs in rhss_expr
-        } for cond in conds
+        } for cond in conds[lhs]
     } for lhs in ['s_f[n]']
 })
 coeffs.update({
@@ -57,6 +64,11 @@ coeffs.update({
         for rhs in rhss_cond
     } for lhs in ['cond']
 })
+coeffs_condfi: Dict[str, List[z3.ArithRef]] = {
+    f'{rhs}': [z3.Real(f'Gen__coeff_condfi_{rhs}_{shift}')
+               for shift in range(HISTORY)]
+    for rhs in rhss_condfi
+}
 
 # coeffs = {}
 # coeffs['c_f[n]'] = {
@@ -79,7 +91,7 @@ coeffs.update({
 consts = {
     f'{lhs}': {
         f'{cond}': z3.Real(f'Gen__const_{lhs}_{cond}')
-        for cond in conds
+        for cond in conds[lhs]
     } for lhs in ['c_f[n]', 's_f[n]']
 }
 
@@ -92,21 +104,25 @@ consts = {
 #     'c_f[n]_noloss': z3.Real('Gen__const_s_f[n]_c_f[n]_noloss'),
 # }
 
-generator_vars = (flatten_dict(coeffs) +
+critical_generator_vars = (flatten_dict(coeffs)
+                           + flatten_dict(coeffs_condfi))
+generator_vars = (critical_generator_vars +
                   flatten_dict(consts))
-critical_generator_vars = flatten_dict(coeffs)
 
 # Search constr
 search_range_conds = [-1, 0, 1]
 # search_range_coeffs = [Fraction(i, 2) for i in range(-4, 5)]
 search_range_coeffs = [Fraction(i, 2) for i in range(5)]
 search_range_consts = [Fraction(i, 2) for i in range(-4, 5)]
+search_range_condfi = [Fraction(i, 2) for i in range(-6, 7)]
 # search_range_consts = [-1, 0, 1]
 domain_clauses = []
 for coeff in flatten_dict([coeffs[x] for x in ['c_f[n]', 's_f[n]']]):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeffs]))
 for coeff in flatten_dict([coeffs[x] for x in ['cond']]):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_conds]))
+for coeff in flatten_dict(coeffs_condfi):
+    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_condfi]))
 for const in flatten_dict(consts):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 
@@ -174,6 +190,37 @@ def get_template_definitions(
                     search_range_conds)
                 + coeffs['cond']['losses'] * loss_detected > 0)
 
+            # Should we be doing fast increase or not
+            condfi = 0
+            for rhs in rhss_condfi:
+                for shift in range(cc.history):
+                    vstr = f'v.{rhs}[t-shift-c.R]'
+                    variable = eval(vstr)
+                    condfi += get_product_ite(
+                        coeffs_condfi[rhs][shift], variable,
+                        search_range_condfi)
+            condfi = condfi > 0
+            # rhs = rhss_condfi[0]
+            # shift = 0
+            # ss = f'v.{rhs}[t-shift]'
+            # # import ipdb; ipdb.set_trace()
+            # try:
+            #     condfi = z3.Sum(*[
+            #         get_product_ite(
+            #             coeffs_condfi[rhs][shift], eval(f'v.{rhs}[t-shift]'),
+            #             search_range_consts)  # Note consts can be negative, so using that.
+            #         for rhs in rhss_condfi
+            #         for shift in range(cc.history)
+            #     ])
+            # except Exception:
+            #     import sys
+            #     import traceback
+
+            #     import ipdb
+            #     extype, value, tb = sys.exc_info()
+            #     traceback.print_exc()
+            #     ipdb.post_mortem(tb)
+
             # RHS for cwnd
             rhs_cond = (
                 get_product_ite(
@@ -201,6 +248,20 @@ def get_template_definitions(
                 + get_product_ite(
                     consts['c_f[n]']['noloss'], v.alpha,
                     search_range_consts))
+            rhs_fi = (
+                get_product_ite(
+                    coeffs['c_f[n]']['fi']['c_f[n]'], v.c_f[n][t-c.R],
+                    search_range_coeffs)
+                + get_product_ite(
+                    coeffs['c_f[n]']['fi']['s_f[n]'], rhs_expr,
+                    search_range_coeffs)
+                + get_product_ite(
+                    coeffs['c_f[n]']['fi']['ack_f[n]'], acked_bytes,
+                    search_range_coeffs)
+                + get_product_ite(
+                    consts['c_f[n]']['fi'], v.alpha,
+                    search_range_consts))
+            rhs_nocond = z3.If(condfi, rhs_fi, rhs_nocond)
             next_cwnd = z3.If(cond, rhs_cond, rhs_nocond)
             assert isinstance(next_cwnd, z3.ArithRef)
 
@@ -246,6 +307,15 @@ def get_solution_str(solution: z3.ModelRef,
             f" + {solution.eval(coeffs['cond']['losses'])}"
             f"Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0")
 
+    def get_string(rhs, shift):
+        val = get_raw_value(solution.eval(coeffs_condfi[rhs][shift]))
+        if(val != 0):
+            return f"{val}{rhs}[t-{shift+c.R}]"
+
+    condfi = " + ".join(remove_none(
+        [get_string(rhs, shift)
+         for rhs in rhss_condfi for shift in range(HISTORY)])) + " > 0"
+
     # RHS for cwnd
     rhs_cond = (f"{solution.eval(coeffs['c_f[n]']['loss']['c_f[n]'])}"
                 f"c_f[n][t-{c.R}]"
@@ -261,14 +331,25 @@ def get_solution_str(solution: z3.ModelRef,
                   f" + {solution.eval(coeffs['c_f[n]']['noloss']['ack_f[n]'])}"
                   f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
                   f" + {solution.eval(consts['c_f[n]']['noloss'])}alpha")
+    rhs_fi = (f"{solution.eval(coeffs['c_f[n]']['fi']['c_f[n]'])}"
+                f"c_f[n][t-{c.R}]"
+                f" + {solution.eval(coeffs['c_f[n]']['fi']['s_f[n]'])}"
+                f"expr"
+                f" + {solution.eval(coeffs['c_f[n]']['fi']['ack_f[n]'])}"
+                f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
+                f" + {solution.eval(consts['c_f[n]']['fi'])}alpha")
 
     ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
-            f"\texpr = min({rhs_loss}, {rhs_noloss})\n"
+            f"\texpr = min({rhs_loss},\n"
+            f"\t           {rhs_noloss})\n"
             f"else:\n"
             f"\texpr = {rhs_noloss}\n")
 
-    ret += (f"\nif({cond}):\n"
+    ret += (f"\n"
+            f"if({cond})\n"
             f"\tc_f[n][t] = max(alpha, {rhs_cond})\n"
+            f"elif({condfi}):\n"
+            f"\tc_f[n][t] = max(alpha, {rhs_fi})\n"
             f"else:\n"
             f"\tc_f[n][t] = max(alpha, {rhs_nocond})\n")
 
@@ -498,6 +579,55 @@ comb_ad = [
     consts['s_f[n]']['noloss'] == 1
 ]
 
+# Fast increase choices
+fi_miai = [
+    coeffs['c_f[n]']['fi']['c_f[n]'] == 3/2,
+    coeffs['c_f[n]']['fi']['s_f[n]'] == 0,
+    coeffs['c_f[n]']['fi']['ack_f[n]'] == 0,
+    consts['c_f[n]']['fi'] == 1/2]
+
+fi_ti = [
+    coeffs['c_f[n]']['fi']['c_f[n]'] == 0,
+    coeffs['c_f[n]']['fi']['s_f[n]'] == 1,
+    coeffs['c_f[n]']['fi']['ack_f[n]'] == 0,
+    consts['c_f[n]']['fi'] == 0]
+
+condfi3 = [
+    coeffs_condfi['c_f[n]'][0] == -5/2,
+    coeffs_condfi['c_f[n]'][1] == 0,
+    coeffs_condfi['c_f[n]'][2] == 0,
+    coeffs_condfi['A_f[n]'][0] == 0,
+    coeffs_condfi['A_f[n]'][1] == 0,
+    coeffs_condfi['A_f[n]'][2] == 0,
+    coeffs_condfi['S_f[n]'][0] == 1/2,
+    coeffs_condfi['S_f[n]'][1] == 0,
+    coeffs_condfi['S_f[n]'][2] == -1/2,
+]
+
+condfi1 = [
+    coeffs_condfi['c_f[n]'][0] == -1/2,
+    coeffs_condfi['c_f[n]'][1] == 0,
+    coeffs_condfi['c_f[n]'][2] == 0,
+    coeffs_condfi['A_f[n]'][0] == 0,
+    coeffs_condfi['A_f[n]'][1] == 0,
+    coeffs_condfi['A_f[n]'][2] == 0,
+    coeffs_condfi['S_f[n]'][0] == 1/2,
+    coeffs_condfi['S_f[n]'][1] == 0,
+    coeffs_condfi['S_f[n]'][2] == -1/2,
+]
+
+condfi2 = [
+    coeffs_condfi['c_f[n]'][0] == -3/2,
+    coeffs_condfi['c_f[n]'][1] == 0,
+    coeffs_condfi['c_f[n]'][2] == 0,
+    coeffs_condfi['A_f[n]'][0] == 0,
+    coeffs_condfi['A_f[n]'][1] == 0,
+    coeffs_condfi['A_f[n]'][2] == 0,
+    coeffs_condfi['S_f[n]'][0] == 1/2,
+    coeffs_condfi['S_f[n]'][1] == 0,
+    coeffs_condfi['S_f[n]'][2] == -1/2,
+]
+
 spaces = {
     # --------------------------------------------------
     # Fixed responses (9 cases: [ai, mi, ti] x [ad, md, td])
@@ -521,14 +651,27 @@ spaces = {
 
     # --------------------------------------------------
     # Just check if we can ever do ti or mi.
-    'ti_or_miai': z3.Or(*[z3.And(ti), z3.And(miai)])
+    'ti_or_miai': z3.Or(*[z3.And(ti), z3.And(miai)]),
+
+    # Everything except fast increase
+    # For exploring fast increase
+    'aitd_comb_ad': [ai, td, comb_ad],
+    'aitd_comb_ad_fi_miai_ti': [
+        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti))],
+    'condfi3': [
+        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi3],
+    'condfi2': [
+        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi2],
+    'condfi1': [
+        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi1],
 }
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '-s', '--space', default=None,
     type=str, action='store',
-    help=f'Search space restriction. Options include: {list(spaces.keys())}')
+    help=f'Search space restriction.',
+    choices=list(spaces.keys()))
 parser.add_argument(
     '--optimize', default=None,
     type=int, action='store',
@@ -559,7 +702,7 @@ cc_ideal.buffer_size_multiplier = 1
 cc_ideal.template_qdel = False
 cc_ideal.template_queue_bound = False
 cc_ideal.N = 1
-cc_ideal.history = 3
+cc_ideal.history = HISTORY
 cc_ideal.cca = "paced"
 
 cc_ideal.desired_util_f = 1
@@ -567,10 +710,10 @@ cc_ideal.desired_queue_bound_multiplier = 1/2
 cc_ideal.desired_queue_bound_alpha = 3
 cc_ideal.desired_loss_count_bound = 3
 cc_ideal.desired_loss_amount_bound_multiplier = 0
-cc_ideal.desired_loss_amount_bound_alpha = 3
+cc_ideal.desired_loss_amount_bound_alpha = 10
 
 cc_ideal.desired_fast_decrease = True
-cc_ideal.desired_fast_increase = False
+cc_ideal.desired_fast_increase = True
 
 cc_ideal.ideal_link = True
 cc_ideal.feasible_response = False
@@ -672,6 +815,16 @@ verifier_structs = [x.get_verifier_struct() for x in links]
 # vs_ideal.specification = z3.Not(env)
 
 if(args.optimize is None):
+
+    # # verifier_structs = verifier_structs[1:]
+    # all_vvars = flatten([vs.verifier_vars for vs in verifier_structs])
+    # all_dvars = flatten([vs.definition_vars for vs in verifier_structs])
+    # all_defs = z3.And(*[vs.definitions for vs in verifier_structs])
+    # all_specs = z3.And(*[vs.specification for vs in verifier_structs])
+    # ef = ExistsForall(generator_vars, all_vvars + all_dvars, search_constraints,
+    #                   z3.Implies(all_defs, all_specs), critical_generator_vars, get_solution_str)
+    # try_except(ef.run)
+
     multicegis = MultiCegis(
         generator_vars, search_constraints, critical_generator_vars,
         verifier_structs, ideal.ctx, None, None)
