@@ -4,7 +4,7 @@ import logging
 import z3
 from ccac.variables import VariableNames
 from ccmatic.cegis import CegisConfig
-from cegis.util import Metric, get_raw_value, optimize_multi_var, unroll_assertions
+from cegis.util import Metric, get_raw_value, optimize_multi_var, unroll_assertions, write_solver
 from ccmatic.verifier import get_cex_df, setup_cegis_basic
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
@@ -30,7 +30,7 @@ def test_copa_composition():
     elif(cc.cca == "bbr"):
         cc.history = 2 * cc.R
 
-    cc.feasible_response = True
+    cc.feasible_response = False
 
     cc.desired_util_f = z3.Real('desired_util_f')
     cc.desired_queue_bound_multiplier = z3.Real('desired_queue_bound_multiplier')
@@ -150,7 +150,7 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    # verifier.add(known_assumption_ccac)
+    verifier.add(known_assumption_ccac)
     # verifier.add(z3.Not(known_assumption_ccmatic2))
     # verifier.add(z3.Not(known_assumption_ccmatic_monotonic21))
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
@@ -165,7 +165,7 @@ def test_copa_composition():
     optimization_list = [
         Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
         # Metric(delay_f, 0, 1, 0.001, True)
-        Metric(cc.desired_queue_bound_multiplier, 0, 8, 0.001, False)
+        # Metric(cc.desired_queue_bound_multiplier, 0, 8, 0.001, False)
     ]
     # verifier.add(cc.desired_util_f == 0.1)
     # verifier.add(cc.desired_queue_bound_multiplier == 8)
@@ -177,6 +177,7 @@ def test_copa_composition():
         else:
             verifier.add(metric.z3ExprRef == metric.hi)
 
+    write_solver(verifier, "tmp/test_copa_assumption")
     sat = verifier.check()
     print(str(sat))
     if(str(sat) == "sat"):
@@ -185,7 +186,7 @@ def test_copa_composition():
         import ipdb; ipdb.set_trace()
 
     else:
-        # sys.exit(1)
+        sys.exit(1)
         # # Unsat core
         # dummy = MySolver()
         # dummy.warn_undeclared = False
