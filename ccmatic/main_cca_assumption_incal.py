@@ -31,8 +31,8 @@ Though, need to ensure that each def var takes exactly one value.
 """
 
 DEBUG = False
+# dummy_cca = "paced"
 dummy_cca = "bbr"
-dummy_cca = "paced"
 cc = CegisConfig()
 cc.T = 10
 cc.infinite_buffer = True  # No loss for simplicity
@@ -42,8 +42,8 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
-cc.use_ref_cca = False
-cc.monotonic_inc_assumption = True
+cc.use_ref_cca = True
+cc.monotonic_inc_assumption = False
 
 cc.compose = True
 cc.cca = "copa"
@@ -53,7 +53,7 @@ if(cc.cca == "copa"):
 elif(cc.cca == "bbr"):
     cc.history = 2 * cc.R
 
-cc.feasible_response = True
+cc.feasible_response = False
 util_frac = 0.1
 
 # CCA under test
@@ -254,9 +254,9 @@ assumption = z3.And(assumption_constraints)
 assert isinstance(assumption, z3.ExprRef)
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
-# Try synth assumption that breaks CCA.
-specification = z3.Implies(
-    z3.And(environment, assumption), poor_utilization)
+# # Try synth assumption that breaks CCA.
+# specification = z3.Implies(
+#     z3.And(environment, assumption), poor_utilization)
 definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
 assert isinstance(definitions, z3.ExprRef)
 # cca_definitions are verifier only. does not matter if they are here...
@@ -274,9 +274,9 @@ if(cc.monotonic_inc_assumption):
         assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
     specification_novel = z3.And(
         environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
-    # Try synth assumption that breaks CCA.
-    specification_novel = z3.And(
-        environment_novel, assumption_novel, poor_utilization_novel)
+    # # Try synth assumption that breaks CCA.
+    # specification_novel = z3.And(
+    #     environment_novel, assumption_novel, poor_utilization_novel)
     definitions_novel = z3.And(
         ccac_domain_novel, ccac_definitions_novel, cca_definitions_novel)
 
@@ -455,16 +455,43 @@ def process_seed_assumptions(seed_assumptions_path: str):
 known_solution = None
 known_solution_list = []
 
-# Ineq 1
-known_solution_list.append(coeffs[1][vname2vnum['W']][0] == 1)
-known_solution_list.append(coeffs[1][vname2vnum['W']][1] == -1)
+# Waste does not happen or Q <= 0
+known_solution_list = []
+# Ineq 0: W[t] - W[t-1] <= 0
+known_solution_list.append(coeffs[0][vname2vnum['W']][0] == 1)
+known_solution_list.append(coeffs[0][vname2vnum['W']][1] == -1)
 for vname in ineq_var_symbols[:-1]:
     if(vname != 'W'):
-        known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
-        known_solution_list.append(coeffs[1][vname2vnum[vname]][1] == 0)
-known_solution_list.append(z3.Not(clauses[0][1]))
-known_solution_list.append(clausenegs[0][1])
+        known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
+        known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
+known_solution_list.append(clauses[0][0])
+known_solution_list.append(z3.Not(clausenegs[0][0]))
 
+# Ineq 1: Q >= 0 <=> A-L-S <= 0. Note lossless, so no mention of L
+known_solution_list.append(coeffs[1][vname2vnum['A']][0] == 1)
+known_solution_list.append(coeffs[1][vname2vnum['S']][0] == -1)
+for vname in ineq_var_symbols[:-1]:
+    known_solution_list.append(coeffs[1][vname2vnum[vname]][1] == 0)
+    if(vname not in ['A', 'S']):
+        known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
+known_solution_list.append(clauses[0][1])
+known_solution_list.append(z3.Not(clausenegs[0][1]))
+
+# # Waste never happens
+# known_solution_list = []
+# known_solution_list.append(coeffs[0][vname2vnum['W']][0] == 1)
+# known_solution_list.append(coeffs[0][vname2vnum['W']][1] == -1)
+# for vname in ineq_var_symbols[:-1]:
+#     if(vname != 'W'):
+#         known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
+#         known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
+# known_solution_list.append(clauses[0][0])
+# known_solution_list.append(z3.Not(clausenegs[0][0]))
+# known_solution_list.append(z3.Not(clauses[0][1]))
+# known_solution_list.append(z3.Not(clausenegs[0][1]))
+
+# Don't use A[t] in template
+# known_solution_list = []
 # # Ineq 0
 # known_solution_list.append(coeffs[0][vname2vnum['A']][0] == 1)
 # known_solution_list.append(coeffs[0][vname2vnum['']][1] == -1)
@@ -472,8 +499,8 @@ known_solution_list.append(clausenegs[0][1])
 #     if(vname != 'W'):
 #         known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
 #         known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
-known_solution_list.append(clauses[0][0])
-known_solution_list.append(z3.Not(clausenegs[0][0]))
+# known_solution_list.append(clauses[0][0])
+# known_solution_list.append(z3.Not(clausenegs[0][0]))
 
 known_solution = z3.And(known_solution_list)
 # Check the False assumption
@@ -573,6 +600,7 @@ if (__name__ == "__main__"):
                                         definitions_novel, specification_novel)
         assert isinstance(search_constraints, z3.ExprRef)
 
+        # import ipbd; ipdb.set_trace()
         cg = CegisCCAGen(generator_vars, verifier_vars,
                          definition_vars, search_constraints,
                          definitions, specification, ctx,
