@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import fractions
 import logging
 import math
@@ -12,12 +13,16 @@ from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
 LINK_RATE = 100
+R = 1
+D = R
 
 
 def test_rate_bounds(
-        sending_rate_multiplier=2, tsteps=1, upper_bound=True):
+        pacing_gain=2, tsteps=1, upper_bound=True, cwnd_gain: float=100):
     cc = CegisConfig()
     cc.C = LINK_RATE
+    cc.R = R
+    cc.D = D
     cc.T = 10
     cc.history = cc.R
     cc.infinite_buffer = False
@@ -45,10 +50,10 @@ def test_rate_bounds(
     link.setup_cegis_loop(True, [], [], lambda x, y: "")
 
     sending_rate_constraint = z3.And(*[
-        v.r_f[n][t] == cc.C * sending_rate_multiplier
+        v.r_f[n][t] == cc.C * pacing_gain
         for t in range(cc.T) for n in range(cc.N)])
     cwnd_constraint = z3.And(*[
-        v.c_f[n][t] == 100 * cc.C * (c.R + c.D)
+        v.c_f[n][t] == cwnd_gain * cc.C * (c.R + c.D)
         for t in range(cc.T) for n in range(cc.N)])
     # Ensure we are only rate limited, never cwnd limited.
 
@@ -64,7 +69,9 @@ def test_rate_bounds(
     assert cc.R == cc.D
     # Assume link rate has been stagnant throughout.
     # So max queuing is sending_rate * R
-    verifier.add(v.A[0] - v.L[0] - v.S[0] <= cc.C * cc.R * sending_rate_multiplier)
+    verifier.add(v.A[0] - v.L[0] - v.S[0] == 0)
+    # verifier.add(v.A[0] - v.L[0] - v.S[0] <= cc.C * cc.R * pacing_gain)
+    # verifier.add(v.A[0] - v.L[0] - v.S[0] <= cc.C * (cc.R + cc.D) * cwnd_gain)
     # verifier.add(v.A[0] - v.L[0] - v.S[0] <= cc.C * (cc.R + cc.D))
     # verifier.add(z3.And(*[v.A[t] - v.L[t] - v.S[t] == cc.C * sending_rate_multiplier * cc.R
     #                       for t in range(2)]))
@@ -116,11 +123,92 @@ def test_rate_bounds(
     # sort_order = [x.maximize for x in optimization_list]
     # df = df.sort_values(by=sort_columns, ascending=sort_order)
 
-    print(sending_rate_multiplier, tsteps, ret)
+    print(pacing_gain, tsteps, ret)
     if(upper_bound):
         return ret[0]
     else:
         return ret[2]
+
+
+def vary_sending_rate():
+    all_records = []
+    for pacing_gain in \
+            [0.1, 0.25, fractions.Fraction(1, 3), 0.5, fractions.Fraction(2, 3), 0.75, 1, 2]:
+        records = []
+        n_tsteps = 5
+        for tsteps in range(1, n_tsteps+1):
+            lower = test_rate_bounds(
+                pacing_gain, tsteps, upper_bound=False)
+            upper = test_rate_bounds(pacing_gain, tsteps)
+            print(pacing_gain, tsteps, lower, upper)
+            min_rate = min(LINK_RATE, LINK_RATE * pacing_gain)
+            den_limit = 32
+            if(min_rate == LINK_RATE):
+                den_limit = tsteps
+            record = {
+                'sending_rate': pacing_gain,
+                'tsteps': tsteps,
+                # 'lower': fractions.Fraction(lower/min_rate).limit_denominator(den_limit),
+                # 'upper': fractions.Fraction(upper/min_rate).limit_denominator(den_limit)
+                'lower': round(lower/min_rate, 6),
+                'upper': round(upper/min_rate, 6)
+            }
+            records.append(record)
+            all_records.append(record)
+        df = pd.DataFrame(records).astype(float)
+        print(df)
+
+    df = pd.DataFrame(all_records).astype(float)
+    print(df)
+
+
+def vary_inflight():
+    all_records = []
+    # [0.1, 0.25, fractions.Fraction(1, 3), 0.5, fractions.Fraction(2, 3), 0.75, 1, 2]
+    sweep = sorted(list(set([x/10 for x in range(1, 21, 1)] + [x/20 for x in range(1, 21, 1)])))
+    for cwnd_gain in sweep:
+        records = []
+        n_tsteps = 3
+        for tsteps in range(n_tsteps, n_tsteps+1):
+            lower = test_rate_bounds(
+                100, tsteps, False, cwnd_gain)
+            upper = test_rate_bounds(100, tsteps, cwnd_gain=cwnd_gain)
+            print(cwnd_gain, tsteps, lower, upper)
+            record = {
+                'inflight': cwnd_gain,
+                'tsteps': tsteps,
+                'lower': lower,
+                'upper': upper
+            }
+            records.append(record)
+            all_records.append(record)
+        df = pd.DataFrame(records).astype(float)
+        print(df)
+
+    df = pd.DataFrame(all_records).astype(float)
+    print(df)
+    return df
+
+
+def plot_rate_bounds(df, vary='inflight'):
+
+    # Assumes df has one a single tstep for all rows.
+    tsteps = df['tsteps'].iloc[0]
+    xx = df[vary]
+    ylower = df['lower']
+    yupper = df['upper']
+
+    fig, ax = plt.subplots()
+    ax.fill_between(xx, ylower, yupper, alpha=0.5)
+    ax.set_xlabel(vary)
+    ax.set_ylabel(f'Delivery rate (over {tsteps} Rm)')
+    if(vary == "inflight"):
+        ax.set_xlabel("Inflight (max BDP)")
+        ax.axvline(x=0.5, label='min BDP', color='black')
+        ax.axvline(x=1, label='max BDP', color='black')
+        ax.axhline(y=LINK_RATE, label='max BDP', color='black')
+
+    fig.savefig(f"tmp/{vary}-{tsteps}.pdf")
 
 
 if (__name__ == "__main__"):
@@ -145,36 +233,9 @@ if (__name__ == "__main__"):
     # df = pd.DataFrame(records)
     # print(df)
 
-    all_records = []
-    for sending_rate_multiplier in \
-            [0.1, 0.25, fractions.Fraction(1, 3), 0.5, fractions.Fraction(2, 3), 0.75, 1, 2]:
-        # When rate is higher
-        records = []
-        n_tsteps = 5
-        for tsteps in range(1, n_tsteps+1):
-            lower = test_rate_bounds(
-                sending_rate_multiplier, tsteps, upper_bound=False)
-            upper = test_rate_bounds(sending_rate_multiplier, tsteps)
-            print(sending_rate_multiplier, tsteps, lower, upper)
-            min_rate = min(LINK_RATE, LINK_RATE * sending_rate_multiplier)
-            den_limit = 32
-            if(min_rate == LINK_RATE):
-                den_limit = tsteps
-            record = {
-                'sending_rate': sending_rate_multiplier,
-                'tsteps': tsteps,
-                # 'lower': fractions.Fraction(lower/min_rate).limit_denominator(den_limit),
-                # 'upper': fractions.Fraction(upper/min_rate).limit_denominator(den_limit)
-                'lower': round(lower/min_rate, 6),
-                'upper': round(upper/min_rate, 6)
-            }
-            records.append(record)
-            all_records.append(record)
-        df = pd.DataFrame(records).astype(float)
-        print(df)
-
-    df = pd.DataFrame(all_records).astype(float)
-    print(df)
+    df = vary_inflight()
+    plot_rate_bounds(df)
+    # vary_sending_rate()
 
 
 """

@@ -31,8 +31,9 @@ Though, need to ensure that each def var takes exactly one value.
 """
 
 DEBUG = False
-# dummy_cca = "paced"
-dummy_cca = "bbr"
+dummy_cca = "paced"
+# dummy_cca = "bbr"
+# dummy_cca = "copa"
 cc = CegisConfig()
 cc.T = 10
 cc.infinite_buffer = True  # No loss for simplicity
@@ -42,12 +43,12 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
-cc.use_ref_cca = False
+cc.use_ref_cca = True
 cc.monotonic_inc_assumption = True
 
 cc.compose = True
-cc.cca = "copa"
-# cc.cca = "bbr"
+# cc.cca = "copa"
+cc.cca = "bbr"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
 elif(cc.cca == "bbr"):

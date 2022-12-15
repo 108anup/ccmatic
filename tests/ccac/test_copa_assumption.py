@@ -24,7 +24,7 @@ def test_copa_composition():
     cc.template_qdel = True
 
     cc.compose = True
-    cc.cca = "bbr"
+    cc.cca = "copa"
     if(cc.cca == "copa"):
         cc.history = cc.R + cc.D
     elif(cc.cca == "bbr"):
@@ -142,6 +142,21 @@ def test_copa_composition():
         )
     known_assumption_ccmatic_monotonic21 = z3.And(known_assumption_list)
 
+    # Copa works but bbr doesn't
+    # Ineq 0: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
+    # Ineq 1: -S[t-0] +S[t-1] -A[t-0] +A[t-1] +W[t-0] -W[t-1] +(C_0 + C(t-0)) -(C_0 + C(t-1)) <= 0
+    known_assumption_list = []
+    for t in range(c.T):
+        known_assumption_list.append(
+            z3.Or(
+                +v.S[t-0] + v.A[t-0] - v.A[t-1] +
+                v.W[t-0] - (v.C0 + c.C*(t-0)) <= 0,
+                -v.S[t-0] + v.S[t-1] - v.A[t-0] + v.A[t-1] + v.W[t-0] -
+                v.W[t-1] + (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0
+            )
+        )
+    assumption_copa_not_bbr = z3.And(*known_assumption_list)
+
     verifier = MySolver()
     verifier.warn_undeclared = False
     verifier.add(ccac_domain)
@@ -150,7 +165,8 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(known_assumption_ccac)
+    verifier.add(assumption_copa_not_bbr)
+    # verifier.add(known_assumption_ccac)
     # verifier.add(z3.Not(known_assumption_ccmatic2))
     # verifier.add(z3.Not(known_assumption_ccmatic_monotonic21))
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
@@ -186,7 +202,7 @@ def test_copa_composition():
         import ipdb; ipdb.set_trace()
 
     else:
-        sys.exit(1)
+        # sys.exit(1)
         # # Unsat core
         # dummy = MySolver()
         # dummy.warn_undeclared = False
