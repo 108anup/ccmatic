@@ -1022,7 +1022,14 @@ def maximize_gap(
 
         s.push()
         s.add(min_gap >= pt)
-        sat = s.check()
+        try:
+            sat = s.check()
+        except z3.z3types.Z3Exception as e:
+            logger.error(f"During binary search for max gap,"
+                         f" verifier threw error: {e}")
+            logger.info("Defaulting to using unoptimized model")
+            s.pop()
+            return orig_sat, orig_model
         s.pop()
 
         if(str(sat) == 'sat'):
