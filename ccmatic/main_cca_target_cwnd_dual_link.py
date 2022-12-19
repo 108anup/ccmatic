@@ -1,22 +1,21 @@
 import argparse
 import copy
-import functools
 import logging
 from fractions import Fraction
-import time
 from typing import Dict, List, Union
 
+import numpy as np
 import pandas as pd
 import z3
 
 import ccmatic.common  # Used for side effects
 from ccac.config import ModelConfig
-from ccac.variables import Variables
+from ccac.variables import VariableNames, Variables
 from ccmatic import CCmatic, OptimizationStruct
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, flatten_dict, get_product_ite, remove_none, try_except
+from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
+from ccmatic.verifier import get_cex_df
 from cegis.multi_cegis import MultiCegis
-from cegis.quantified_smt import ExistsForall
 from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -28,6 +27,9 @@ GlobalConfig().default_logger_setup(logger)
 # TEMPLATE
 # Generator search space
 HISTORY = 3
+TRACE_TIME = 9
+TIME_BETWEEN_LARGE_LOSS = TRACE_TIME - HISTORY - 1 # units of Rm
+
 domain_clauses = []
 
 # For determining lhs, under cond, the coeff of rhs is:
@@ -36,7 +38,7 @@ domain_clauses = []
 rhss_cwnd = ['c_f[n]', 's_f[n]', 'ack_f[n]']
 rhss_expr = ['c_f[n]', 'ack_f[n]']
 rhss_cond = ['c_f[n]', 's_f[n]', 'ack_f[n]', 'losses']
-rhss_condfi = ['c_f[n]', 'S_f[n]', 'A_f[n]']
+# rhss_condfi = ['c_f[n]', 'S_f[n]', 'A_f[n]']
 conds = {
     's_f[n]': ['loss', 'noloss'],
     'c_f[n]': ['loss', 'noloss', 'fi']
@@ -64,11 +66,11 @@ coeffs.update({
         for rhs in rhss_cond
     } for lhs in ['cond']
 })
-coeffs_condfi: Dict[str, List[z3.ArithRef]] = {
-    f'{rhs}': [z3.Real(f'Gen__coeff_condfi_{rhs}_{shift}')
-               for shift in range(HISTORY)]
-    for rhs in rhss_condfi
-}
+# coeffs_condfi: Dict[str, List[z3.ArithRef]] = {
+#     f'{rhs}': [z3.Real(f'Gen__coeff_condfi_{rhs}_{shift}')
+#                for shift in range(HISTORY)]
+#     for rhs in rhss_condfi
+# }
 
 # coeffs = {}
 # coeffs['c_f[n]'] = {
@@ -104,8 +106,9 @@ consts = {
 #     'c_f[n]_noloss': z3.Real('Gen__const_s_f[n]_c_f[n]_noloss'),
 # }
 
-critical_generator_vars = (flatten_dict(coeffs)
-                           + flatten_dict(coeffs_condfi))
+# critical_generator_vars = (flatten_dict(coeffs)
+#                            + flatten_dict(coeffs_condfi))
+critical_generator_vars = flatten_dict(coeffs)
 generator_vars = (critical_generator_vars +
                   flatten_dict(consts))
 
@@ -121,8 +124,8 @@ for coeff in flatten_dict([coeffs[x] for x in ['c_f[n]', 's_f[n]']]):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_coeffs]))
 for coeff in flatten_dict([coeffs[x] for x in ['cond']]):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_conds]))
-for coeff in flatten_dict(coeffs_condfi):
-    domain_clauses.append(z3.Or(*[coeff == val for val in search_range_condfi]))
+# for coeff in flatten_dict(coeffs_condfi):
+#     domain_clauses.append(z3.Or(*[coeff == val for val in search_range_condfi]))
 for const in flatten_dict(consts):
     domain_clauses.append(z3.Or(*[const == val for val in search_range_consts]))
 
@@ -191,35 +194,23 @@ def get_template_definitions(
                 + coeffs['cond']['losses'] * loss_detected > 0)
 
             # Should we be doing fast increase or not
-            condfi = 0
-            for rhs in rhss_condfi:
-                for shift in range(cc.history):
-                    vstr = f'v.{rhs}[t-shift-c.R]'
-                    variable = eval(vstr)
-                    condfi += get_product_ite(
-                        coeffs_condfi[rhs][shift], variable,
-                        search_range_condfi)
-            condfi = condfi > 0
-            # rhs = rhss_condfi[0]
-            # shift = 0
-            # ss = f'v.{rhs}[t-shift]'
-            # # import ipdb; ipdb.set_trace()
-            # try:
-            #     condfi = z3.Sum(*[
-            #         get_product_ite(
-            #             coeffs_condfi[rhs][shift], eval(f'v.{rhs}[t-shift]'),
-            #             search_range_consts)  # Note consts can be negative, so using that.
-            #         for rhs in rhss_condfi
-            #         for shift in range(cc.history)
-            #     ])
-            # except Exception:
-            #     import sys
-            #     import traceback
+            # condfi = 0
+            # for rhs in rhss_condfi:
+            #     for shift in range(cc.history):
+            #         vstr = f'v.{rhs}[t-shift-c.R]'
+            #         variable = eval(vstr)
+            #         condfi += get_product_ite(
+            #             coeffs_condfi[rhs][shift], variable,
+            #             search_range_condfi)
+            # condfi = condfi > 0
 
-            #     import ipdb
-            #     extype, value, tb = sys.exc_info()
-            #     traceback.print_exc()
-            #     ipdb.post_mortem(tb)
+            begin = max(t-TIME_BETWEEN_LARGE_LOSS+1, 1)
+            assert t-2 >= 0
+            can_fast_increase = z3.And(
+                z3.Not(
+                    z3.Or(*[v.Ld_f[n][_t] > v.Ld_f[n][_t-1]
+                            for _t in range(begin, t+1)])),
+                z3.Not(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha))
 
             # RHS for cwnd
             rhs_cond = (
@@ -261,15 +252,21 @@ def get_template_definitions(
                 + get_product_ite(
                     consts['c_f[n]']['fi'], v.alpha,
                     search_range_consts))
-            rhs_nocond = z3.If(condfi, rhs_fi, rhs_nocond)
+            rhs_nocond = z3.If(can_fast_increase, rhs_fi, rhs_nocond)
             next_cwnd = z3.If(cond, rhs_cond, rhs_nocond)
             assert isinstance(next_cwnd, z3.ArithRef)
+            clamped_cwnd = z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha)
+
+            # Reset cwnd is loss happened on fast increase (FI)
+            # Previous was FI and loss detected in this window.
+            loss_on_fi = z3.And(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha, loss_detected)
+            reset_cwnd = v.c_f[n][t-2]  # the cwnd before last FI
 
             # next_cwnd = z3.If(v.c_f[n][t-1] < target_cwnd,
             #                   v.c_f[n][t-1] + v.alpha,
             #                   v.c_f[n][t-1] - v.alpha)
             template_definitions.append(
-                v.c_f[n][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
+                v.c_f[n][t] == z3.If(loss_on_fi, reset_cwnd, clamped_cwnd))
 
             # target_cwnd = z3.If(rhs >= v.alpha + cc.template_cca_lower_bound,
             #                     rhs, v.alpha + cc.template_cca_lower_bound)
@@ -280,6 +277,59 @@ def get_template_definitions(
             # template_definitions.append(
             #     v.c_f[n][t] == target_cwnd)
     return template_definitions
+
+
+def get_cex_function(ccmatic: CCmatic):
+    cc = ccmatic.cc
+    c, _, v = ccmatic.c, ccmatic.s, ccmatic.v
+    d = ccmatic.d
+    vn = VariableNames(v)
+
+    def get_counter_example_str(
+            counter_example: z3.ModelRef,
+            verifier_vars: List[z3.ExprRef]) -> str:
+        df = get_cex_df(counter_example, v, vn, c)
+        for n in range(c.N):
+            can_fast_increase_t: List = [-1, -1]
+            can_fast_increase_a_t: List = [-1, -1]
+            can_fast_increase_b_t: List = [-1, -1]
+            for t in range(2, c.T):
+                assert t-2 >= 0
+                begin = max(t-TIME_BETWEEN_LARGE_LOSS+1, 1)
+
+                can_fast_increase = z3.And(
+                    z3.Not(
+                        z3.Or(*[v.Ld_f[n][_t] > v.Ld_f[n][_t-1]
+                                for _t in range(begin, t+1)])),
+                    z3.Not(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha))
+                cfi_a = z3.Not(
+                    z3.Or(*[v.Ld_f[n][_t] > v.Ld_f[n][_t-1]
+                            for _t in range(begin, t+1)]))
+                cfi_b = z3.Not(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha)
+
+                can_fast_increase_t.append(
+                    get_raw_value(counter_example.eval(can_fast_increase)))  # type: ignore
+                can_fast_increase_a_t.append(
+                    get_raw_value(counter_example.eval(cfi_a)))  # type: ignore
+                can_fast_increase_b_t.append(
+                    get_raw_value(counter_example.eval(cfi_b)))  # type: ignore
+
+            df[f'can_fast_increase_{n},t'] = np.array(
+                    can_fast_increase_t).astype(float)
+            df[f'can_fast_increase_a_{n},t'] = np.array(
+                can_fast_increase_a_t).astype(float)
+            df[f'can_fast_increase_b_{n},t'] = np.array(
+                can_fast_increase_b_t).astype(float)
+
+        desired_string = d.to_string(cc, c, counter_example)
+        buf_size = c.buf_min
+        if(cc.dynamic_buffer):
+            buf_size = counter_example.eval(c.buf_min)
+        ret = "{}\n{}, alpha={}, buf_size={}.".format(
+            df, desired_string, counter_example.eval(v.alpha), buf_size)
+        return ret
+
+    return get_counter_example_str
 
 
 def get_solution_str(solution: z3.ModelRef,
@@ -307,14 +357,16 @@ def get_solution_str(solution: z3.ModelRef,
             f" + {solution.eval(coeffs['cond']['losses'])}"
             f"Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0")
 
-    def get_string(rhs, shift):
-        val = get_raw_value(solution.eval(coeffs_condfi[rhs][shift]))
-        if(val != 0):
-            return f"{val}{rhs}[t-{shift+c.R}]"
+    # def get_string(rhs, shift):
+    #     val = get_raw_value(solution.eval(coeffs_condfi[rhs][shift]))
+    #     if(val != 0):
+    #         return f"{val}{rhs}[t-{shift+c.R}]"
 
-    condfi = " + ".join(remove_none(
-        [get_string(rhs, shift)
-         for rhs in rhss_condfi for shift in range(HISTORY)])) + " > 0"
+    # condfi = " + ".join(remove_none(
+    #     [get_string(rhs, shift)
+    #      for rhs in rhss_condfi for shift in range(HISTORY)])) + " > 0"
+
+    can_fast_increase = f"\"Last loss was >= {TIME_BETWEEN_LARGE_LOSS} Rm ago and Last fast increase was >= 1 Rm ago\""
 
     # RHS for cwnd
     rhs_cond = (f"{solution.eval(coeffs['c_f[n]']['loss']['c_f[n]'])}"
@@ -348,10 +400,13 @@ def get_solution_str(solution: z3.ModelRef,
     ret += (f"\n"
             f"if({cond})\n"
             f"\tc_f[n][t] = max(alpha, {rhs_cond})\n"
-            f"elif({condfi}):\n"
+            f"elif({can_fast_increase}):\n"
             f"\tc_f[n][t] = max(alpha, {rhs_fi})\n"
             f"else:\n"
             f"\tc_f[n][t] = max(alpha, {rhs_nocond})\n")
+
+    ret += (f"if(\"Loss on fast increase\"):\n"
+            f"\tc_f[n][t] = c_f[n][t-2]")
 
     return ret
 
@@ -592,41 +647,41 @@ fi_ti = [
     coeffs['c_f[n]']['fi']['ack_f[n]'] == 0,
     consts['c_f[n]']['fi'] == 0]
 
-condfi3 = [
-    coeffs_condfi['c_f[n]'][0] == -5/2,
-    coeffs_condfi['c_f[n]'][1] == 0,
-    coeffs_condfi['c_f[n]'][2] == 0,
-    coeffs_condfi['A_f[n]'][0] == 0,
-    coeffs_condfi['A_f[n]'][1] == 0,
-    coeffs_condfi['A_f[n]'][2] == 0,
-    coeffs_condfi['S_f[n]'][0] == 1/2,
-    coeffs_condfi['S_f[n]'][1] == 0,
-    coeffs_condfi['S_f[n]'][2] == -1/2,
-]
+# condfi3 = [
+#     coeffs_condfi['c_f[n]'][0] == -5/2,
+#     coeffs_condfi['c_f[n]'][1] == 0,
+#     coeffs_condfi['c_f[n]'][2] == 0,
+#     coeffs_condfi['A_f[n]'][0] == 0,
+#     coeffs_condfi['A_f[n]'][1] == 0,
+#     coeffs_condfi['A_f[n]'][2] == 0,
+#     coeffs_condfi['S_f[n]'][0] == 1/2,
+#     coeffs_condfi['S_f[n]'][1] == 0,
+#     coeffs_condfi['S_f[n]'][2] == -1/2,
+# ]
 
-condfi1 = [
-    coeffs_condfi['c_f[n]'][0] == -1/2,
-    coeffs_condfi['c_f[n]'][1] == 0,
-    coeffs_condfi['c_f[n]'][2] == 0,
-    coeffs_condfi['A_f[n]'][0] == 0,
-    coeffs_condfi['A_f[n]'][1] == 0,
-    coeffs_condfi['A_f[n]'][2] == 0,
-    coeffs_condfi['S_f[n]'][0] == 1/2,
-    coeffs_condfi['S_f[n]'][1] == 0,
-    coeffs_condfi['S_f[n]'][2] == -1/2,
-]
+# condfi1 = [
+#     coeffs_condfi['c_f[n]'][0] == -1/2,
+#     coeffs_condfi['c_f[n]'][1] == 0,
+#     coeffs_condfi['c_f[n]'][2] == 0,
+#     coeffs_condfi['A_f[n]'][0] == 0,
+#     coeffs_condfi['A_f[n]'][1] == 0,
+#     coeffs_condfi['A_f[n]'][2] == 0,
+#     coeffs_condfi['S_f[n]'][0] == 1/2,
+#     coeffs_condfi['S_f[n]'][1] == 0,
+#     coeffs_condfi['S_f[n]'][2] == -1/2,
+# ]
 
-condfi2 = [
-    coeffs_condfi['c_f[n]'][0] == -3/2,
-    coeffs_condfi['c_f[n]'][1] == 0,
-    coeffs_condfi['c_f[n]'][2] == 0,
-    coeffs_condfi['A_f[n]'][0] == 0,
-    coeffs_condfi['A_f[n]'][1] == 0,
-    coeffs_condfi['A_f[n]'][2] == 0,
-    coeffs_condfi['S_f[n]'][0] == 1/2,
-    coeffs_condfi['S_f[n]'][1] == 0,
-    coeffs_condfi['S_f[n]'][2] == -1/2,
-]
+# condfi2 = [
+#     coeffs_condfi['c_f[n]'][0] == -3/2,
+#     coeffs_condfi['c_f[n]'][1] == 0,
+#     coeffs_condfi['c_f[n]'][2] == 0,
+#     coeffs_condfi['A_f[n]'][0] == 0,
+#     coeffs_condfi['A_f[n]'][1] == 0,
+#     coeffs_condfi['A_f[n]'][2] == 0,
+#     coeffs_condfi['S_f[n]'][0] == 1/2,
+#     coeffs_condfi['S_f[n]'][1] == 0,
+#     coeffs_condfi['S_f[n]'][2] == -1/2,
+# ]
 
 spaces = {
     # --------------------------------------------------
@@ -658,12 +713,12 @@ spaces = {
     'aitd_comb_ad': [ai, td, comb_ad],
     'aitd_comb_ad_fi_miai_ti': [
         ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti))],
-    'condfi3': [
-        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi3],
-    'condfi2': [
-        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi2],
-    'condfi1': [
-        ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi1],
+    # 'condfi3': [
+    #     ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi3],
+    # 'condfi2': [
+    #     ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi2],
+    # 'condfi1': [
+    #     ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi1],
 }
 
 parser = argparse.ArgumentParser()
@@ -702,6 +757,7 @@ cc_ideal.buffer_size_multiplier = 1
 cc_ideal.template_qdel = False
 cc_ideal.template_queue_bound = False
 cc_ideal.N = 1
+cc_ideal.T = TRACE_TIME
 cc_ideal.history = HISTORY
 cc_ideal.cca = "paced"
 
@@ -709,7 +765,8 @@ cc_ideal.desired_util_f = 1
 cc_ideal.desired_queue_bound_multiplier = 1/2
 cc_ideal.desired_queue_bound_alpha = 3
 cc_ideal.desired_loss_count_bound = 3
-cc_ideal.desired_loss_amount_bound_multiplier = 0
+cc_ideal.desired_large_loss_count_bound = 1
+cc_ideal.desired_loss_amount_bound_multiplier = 1.5
 cc_ideal.desired_loss_amount_bound_alpha = 10
 
 cc_ideal.desired_fast_decrease = True
@@ -726,6 +783,7 @@ template_definitions_ideal = get_template_definitions(cc_ideal, c, v)
 ideal.setup_cegis_loop(
     search_constraints,
     template_definitions_ideal, generator_vars, get_solution_str)
+ideal.get_counter_example_str = get_cex_function(ideal)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -736,6 +794,7 @@ cc_adv.desired_util_f = 0.5
 cc_adv.desired_queue_bound_multiplier = 1.5
 cc_adv.desired_queue_bound_alpha = 3
 cc_adv.desired_loss_count_bound = 3
+cc_ideal.desired_large_loss_count_bound = 3
 cc_adv.desired_loss_amount_bound_multiplier = 1.5
 cc_adv.desired_loss_amount_bound_alpha = 3
 
@@ -750,6 +809,7 @@ template_definitions_adv = get_template_definitions(cc_adv, c, v)
 adv.setup_cegis_loop(
     search_constraints,
     template_definitions_adv, generator_vars, get_solution_str)
+adv.get_counter_example_str = get_cex_function(adv)
 
 logger.info("Ideal: " + cc_ideal.desire_tag())
 logger.info("Adver: " + cc_adv.desire_tag())
@@ -816,7 +876,7 @@ verifier_structs = [x.get_verifier_struct() for x in links]
 
 if(args.optimize is None):
 
-    # # verifier_structs = verifier_structs[1:]
+    # verifier_structs = verifier_structs[:-1]
     # all_vvars = flatten([vs.verifier_vars for vs in verifier_structs])
     # all_dvars = flatten([vs.definition_vars for vs in verifier_structs])
     # all_defs = z3.And(*[vs.definitions for vs in verifier_structs])
@@ -824,6 +884,8 @@ if(args.optimize is None):
     # ef = ExistsForall(generator_vars, all_vvars + all_dvars, search_constraints,
     #                   z3.Implies(all_defs, all_specs), critical_generator_vars, get_solution_str)
     # try_except(ef.run)
+    # import sys
+    # sys.exit(0)
 
     multicegis = MultiCegis(
         generator_vars, search_constraints, critical_generator_vars,

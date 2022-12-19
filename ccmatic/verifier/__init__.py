@@ -121,6 +121,7 @@ class DesiredContainer:
     fefficient: Optional[z3.BoolRef] = None
     bounded_queue: Optional[z3.BoolRef] = None
     bounded_loss_count: Optional[z3.BoolRef] = None
+    bounded_large_loss_count: Optional[z3.BoolRef] = None
     bounded_loss_amount: Optional[z3.BoolRef] = None
 
     ramp_up_cwnd: Optional[z3.BoolRef] = None
@@ -133,6 +134,7 @@ class DesiredContainer:
     ramp_up_bq: Optional[z3.BoolRef] = None
 
     loss_count: Optional[z3.ArithRef] = None
+    large_loss_count: Optional[z3.ArithRef] = None
     loss_amount: Optional[z3.ArithRef] = None
 
     steady_state_variables: Optional[List[SteadyStateVariable]] = None
@@ -175,6 +177,7 @@ class DesiredContainer:
             "fefficient": self.fefficient,
             "bounded_queue": self.bounded_queue,
             "bounded_loss_count": self.bounded_loss_count,
+            "bounded_large_loss_count": self.bounded_large_loss_count,
             "bounded_loss_amount": self.bounded_loss_amount,
             "ramp_up_cwnd": self.ramp_up_cwnd,
             "ramp_down_cwnd": self.ramp_down_cwnd,
@@ -183,6 +186,7 @@ class DesiredContainer:
             "ramp_up_queue": self.ramp_up_queue,
             "ramp_down_queue": self.ramp_down_queue,
             "loss_count": self.loss_count,
+            "large_loss_count": self.large_loss_count,
             "loss_amount": self.loss_amount,
 
             "atleast_one_outside": self.atleast_one_outside,
@@ -843,6 +847,8 @@ def get_desired_necessary(
               d.ramp_down_queue, d.ramp_down_bq),
         z3.Or(d.bounded_loss_count, d.ramp_down_cwnd,
               d.ramp_down_queue, d.ramp_down_bq),
+        z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+              d.ramp_down_queue, d.ramp_down_bq),
         z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd,
               d.ramp_down_queue, d.ramp_down_bq))
 
@@ -872,6 +878,12 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         loss_list.append(v.L[t] > v.L[t-1])
     d.loss_count = z3.Sum(*loss_list)
     d.bounded_loss_count = d.loss_count <= cc.desired_loss_count_bound
+
+    large_loss_list: List[z3.BoolRef] = []
+    for t in range(first, c.T):
+        large_loss_list.append(v.L[t] > v.L[t-1] + v.alpha * cc.desired_loss_amount_bound_alpha)
+    d.large_loss_count = z3.Sum(*large_loss_list)
+    d.bounded_large_loss_count = d.large_loss_count <= cc.desired_large_loss_count_bound
 
     d.loss_amount = v.L[-1] - v.L[first]
     d.bounded_loss_amount = (
@@ -1155,7 +1167,7 @@ def get_cex_df(
             get_name_for_list(vn.r_f[n]): _get_model_value(v.r_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
-            # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
+            get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })
     if(c.feasible_response):

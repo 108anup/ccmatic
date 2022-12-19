@@ -27,6 +27,7 @@ class CegisConfig:
     desired_queue_bound_multiplier: Union[float, z3.ArithRef]
     desired_queue_bound_alpha: Union[float, z3.ArithRef] = 0
     desired_loss_count_bound: Union[float, z3.ArithRef]
+    desired_large_loss_count_bound: Union[float, z3.ArithRef]
     desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
     desired_loss_amount_bound_alpha: Union[float, z3.ArithRef] = 0
 
@@ -62,6 +63,7 @@ class CegisConfig:
         items = [
             'desired_util_f', 'desired_queue_bound_multiplier',
             'desired_queue_bound_alpha', 'desired_loss_count_bound',
+            'desired_large_loss_count_bound',
             'desired_loss_amount_bound_multiplier',
             'desired_loss_amount_bound_alpha']
         item_strs = []
@@ -78,6 +80,8 @@ class CegisConfig:
             z3.Real(f'{pre}Desired__queue_bound_alpha')
         self.desired_loss_count_bound = \
             z3.Real(f'{pre}Desired__loss_count_bound')
+        self.desired_large_loss_count_bound = \
+            z3.Real(f'{pre}Desired__large_loss_count_bound')
         self.desired_loss_amount_bound_multiplier = \
             z3.Real(f'{pre}Desired__loss_amount_bound')
         self.desired_loss_amount_bound_alpha = \
