@@ -45,9 +45,16 @@ class CCmatic():
         fast_decrease = z3.Or(*[z3.Implies(
             v.c_f[n][first] >= 20 * mmBDP,
             v.c_f[n][c.T-1] <= v.c_f[n][first]/2) for n in range(c.N)])
+
+        # Increase should be such that additive increase of alpha can't justify
+        # the increase. Hence, one fast increase must have happened.
+        increase_time_steps = c.T - first - 1
         fast_increase = z3.Or(*[z3.Implies(
             v.c_f[n][first] < 0.1 * mmBDP,
-            v.c_f[n][c.T-1] >= 3/2 * v.c_f[n][first]) for n in range(c.N)])
+            z3.Or(v.c_f[n][c.T-1] > v.c_f[n][first] +
+                  increase_time_steps*v.alpha,
+                  v.c_f[n][c.T-1] >= 0.25 * mmBDP))
+            for n in range(c.N)])
         assert isinstance(fast_decrease, z3.BoolRef)
         assert isinstance(fast_increase, z3.BoolRef)
         return fast_decrease, fast_increase

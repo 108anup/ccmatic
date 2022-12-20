@@ -1,0 +1,44 @@
+[12/19 19:28:55]  Using search space: aitd_comb_ad_fi_ti
+[12/19 19:28:56]  Ideal: desired_util_f=1, desired_queue_bound_multiplier=0.5, desired_queue_bound_alpha=3, desired_loss_count_bound=3, desired_large_loss_count_bound=1, desired_loss_amount_bound_multiplier=1.5, desired_loss_amount_bound_alpha=10
+[12/19 19:28:56]  Adver: desired_util_f=0.5, desired_queue_bound_multiplier=1.5, desired_queue_bound_alpha=3, desired_loss_count_bound=4, desired_large_loss_count_bound=4, desired_loss_amount_bound_multiplier=4, desired_loss_amount_bound_alpha=3
+[12/19 19:29:22]  --------------------------------------------------------------------------------
+[12/19 19:29:22]  Iteration: 1 (0 solution, 0 counterexamples)
+[12/19 19:29:22]  Generator returned sat in 0.006103 secs.
+[12/19 19:29:22]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/19 19:29:25]  Improved number of small numbers from 114 to 114 out of a max of 114
+[12/19 19:29:25]  Verifer returned sat in 2.808530 secs.
+[12/19 19:29:25]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t     queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0           -263.000000           -322.666667         -263.000000         0.333333         0.333333         -322.666667          0.000000                  0.000000   59.666667   -1.000000                   -1.0                     -1.0                     -1.0
+1           -263.000000           -263.000000         -263.000000         0.333333         0.333333         -263.000000          0.000000                  0.000000    0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2           -182.333333           -182.333333         -182.333333        80.666667        80.666667         -182.333333          0.000000                  0.000000    0.000000   -1.000000                    1.0                      1.0                      1.0
+3             98.000000            -82.333333           98.000000       280.333333       280.333333          -82.333333          0.000000                  0.000000  180.333333   -1.000000                    0.0                      1.0                      0.0
+4            197.666667             17.666667          197.666667       280.000000       280.000000           17.666667          0.000000                  0.000000  180.000000  280.000000                    0.0                      1.0                      0.0
+5            317.666667            117.666667          317.666667       300.000000       300.000000          117.666667          0.000000                  0.000000  200.000000  300.000000                    1.0                      1.0                      1.0
+6            437.333333            217.666667          437.333333       319.666667       319.666667          217.666667          0.333333                  0.000000  219.333333  319.666667                    0.0                      1.0                      0.0
+7            518.000000            317.666667          518.000000       300.000000       300.000000          317.666667          0.333333                  0.333333  200.000000  300.000000                    0.0                      0.0                      1.0
+8            637.666667            417.666667          637.666667       319.666667       319.666667          417.666667          0.666667                  0.333333  219.333333  319.666667                    0.0                      0.0                      1.0
+9            718.333333            517.666667          718.333333       300.000000       300.000000          517.666667          0.666667                  0.666667  200.000000  300.000000                    0.0                      0.0                      1.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=2, 
+, large_loss_count=0, loss_amount=2/3, fast_decrease=True, fast_increase=True, alpha=59/3, buf_size=658/3.[0m
+[12/19 19:29:38]  --------------------------------------------------------------------------------
+[12/19 19:29:38]  Iteration: 2 (0 solution, 1 counterexamples)
+[12/19 19:29:38]  Generator returned unsat in 0.206611 secs.
+[12/19 19:29:38]  [96mNo more solutions found[0m
+[12/19 19:29:38]  Final solutions:
+[12/19 19:29:38]  Took 42.732042 secs.

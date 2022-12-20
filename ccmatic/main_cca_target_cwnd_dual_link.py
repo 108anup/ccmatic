@@ -26,8 +26,8 @@ GlobalConfig().default_logger_setup(logger)
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
-HISTORY = 3
-TRACE_TIME = 9
+HISTORY = 4
+TRACE_TIME = 10
 TIME_BETWEEN_LARGE_LOSS = TRACE_TIME - HISTORY - 1 # units of Rm
 
 domain_clauses = []
@@ -754,6 +754,8 @@ spaces = {
     'aitd_comb_ad': [ai, td, comb_ad],
     'aitd_comb_ad_fi_miai_ti': [
         ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti))],
+    'aitd_comb_ad_fi_ti': [
+        ai, td, comb_ad, z3.And(*fi_ti)],
     # 'condfi3': [
     #     ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi3],
     # 'condfi2': [
@@ -803,7 +805,7 @@ cc_ideal.history = HISTORY
 cc_ideal.cca = "paced"
 
 cc_ideal.desired_util_f = 1
-cc_ideal.desired_queue_bound_multiplier = 1/2
+cc_ideal.desired_queue_bound_multiplier = 2
 cc_ideal.desired_queue_bound_alpha = 3
 cc_ideal.desired_loss_count_bound = 3
 cc_ideal.desired_large_loss_count_bound = 1
@@ -832,7 +834,7 @@ cc_adv = copy.copy(cc_ideal)
 cc_adv.name = "adv"
 
 cc_adv.desired_util_f = 0.5
-cc_adv.desired_queue_bound_multiplier = 1.5
+cc_adv.desired_queue_bound_multiplier = 2
 cc_adv.desired_queue_bound_alpha = 3
 cc_adv.desired_loss_count_bound = 4
 cc_adv.desired_large_loss_count_bound = 4
