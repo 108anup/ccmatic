@@ -14,7 +14,7 @@ from ccmatic.verifier import (get_cex_df, get_desired_necessary,
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import Metric
+from cegis.util import Metric, z3_min
 
 
 class CCmatic():
@@ -42,6 +42,7 @@ class CCmatic():
         c = self.c
         first = cc.history
         mmBDP = c.C * (c.R + c.D)
+        BDP = c.C * c.R
         fast_decrease = z3.Or(*[z3.Implies(
             v.c_f[n][first] >= 20 * mmBDP,
             v.c_f[n][c.T-1] <= v.c_f[n][first]/2) for n in range(c.N)])
@@ -49,12 +50,19 @@ class CCmatic():
         # Increase should be such that additive increase of alpha can't justify
         # the increase. Hence, one fast increase must have happened.
         increase_time_steps = c.T - first - 1
-        fast_increase = z3.Or(*[z3.Implies(
-            v.c_f[n][first] < 0.1 * mmBDP,
-            z3.Or(v.c_f[n][c.T-1] > v.c_f[n][first] +
-                  increase_time_steps*v.alpha,
-                  v.c_f[n][c.T-1] >= 0.25 * mmBDP))
-            for n in range(c.N)])
+        fast_increase_list = []
+        for n in range(c.N):
+            initial_cwnd = z3_min(v.c_f[n][first], v.c_f[n][first+1])
+            final_cwnd = z3_min(v.c_f[n][-1], v.c_f[n][-2])
+            this_fi = z3.Implies(
+                initial_cwnd < 0.1 * mmBDP,
+                z3.Or(v.c_f[n][c.T-1] > initial_cwnd +
+                      increase_time_steps*v.alpha,
+                      v.c_f[n][c.T-1] >= 0.5 * BDP,
+                      v.c_f[n][c.T-1] > 3/2 * initial_cwnd))
+            fast_increase_list.append(this_fi)
+        fast_increase = z3.Or(*fast_increase_list)
+
         assert isinstance(fast_decrease, z3.BoolRef)
         assert isinstance(fast_increase, z3.BoolRef)
         return fast_decrease, fast_increase

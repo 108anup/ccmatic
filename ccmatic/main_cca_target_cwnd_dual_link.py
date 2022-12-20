@@ -16,7 +16,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from ccmatic.verifier import get_cex_df
 from cegis.multi_cegis import MultiCegis
-from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var
+from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_min
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -252,6 +252,7 @@ def get_template_definitions(
                 + get_product_ite(
                     consts['c_f[n]']['fi'], v.alpha,
                     search_range_consts))
+            rhs_fi = z3_min(3/2 * v.c_f[n][t-1], rhs_fi)
             rhs_nocond = z3.If(can_fast_increase, rhs_fi, rhs_nocond)
             next_cwnd = z3.If(cond, rhs_cond, rhs_nocond)
             assert isinstance(next_cwnd, z3.ArithRef)
@@ -431,6 +432,8 @@ def get_solution_str(solution: z3.ModelRef,
                 f" + {solution.eval(coeffs['c_f[n]']['fi']['ack_f[n]'])}"
                 f"(S_f[n][t-{c.R}]-S_f[n][t-{cc_ideal.history}])"
                 f" + {solution.eval(consts['c_f[n]']['fi'])}alpha")
+
+    rhs_fi = f"min(3/2c_f[n][t-1], {rhs_fi})"
 
     ret += (f"if(Ld_f[n][t] > Ld_f[n][t-1]):\n"
             f"\texpr = min({rhs_loss},\n"
@@ -675,6 +678,16 @@ comb_ad = [
     consts['s_f[n]']['noloss'] == 1
 ]
 
+rocc_ad = [
+    coeffs['s_f[n]']['loss']['c_f[n]'] == 1,
+    coeffs['s_f[n]']['loss']['ack_f[n]'] == 0,
+    consts['s_f[n]']['loss'] == -1,
+
+    coeffs['s_f[n]']['noloss']['c_f[n]'] == 0,
+    coeffs['s_f[n]']['noloss']['ack_f[n]'] == 1,
+    consts['s_f[n]']['noloss'] == 0
+]
+
 # Fast increase choices
 fi_miai = [
     coeffs['c_f[n]']['fi']['c_f[n]'] == 3/2,
@@ -744,6 +757,7 @@ spaces = {
     # Fixed targets
     'comb_md': comb_md,  # titd for adv link
     'comb_ad': comb_ad,  # synthesized by this file
+    'rocc_ad': rocc_ad,  # synthesized by this file
 
     # --------------------------------------------------
     # Just check if we can ever do ti or mi.
@@ -756,6 +770,10 @@ spaces = {
         ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti))],
     'aitd_comb_ad_fi_ti': [
         ai, td, comb_ad, z3.And(*fi_ti)],
+    'aitd_rocc_ad_fi_ti': [
+        ai, td, rocc_ad, z3.And(*fi_ti)],
+    'aitd_fi_ti': [
+        ai, td, z3.And(*fi_ti)],
     # 'condfi3': [
     #     ai, td, comb_ad, z3.Or(z3.And(*fi_miai), z3.And(*fi_ti)), condfi3],
     # 'condfi2': [
