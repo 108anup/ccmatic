@@ -1,0 +1,46 @@
+[12/20 14:55:47]  Using search space: aitd_rocc_ad_fi_ti
+[12/20 14:55:48]  Ideal: desired_util_f=1, desired_queue_bound_multiplier=2, desired_queue_bound_alpha=3, desired_loss_count_bound=3, desired_large_loss_count_bound=1, desired_loss_amount_bound_multiplier=1.5, desired_loss_amount_bound_alpha=10
+[12/20 14:55:48]  Adver: desired_util_f=0.5, desired_queue_bound_multiplier=2, desired_queue_bound_alpha=3, desired_loss_count_bound=4, desired_large_loss_count_bound=4, desired_loss_amount_bound_multiplier=4, desired_loss_amount_bound_alpha=3
+[12/20 14:56:21]  --------------------------------------------------------------------------------
+[12/20 14:56:21]  Iteration: 1 (0 solution, 0 counterexamples)
+[12/20 14:56:21]  Generator returned sat in 0.005689 secs.
+[12/20 14:56:21]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 0alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 14:56:24]  Verifer returned unsat in 3.358284 secs.
+[12/20 14:57:41]  Improved gap from 0.0 to 4.6875
+[12/20 14:57:41]  Improved number of small numbers from 136 to 136 out of a max of 136
+[12/20 14:57:41]  Verifer returned sat in 76.510854 secs.
+[12/20 14:57:41]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -910.536859        -1030.584936       -910.536859     136.730769     136.730769      -1030.584936        0.048077                0.000000                -930.536859     930.584936  120.000000       20.000000   -1.000000                   -1.0                     -1.0                     -1.0
+1         -825.440705         -840.657051       -825.440705     205.096154     205.096154       -840.657051        0.048077                0.048077                -840.657051     930.584936   15.168269        5.096154   -1.000000                   -1.0                     -1.0                     -1.0
+2         -825.440705         -830.584936       -825.440705      15.120192      15.120192       -830.584936        0.048077                0.048077                -830.633013    1025.488782    5.096154        0.000000   -1.000000                    0.0                      0.0                      0.0
+3         -825.440705         -825.488782       -825.440705       0.048077       0.048077       -825.488782        0.048077                0.048077                -825.536859    1120.801282    0.000000       -4.687500   -1.000000                    0.0                      0.0                      1.0
+4         -805.440705         -820.753205       -805.440705      20.000000      20.000000       -820.753205        0.048077                0.048077                -820.753205    1205.488782   15.264423        0.000000  205.096154                    0.0                      0.0                      1.0
+5         -800.753205         -805.440705       -800.753205      19.951923      19.951923       -805.440705        0.048077                0.048077                -805.440705    1300.753205    4.639423       -0.048077   19.903846                    0.0                      0.0                      1.0
+6         -780.248397         -800.705128       -780.248397      25.144231      25.144231       -800.705128        0.048077                0.048077                -800.705128    1380.296474   20.408654        0.000000   25.144231                    1.0                      1.0                      1.0
+7         -775.873397         -780.248397       -775.873397      24.783654      24.783654       -780.248397        0.048077                0.048077                -780.248397    1475.560897    4.326923       -0.360577   24.783654                    1.0                      1.0                      1.0
+8         -743.024840         -775.512821       -743.024840      37.175481      37.175481       -775.512821        0.048077                0.048077                -775.512821    1543.072917   32.439904        0.000000   40.504808                    1.0                      1.0                      1.0
+9         -743.024840         -743.072917       -743.024840      29.927885      29.927885       -743.072917        0.048077                0.048077                -643.024840    1543.072917    0.000000     -100.000000   29.927885                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=2075/104, buf_size=20.[0m
+[12/20 14:57:57]  --------------------------------------------------------------------------------
+[12/20 14:57:57]  Iteration: 2 (0 solution, 1 counterexamples)
+[12/20 14:57:58]  Generator returned unsat in 0.100431 secs.
+[12/20 14:57:58]  [96mNo more solutions found[0m
+[12/20 14:57:58]  Final solutions:
+[12/20 14:57:58]  Took 129.551056 secs.

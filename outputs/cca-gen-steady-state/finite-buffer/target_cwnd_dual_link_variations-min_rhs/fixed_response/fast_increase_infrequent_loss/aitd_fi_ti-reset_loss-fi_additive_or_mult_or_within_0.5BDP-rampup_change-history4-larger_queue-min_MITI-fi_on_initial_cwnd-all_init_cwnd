@@ -71,3 +71,517 @@ if("Loss on fast increase"):
 fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
 , ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, 
 , large_loss_count=0, loss_amount=8587/192, fast_decrease=True, fast_increase=True, alpha=4289/288, buf_size=8587/576.[0m
+[12/20 13:34:48]  --------------------------------------------------------------------------------
+[12/20 13:34:48]  Iteration: 3 (0 solution, 2 counterexamples)
+[12/20 13:34:50]  Generator returned sat in 1.844396 secs.
+[12/20 13:34:50]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1/2c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1/2alpha,
+	           1/2c_f[n][t-1] + 2(S_f[n][t-1]-S_f[n][t-4]) + -2alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 2(S_f[n][t-1]-S_f[n][t-4]) + -2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:34:51]  Improved number of small numbers from 114 to 114 out of a max of 114
+[12/20 13:34:51]  Verifer returned sat in 1.573518 secs.
+[12/20 13:34:51]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t   queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -13113.868056         -13121.914931       -13113.868056         0.062500         0.062500       -13121.914931          0.000000                  0.000000  8.046875   -1.000000                   -1.0                     -1.0                     -1.0
+1         -13013.852431         -13021.914931       -13013.852431       108.062500       108.062500       -13021.914931          0.015625                  0.000000  8.046875   -1.000000                   -1.0                     -1.0                     -1.0
+2         -13013.852431         -13013.868056       -13013.852431         8.031250         8.031250       -13013.868056          0.015625                  0.015625  0.000000   -1.000000                    0.0                      0.0                      0.0
+3         -12913.852431         -12913.868056       -12913.852431       100.000000       100.000000       -12913.868056          0.015625                  0.015625  0.000000   -1.000000                    0.0                      0.0                      1.0
+4         -12809.821181         -12813.868056       -12809.821181       104.031250       104.031250       -12813.868056          0.015625                  0.015625  4.031250  458.031250                    0.0                      0.0                      0.0
+5         -12705.789931         -12713.868056       -12705.789931       108.062500       108.062500       -12713.868056          0.031250                  0.015625  8.046875  460.046875                    0.0                      0.0                      1.0
+6         -12661.821181         -12661.852431       -12661.821181        52.015625        52.015625       -12661.852431          0.031250                  0.031250  0.000000   52.015625                    0.0                      0.0                      1.0
+7         -12605.774306         -12605.805556       -12605.774306        56.046875        56.046875       -12605.805556          0.031250                  0.031250  0.000000  521.976562                    0.0                      0.0                      1.0
+8         -12545.696181         -12545.727431       -12545.696181        60.078125        60.078125       -12545.727431          0.031250                  0.031250  0.000000  436.085938                    0.0                      0.0                      1.0
+9         -12481.586806         -12481.618056       -12481.586806        64.109375        64.109375       -12481.618056          0.031250                  0.031250  0.000000  358.257812                    0.0                      0.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=1, 
+, large_loss_count=0, loss_amount=1/64, fast_decrease=True, fast_increase=True, alpha=129/32, buf_size=515/64.[0m
+[12/20 13:35:08]  --------------------------------------------------------------------------------
+[12/20 13:35:08]  Iteration: 4 (0 solution, 3 counterexamples)
+[12/20 13:35:10]  Generator returned sat in 2.104895 secs.
+[12/20 13:35:10]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -2alpha,
+	           0c_f[n][t-1] + 3/2(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 3/2(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:35:16]  Verifer returned unsat in 5.802353 secs.
+[12/20 13:35:23]  Improved number of small numbers from 135 to 135 out of a max of 135
+[12/20 13:35:23]  Verifer returned sat in 7.099012 secs.
+[12/20 13:35:23]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t  queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0            -880.400             -880.65          -880.400          0.250          0.250           -880.65           0.000                   0.000                    -880.65         800.25     0.25          -80.15      -1.000                   -1.0                     -1.0                     -1.0
+1            -612.900             -790.00          -612.900        267.750        267.750           -790.00           0.000                   0.000                    -790.00         800.25   177.10           87.35      -1.000                   -1.0                     -1.0                     -1.0
+2            -612.900             -613.15          -612.900          0.250          0.250           -613.15           0.000                   0.000                    -613.15         800.25     0.25          -12.65      -1.000                    0.0                      1.0                      0.0
+3            -158.300             -600.00          -158.300        454.850        454.850           -600.00           0.000                   0.000                    -600.00         800.25   441.70          341.95      -1.000                    1.0                      1.0                      1.0
+4            -158.300             -500.25          -158.300        441.450        441.450           -500.25           0.000                   0.000                    -400.00         800.25   341.95          241.95     441.450                    0.0                      1.0                      0.0
+5             -45.150             -300.25           -45.150        455.100        455.100           -300.25           0.000                   0.000                    -300.25         800.25   255.10          255.10     455.100                    1.0                      1.0                      1.0
+6             189.575             -300.00           189.575        489.825        489.825           -300.00          21.325                   0.000                    -300.00         800.25   468.25          368.50     489.825                    1.0                      1.0                      1.0
+7             189.575             -100.25           189.575        455.100        455.100           -100.25          21.325                  21.325                    -100.25         800.25   268.50          268.50     462.525                    0.0                      0.0                      0.0
+8             389.825               -0.25           389.825        468.750        468.750             -0.25          21.575                  21.325                      -0.25         800.25   368.50          368.50     620.475                    0.0                      0.0                      1.0
+9             462.775                0.00           462.775        441.450        441.450              0.00          21.575                  21.575                       0.00         800.25   441.20          341.45     441.450                    0.0                      0.0                      1.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=2, 
+, large_loss_count=0, loss_amount=863/40, fast_decrease=True, fast_increase=True, alpha=273/20, buf_size=737/2.[0m
+[12/20 13:35:40]  --------------------------------------------------------------------------------
+[12/20 13:35:40]  Iteration: 5 (0 solution, 4 counterexamples)
+[12/20 13:35:41]  Generator returned sat in 0.671007 secs.
+[12/20 13:35:41]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:35:46]  Verifer returned unsat in 5.462424 secs.
+[12/20 13:36:44]  Improved gap from 0.0 to 29.6875
+[12/20 13:36:45]  Improved number of small numbers from 127 to 136 out of a max of 136
+[12/20 13:36:45]  Verifer returned sat in 58.378851 secs.
+[12/20 13:36:45]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t    queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -780.250000         -800.250244       -780.250000       0.249756       0.249756       -800.250244             0.0                     0.0                -800.250244     800.249756  20.000244       20.000000   -1.000000                   -1.0                     -1.0                     -1.0
+1         -740.598633         -770.310303       -740.598633      59.651611      59.651611       -770.310303             0.0                     0.0                -770.310303     840.598389  29.711670        0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2         -740.598633         -740.598633       -740.598633       0.024170       0.024170       -740.598633             0.0                     0.0                -740.574707     910.886963   0.000000      -29.711426   -1.000000                    0.0                      1.0                      0.0
+3         -681.127441         -710.863037       -681.127441      59.471191      59.471191       -710.863037             0.0                     0.0                -710.863037     981.127197  29.735596        0.000000   -1.000000                    1.0                      1.0                      1.0
+4         -651.439941         -681.127441       -651.439941      59.423096      59.423096       -681.127441             0.0                     0.0                -681.151442    1051.439697  29.687500        0.000000   59.423096                    0.0                      1.0                      0.0
+5         -621.908691         -651.439941       -621.908691      59.218750      59.218750       -651.439941             0.0                     0.0                -651.464111    1121.751953  29.531250       -0.156494   59.218750                    1.0                      1.0                      1.0
+6         -592.245361         -621.728271       -592.245361      59.194580      59.194580       -621.728271             0.0                     0.0                -621.728271    1192.040527  29.482910       -0.204590   59.194580                    1.0                      1.0                      1.0
+7         -562.557617         -592.016846       -562.557617      59.170654      59.170654       -592.016846             0.0                     0.0                -592.016846    1259.304932  29.459229       -3.252441   59.170654                    1.0                      1.0                      1.0
+8         -532.870361         -559.281250       -532.870361      59.146484      59.146484       -559.281250             0.0                     0.0                -559.281250    1297.086426  26.410889      -35.783691   59.146484                    1.0                      1.0                      1.0
+9         -497.086670         -497.086670       -497.086670      62.194580      62.194580       -497.086670             0.0                     0.0                -497.086670    1367.398926   0.000000      -29.687500   62.194580                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=True, alpha=40911/2048, buf_size=20.[0m
+[12/20 13:37:01]  --------------------------------------------------------------------------------
+[12/20 13:37:01]  Iteration: 6 (0 solution, 5 counterexamples)
+[12/20 13:37:02]  Generator returned sat in 0.333934 secs.
+[12/20 13:37:02]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -2alpha,
+	           0c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:37:04]  Improved number of small numbers from 114 to 114 out of a max of 114
+[12/20 13:37:04]  Verifer returned sat in 1.548584 secs.
+[12/20 13:37:04]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t  queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -15578.563368         -15578.610243       -15578.563368         0.062500         0.062500       -15578.610243          0.015625                  0.000000  0.03125   -1.000000                   -1.0                     -1.0                     -1.0
+1         -15578.563368         -15578.578993       -15578.563368         0.015625         0.015625       -15578.578993          0.015625                  0.015625  0.00000   -1.000000                   -1.0                     -1.0                     -1.0
+2         -15578.547743         -15578.563368       -15578.547743         0.015625         0.015625       -15578.563368          0.015625                  0.015625  0.00000   -1.000000                    0.0                      0.0                      1.0
+3         -15573.860243         -15573.875868       -15573.860243         4.687500         4.687500       -15573.875868          0.015625                  0.015625  0.00000   -1.000000                    0.0                      0.0                      1.0
+4         -15572.907118         -15572.922743       -15572.907118         0.953125         0.953125       -15572.922743          0.015625                  0.015625  0.00000    0.937500                    0.0                      0.0                      0.0
+5         -15571.000868         -15571.016493       -15571.000868         1.906250         1.906250       -15571.016493          0.015625                  0.015625  0.00000    1.398438                    0.0                      0.0                      1.0
+6         -15568.657118         -15568.672743       -15568.657118         2.343750         2.343750       -15568.672743          0.015625                  0.015625  0.00000    2.343750                    1.0                      1.0                      1.0
+7         -15567.485243         -15567.500868       -15567.485243         1.171875         1.171875       -15567.500868          0.015625                  0.015625  0.00000    1.171875                    1.0                      1.0                      1.0
+8         -15566.203993         -15566.219618       -15566.203993         1.281250         1.281250       -15566.219618          0.015625                  0.015625  0.00000    1.281250                    1.0                      1.0                      1.0
+9         -15565.235243         -15565.250868       -15565.235243         0.968750         0.968750       -15565.250868          0.015625                  0.015625  0.00000    0.968750                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=61/64, buf_size=31/32.[0m
+[12/20 13:37:20]  --------------------------------------------------------------------------------
+[12/20 13:37:20]  Iteration: 7 (0 solution, 6 counterexamples)
+[12/20 13:37:22]  Generator returned sat in 1.433708 secs.
+[12/20 13:37:22]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha,
+	           1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:37:32]  Improved number of small numbers from 68 to 70 out of a max of 114
+[12/20 13:37:32]  Verifer returned sat in 10.282774 secs.
+[12/20 13:37:32]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t    queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -15675.454407         -15738.977112       -15675.454407         0.062256         0.062256       -15738.977112               0.0                       0.0  63.522705   -1.000000                   -1.0                     -1.0                     -1.0
+1         -15675.454407         -15675.454407       -15675.454407         0.031250         0.031250       -15675.454407               0.0                       0.0   0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2         -15671.454407         -15671.454407       -15671.454407         4.000000         4.000000       -15671.454407               0.0                       0.0   0.000000   -1.000000                    1.0                      1.0                      1.0
+3         -15651.558167         -15651.558167       -15651.558167        19.896240        19.896240       -15651.558167               0.0                       0.0   0.000000   -1.000000                    1.0                      1.0                      1.0
+4         -15621.744934         -15621.744934       -15621.744934        29.813232        29.813232       -15621.744934               0.0                       0.0   0.000000   29.813232                    1.0                      1.0                      1.0
+5         -15603.827942         -15603.827942       -15603.827942        17.916992        17.916992       -15603.827942               0.0                       0.0   0.000000   17.916992                    1.0                      1.0                      1.0
+6         -15584.900574         -15584.900574       -15584.900574        18.927368        18.927368       -15584.900574               0.0                       0.0   0.000000   18.927368                    1.0                      1.0                      1.0
+7         -15565.952454         -15565.952454       -15565.952454        18.948120        18.948120       -15565.952454               0.0                       0.0   0.000000   18.948120                    1.0                      1.0                      1.0
+8         -15550.056213         -15550.056213       -15550.056213        15.896240        15.896240       -15550.056213               0.0                       0.0   0.000000   13.525940                    1.0                      1.0                      1.0
+9         -15534.159973         -15534.159973       -15534.159973        15.896240        15.896240       -15534.159973               0.0                       0.0   0.000000   10.989624                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=65111/4096, buf_size=260189/4096.[0m
+[12/20 13:37:49]  --------------------------------------------------------------------------------
+[12/20 13:37:49]  Iteration: 8 (0 solution, 7 counterexamples)
+[12/20 13:37:50]  Generator returned sat in 0.842335 secs.
+[12/20 13:37:50]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -3/2alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + -1alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + -1alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:37:56]  Verifer returned unsat in 6.067048 secs.
+[12/20 13:39:34]  Improved gap from 19.8564453125 to 18.75
+[12/20 13:39:35]  Improved number of small numbers from 96 to 136 out of a max of 136
+[12/20 13:39:35]  Verifer returned sat in 98.427765 secs.
+[12/20 13:39:35]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t    queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         7098.335938         7060.606934       7098.335938       0.249512       0.249512       7060.606934             0.0                     0.0                7060.606934   -7078.336426  37.729004       20.000000   -1.000000                   -1.0                     -1.0                     -1.0
+1         7098.335938         7078.481934       7098.335938       0.020996       0.020996       7078.481934             0.0                     0.0                7078.481934   -6998.336426  19.854004        0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2         7098.335938         7098.335938       7098.335938      19.833496      19.833496       7098.335938             0.0                     0.0                7098.335938   -6917.086426   0.000000      -18.750000   -1.000000                    1.0                      1.0                      1.0
+3         7135.898438         7117.106934       7135.898438      37.562500      37.562500       7117.106934             0.0                     0.0                7117.106934   -6836.044922  18.791504       -0.145996   -1.000000                    1.0                      1.0                      1.0
+4         7153.627686         7136.044434       7153.627686      36.520752      36.520752       7136.044434             0.0                     0.0                7154.815186   -6754.794922  17.583252       -1.166748   36.520752                    1.0                      1.0                      1.0
+5         7173.627686         7154.877686       7173.627686      37.583252      37.583252       7154.877686             0.0                     0.0                7154.877686   -6673.628174  18.750000        0.000000   37.583252                    1.0                      1.0                      1.0
+6         7191.440186         7173.627686       7191.440186      36.562500      36.562500       7173.627686             0.0                     0.0                7173.606934   -6592.586426  17.812500       -1.145752   36.562500                    1.0                      1.0                      1.0
+7         7210.169189         7192.606934       7210.169189      36.541504      36.541504       7192.606934             0.0                     0.0                7192.606934   -6511.357422  17.562256       -1.187744   36.541504                    1.0                      1.0                      1.0
+8         7229.190186         7211.377686       7229.190186      36.583252      36.583252       7211.377686             0.0                     0.0                7211.377686   -6430.315430  17.812500       -1.124756   36.583252                    1.0                      1.0                      1.0
+9         7247.898438         7230.315186       7247.898438      36.520752      36.520752       7230.315186             0.0                     0.0                7230.315186   -6349.065674  17.583252       -1.166748   36.520752                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=True, alpha=81835/4096, buf_size=20.[0m
+[12/20 13:39:51]  --------------------------------------------------------------------------------
+[12/20 13:39:51]  Iteration: 9 (0 solution, 8 counterexamples)
+[12/20 13:39:57]  Generator returned sat in 5.256545 secs.
+[12/20 13:39:57]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -2alpha,
+	           0c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:40:03]  Verifer returned unsat in 5.990372 secs.
+[12/20 13:41:00]  Improved gap from 5.979248046875 to 48.4375
+[12/20 13:41:01]  Improved number of small numbers from 57 to 136 out of a max of 136
+[12/20 13:41:01]  Verifer returned sat in 58.231392 secs.
+[12/20 13:41:01]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t    queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -4906.520996        -4906.521240      -4906.520996       0.249268       0.249268      -4906.521240        0.000000                0.000000               -4906.521240    4747.020996   0.000244        0.000244   -1.000000                   -1.0                     -1.0                     -1.0
+1        -4754.272705        -4806.521240      -4754.272705     152.248535     152.248535      -4806.521240        0.062256                0.000000               -4806.521240    4747.020996  52.186279       52.186279   -1.000000                   -1.0                     -1.0                     -1.0
+2        -4754.272705        -4802.772461      -4754.272705      51.999023      51.999023      -4802.772461        0.062256                0.062256               -4802.772461    4794.834717  48.437500        0.000000   -1.000000                    0.0                      0.0                      0.0
+3        -4602.023926        -4654.334961      -4602.023926     200.686279     200.686279      -4654.334961        0.124756                0.062256               -4654.334961    4794.834717  52.186279       52.186279   -1.000000                    0.0                      0.0                      1.0
+4        -4602.023926        -4654.272461      -4602.023926      51.999023      51.999023      -4654.272461        0.124756                0.124756               -4654.272461    4842.648438  52.123779        0.000000  126.124390                    0.0                      0.0                      0.0
+5        -4602.023926        -4602.148682      -4602.023926      52.061523      52.061523      -4602.148682        0.124756                0.124756               -4602.210938    4894.210693   0.000000      -48.437744   76.155640                    0.0                      0.0                      1.0
+6        -4549.899902        -4553.648926      -4549.899902      52.124023      52.124023      -4553.648926        0.124756                0.124756               -4553.648926    4945.710938   3.624268      -44.813477  100.343140                    0.0                      0.0                      1.0
+7        -4503.149902        -4505.148926      -4503.149902      50.374268      50.374268      -4505.148926        0.124756                0.124756               -4505.148926    4997.211182   1.874268      -46.563232   50.374268                    0.0                      0.0                      1.0
+8        -4454.587402        -4456.649170      -4454.587402      50.436768      50.436768      -4456.649170        0.124756                0.124756               -4456.649170    5048.711182   1.937012      -46.500732   74.593018                    0.0                      0.0                      1.0
+9        -4383.743408        -4408.149170      -4383.743408      72.781006      72.781006      -4408.149170        0.124756                0.124756               -4408.149170    5048.711426  24.281006      -75.656494   72.781006                    1.0                      1.0                      1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=True, alpha=1/16, buf_size=213755/4096.[0m
+[12/20 13:41:18]  --------------------------------------------------------------------------------
+[12/20 13:41:18]  Iteration: 10 (0 solution, 9 counterexamples)
+[12/20 13:41:20]  Generator returned sat in 2.541258 secs.
+[12/20 13:41:20]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 0alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:41:24]  Verifer returned unsat in 3.669509 secs.
+[12/20 13:42:42]  Improved gap from 0.0 to 4.6875
+[12/20 13:42:44]  Improved number of small numbers from 50 to 69 out of a max of 136
+[12/20 13:42:44]  Verifer returned sat in 80.197566 secs.
+[12/20 13:42:45]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -2517.892090        -2517.954193      -2517.892090       0.249023       0.249023      -2517.954193        0.000000                0.000000               -2517.829590    4794.834717    0.062103      -99.937897   -1.000000                   -1.0                     -1.0                     -1.0
+1        -2317.829559        -2417.954193      -2317.829559     200.124634     200.124634      -2417.954193        0.000000                0.000000               -2317.891846    4794.834717  100.124634        0.124634   -1.000000                   -1.0                     -1.0                     -1.0
+2        -2317.829559        -2317.891846      -2317.829559      19.937683      19.937683      -2317.891846        0.000000                0.000000               -2317.891846    4794.834717    0.062286      -99.875366   -1.000000                    0.0                      1.0                      0.0
+3        -1893.672852        -2217.954193      -1893.672852     424.218994     424.218994      -2217.954193        0.062317                0.000000               -2117.892090    4794.834717  324.219025      224.219025   -1.000000                    1.0                      1.0                      1.0
+4        -1893.672852        -2096.954346      -1893.672852      19.937683      19.937683      -2096.954346        0.062317                0.062317               -2096.954346    4794.834717  203.219177      124.219025  300.000000                    0.0                      0.0                      0.0
+5        -1893.672852        -1917.954193      -1893.672852      21.731451      21.731451      -1917.954193        0.062317                0.062317               -1917.954193    4794.834717   24.219025       24.219025  320.999847                    0.0                      0.0                      1.0
+6        -1893.672852        -1914.891876      -1893.672852      23.525220      23.525220      -1914.891876        0.062317                0.062317               -1914.891876    4870.615692   21.156708        0.000000  399.937653                    0.0                      0.0                      1.0
+7        -1889.510571        -1893.735168      -1889.510571      25.318988      25.318988      -1893.735168        0.062317                0.062317               -1888.985352    4965.928192    4.162280       -0.525220  303.062317                    0.0                      0.0                      1.0
+8        -1866.560095        -1889.047668      -1866.560095      27.112756      27.112756      -1889.047668        0.062317                0.062317               -1889.110107    5043.502930   22.425256       -0.000006  203.219177                    0.0                      0.0                      1.0
+9        -1860.078827        -1866.560303      -1860.078827      28.906525      28.906525      -1866.560303        0.062317                0.062317               -1866.560303    5043.503174    6.419159      -93.518494   28.906525                    1.0                      1.0                      1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=293891/163840, buf_size=7347209/32768.[0m
+[12/20 13:43:01]  --------------------------------------------------------------------------------
+[12/20 13:43:01]  Iteration: 11 (0 solution, 10 counterexamples)
+[12/20 13:43:04]  Generator returned sat in 2.379309 secs.
+[12/20 13:43:04]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1/2alpha,
+	           1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:43:07]  Improved number of small numbers from 44 to 46 out of a max of 114
+[12/20 13:43:07]  Verifer returned sat in 3.062295 secs.
+[12/20 13:43:07]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t    queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0         -16139.164062         -16139.195007       -16139.164062         0.062012         0.062012       -16139.195007          0.000000                  0.000000   0.030945   -1.000000                   -1.0                     -1.0                     -1.0
+1         -15981.226135         -16039.195007       -15981.226135       157.968872       157.968872       -16039.195007          0.000000                  0.000000  57.968872   -1.000000                   -1.0                     -1.0                     -1.0
+2         -15960.466085         -15960.466085       -15960.466085        78.728923        78.728923       -15960.466085          0.000000                  0.000000   0.000000   -1.000000                    0.0                      1.0                      0.0
+3         -15861.768290         -15861.768290       -15861.768290        98.697795        98.697795       -15861.768290          0.000000                  0.000000   0.000000   -1.000000                    1.0                      1.0                      1.0
+4         -15713.721598         -15761.768290       -15713.721598       148.046692       148.046692       -15761.768290          0.000000                  0.000000  48.046692  218.015564                    1.0                      1.0                      1.0
+5         -15593.752726         -15661.768290       -15593.752726       168.015564       168.015564       -15661.768290         10.015564                  0.000000  58.000000  242.690013                    0.0                      1.0                      0.0
+6         -15493.721598         -15561.768290       -15493.721598       158.031128       158.031128       -15561.768290         10.046692                 10.015564  58.000000  158.031128                    0.0                      0.0                      1.0
+7         -15403.674906         -15461.768290       -15403.674906       148.046692       148.046692       -15461.768290         10.046692                 10.046692  48.046692  148.046692                    0.0                      0.0                      1.0
+8         -15283.706034         -15361.768290       -15283.706034       168.015564       168.015564       -15361.768290         20.062256                 10.046692  58.000000  253.976654                    0.0                      0.0                      1.0
+9         -15183.674906         -15261.768290       -15183.674906       158.031128       158.031128       -15261.768290         20.093384                 20.062256  58.000000  158.031128                    0.0                      0.0                      1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=164605/8192, fast_decrease=True, fast_increase=True, alpha=163585/8192, buf_size=58.[0m
+[12/20 13:43:23]  --------------------------------------------------------------------------------
+[12/20 13:43:23]  Iteration: 12 (0 solution, 11 counterexamples)
+[12/20 13:43:25]  Generator returned sat in 1.537503 secs.
+[12/20 13:43:25]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 2alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:43:31]  Verifer returned unsat in 5.617802 secs.
+[12/20 13:43:44]  Improved number of small numbers from 74 to 135 out of a max of 135
+[12/20 13:43:44]  Verifer returned sat in 12.600204 secs.
+[12/20 13:43:44]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -2314.180176        -2756.545898      -2314.180176       0.248779       0.248779      -2756.545898        0.000000                0.000000               -2756.545898    5033.550781  442.365723      342.490234   -1.000000                   -1.0                     -1.0                     -1.0
+1        -2314.180176        -2656.545898      -2314.180176     442.365479     442.365479      -2656.545898        0.000000                0.000000               -2656.545898    5033.550781  342.365723      242.490234   -1.000000                   -1.0                     -1.0                     -1.0
+2        -2314.055664        -2556.670410      -2314.055664     342.490234     342.490234      -2556.670410        0.000000                0.000000               -2556.794678    5033.550781  242.614746      142.614746   -1.000000                    0.0                      1.0                      0.0
+3        -2194.180176        -2456.670410      -2194.180176     362.490234     362.490234      -2456.670410        0.000000                0.000000               -2356.545654    5033.550781  262.490234      162.490234   -1.000000                    1.0                      1.0                      1.0
+4        -2074.304688        -2317.168457      -2074.304688     382.365723     382.365723      -2317.168457        0.000000                0.000000               -2317.168457    5033.550781  242.863770      182.365723  370.933838                    0.0                      1.0                      0.0
+5        -1916.545898        -2235.798828      -1916.545898     400.622559     400.622559      -2235.798828        0.000000                0.000000               -2235.798828    5033.550781  319.252930      240.124512  400.622559                    1.0                      1.0                      1.0
+6        -1835.300781        -2056.670410      -1835.300781     400.498047     400.498047      -2056.670410        0.000000                0.000000               -2056.670410    5033.550781  221.369629      221.369629  400.498047                    1.0                      1.0                      1.0
+7        -1616.670410        -1956.670410      -1616.670410     440.000000     440.000000      -1956.670410        0.000000                0.000000               -1956.670410    5033.550781  340.000000      340.000000  440.000000                    1.0                      1.0                      1.0
+8        -1496.794922        -1956.670410      -1496.794922     459.875488     459.875488      -1956.670410        0.124512                0.000000               -1856.545654    5033.550781  459.750977      359.750977  440.000000                    0.0                      1.0                      0.0
+9        -1496.794922        -1856.670166      -1496.794922     409.252930     409.252930      -1856.670166        0.124512                0.124512               -1856.670166    5033.550781  359.750732      259.750977  409.252930                    0.0                      0.0                      1.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=1, 
+, large_loss_count=0, loss_amount=255/2048, fast_decrease=True, fast_increase=True, alpha=40705/2048, buf_size=368385/1024.[0m
+[12/20 13:44:00]  --------------------------------------------------------------------------------
+[12/20 13:44:00]  Iteration: 13 (0 solution, 12 counterexamples)
+[12/20 13:44:04]  Generator returned sat in 3.249927 secs.
+[12/20 13:44:04]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -2alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 1/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 1/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:44:09]  Verifer returned unsat in 5.260015 secs.
+[12/20 13:44:40]  Improved gap from 0.19801980198019803 to 4.6875
+[12/20 13:44:43]  Improved number of small numbers from 92 to 130 out of a max of 136
+[12/20 13:44:43]  Verifer returned sat in 33.194160 secs.
+[12/20 13:44:43]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -2415.708984        -2836.800293      -2415.708984       0.248535       0.248535      -2836.800293        0.000000                0.000000               -2836.800293    5113.776611  421.091309      321.187256   -1.000000                   -1.0                     -1.0                     -1.0
+1        -2315.612793        -2636.896484      -2315.612793     521.187500     521.187500      -2636.896484        0.096191                0.000000               -2636.896484    5113.776611  321.187500      321.187256   -1.000000                   -1.0                     -1.0                     -1.0
+2        -2215.516602        -2536.896484      -2215.516602     421.283691     421.283691      -2536.896484        0.192383                0.096191               -2536.896484    5113.776611  321.187500      321.187256   -1.000000                    0.0                      0.0                      0.0
+3        -2215.516602        -2436.896484      -2215.516602      17.913462      17.913462      -2436.896484        0.192383                0.192383               -2436.896484    5113.776611  221.187500      221.187256   -1.000000                    0.0                      0.0                      1.0
+4        -2215.516602        -2436.896240      -2215.516602      19.903846      19.903846      -2436.896240        0.192383                0.192383               -2436.992676    5113.776611  221.187256      121.187256  400.899001                    0.0                      0.0                      1.0
+5        -2215.516602        -2239.689641      -2215.516602      21.894231      21.894231      -2239.689641        0.192383                0.192383               -2239.689641    5113.776611   23.980657       21.187256  200.995436                    0.0                      0.0                      1.0
+6        -2215.516602        -2236.800293      -2215.516602      23.884615      23.884615      -2236.800293        0.192383                0.192383               -2236.800293    5192.589111   21.091309       -0.000244  298.202036                    0.0                      0.0                      1.0
+7        -2210.732910        -2215.612793      -2210.732910      25.875000      25.875000      -2215.612793        0.192383                0.192383               -2215.612793    5287.805420    4.687500       -0.000244  201.091384                    0.0                      0.0                      1.0
+8        -2176.607910        -2210.829064      -2176.607910      38.812500      38.812500      -2210.829064        0.192383                0.192383               -2210.829064    5353.680664   34.028771        0.000000  222.278640                    1.0                      1.0                      1.0
+9        -2176.607910        -2176.800293      -2176.607910      29.855769      29.855769      -2176.800293        0.192383                0.192383               -2176.896484    5448.992920    0.000000       -4.687744   29.855769                    0.0                      1.0                      0.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=207/104, buf_size=1315583/4096.[0m
+[12/20 13:44:59]  --------------------------------------------------------------------------------
+[12/20 13:44:59]  Iteration: 14 (0 solution, 13 counterexamples)
+[12/20 13:45:01]  Generator returned sat in 1.040256 secs.
+[12/20 13:45:01]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:45:05]  Verifer returned unsat in 3.989082 secs.
+[12/20 13:45:24]  Improved gap from 0.0 to 1.5625
+[12/20 13:45:25]  Improved number of small numbers from 136 to 136 out of a max of 136
+[12/20 13:45:25]  Verifer returned sat in 19.836436 secs.
+[12/20 13:45:25]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -3267.429688        -3287.429688      -3267.429688       0.248535       0.248535      -3287.429688        0.000000                0.000000               -3287.429688    5664.310059   20.000000       20.000000   -1.000000                   -1.0                     -1.0                     -1.0
+1        -3267.305420        -3287.305420      -3267.305420      20.124268      20.124268      -3287.305420        0.000000                0.000000               -3287.305420    5744.185791   20.000000        0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2        -3267.305420        -3267.305420      -3267.305420      19.875732      19.875732      -3267.305420        0.000000                0.000000               -3267.305420    5842.623291    0.000000       -1.562500   -1.000000                    0.0                      1.0                      0.0
+3        -2965.618652        -3265.618652      -2965.618652     301.686768     301.686768      -3265.618652        0.124268                0.000000               -3265.618652    5842.623291  299.875732      200.000000   -1.000000                    1.0                      1.0                      1.0
+4        -2965.618652        -3165.618652      -2965.618652      19.875732      19.875732      -3165.618652        0.124268                0.124268               -3165.618652    5842.623291  199.875732      100.000000   25.184570                    0.0                      0.0                      0.0
+5        -2965.618652        -2965.742920      -2965.618652      21.562500      21.562500      -2965.742920        0.124268                0.124268               -2965.742920    5842.623291    0.000000        0.000000  125.060303                    0.0                      0.0                      1.0
+6        -2942.369385        -2965.742920      -2942.369385      23.249268      23.249268      -2965.742920        0.124268                0.124268               -2942.369385    5919.374023   23.249268        0.000000  304.936035                    0.0                      0.0                      1.0
+7        -2940.682617        -2942.369385      -2940.682617      24.936035      24.936035      -2942.369385        0.124268                0.124268               -2942.369385    6017.687256    1.562500        0.000000  303.249268                    0.0                      0.0                      1.0
+8        -2915.622314        -2940.806885      -2915.622314      26.622803      26.622803      -2940.806885        0.124268                0.124268               -2940.806885    6089.377686   25.060303       -3.249268  226.622803                    0.0                      0.0                      1.0
+9        -2912.373047        -2912.497314      -2912.373047      28.309570      28.309570      -2912.497314        0.124268                0.124268               -2912.497314    6089.377686    0.000000     -100.000000   28.309570                    1.0                      1.0                      1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=6909/4096, buf_size=200.[0m
+[12/20 13:45:41]  --------------------------------------------------------------------------------
+[12/20 13:45:41]  Iteration: 15 (0 solution, 14 counterexamples)
+[12/20 13:45:42]  Generator returned sat in 0.327134 secs.
+[12/20 13:45:42]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha)
+else:
+	expr = 0c_f[n][t-1] + 1(S_f[n][t-1]-S_f[n][t-4]) + 3/2alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:45:46]  Verifer returned unsat in 4.162627 secs.
+[12/20 13:47:09]  Improved gap from 1.5625 to 1.5625
+[12/20 13:47:13]  Improved number of small numbers from 39 to 52 out of a max of 136
+[12/20 13:47:13]  Verifer returned sat in 86.480889 secs.
+[12/20 13:47:13]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -4723.709961        -4940.576263      -4723.709961       0.248291       0.248291      -4940.576263        0.000000                0.000000               -4940.576263    5821.184692  216.866302      216.866302   -1.000000                   -1.0                     -1.0                     -1.0
+1        -4623.585663        -4840.576416      -4623.585663     316.990601     316.990601      -4840.576416        0.124146                0.000000               -4840.576416    5821.184692  216.866608      216.866455   -1.000000                   -1.0                     -1.0                     -1.0
+2        -4623.585663        -4840.576263      -4623.585663       0.124268       0.124268      -4840.576263        0.124146                0.124146               -4740.452148    5821.184692  216.866455      116.866455   -1.000000                    0.0                      0.0                      0.0
+3        -4623.585663        -4640.700409      -4623.585663      15.179810      15.179810      -4640.700409        0.124146                0.124146               -4640.700409    5821.184692   16.990601       16.866455   -1.000000                    0.0                      0.0                      1.0
+4        -4623.585663        -4640.576263      -4623.585663      16.866455      16.866455      -4640.576263        0.124146                0.124146               -4640.700439    5904.318115   16.866455       -0.000122  302.405823                    0.0                      0.0                      0.0
+5        -4621.899017        -4623.585663      -4621.899017      18.553101      18.553101      -4623.585663        0.124146                0.124146               -4623.585663    6002.631592    1.562500        0.000000  202.530121                    0.0                      0.0                      1.0
+6        -4603.221771        -4622.023163      -4603.221771      20.239746      20.239746      -4622.023163        0.124146                0.124146               -4603.221924    6083.954102   18.677246       -0.000244  219.520569                    0.0                      0.0                      1.0
+7        -4600.691803        -4602.378448      -4600.691803      21.207214      21.207214      -4602.378448        0.124146                0.124146               -4602.378448    6181.424377    1.562500        0.000000   21.207214                    1.0                      1.0                      1.0
+8        -4570.443481        -4600.815948      -4570.443481      31.810822      31.810822      -4600.815948        0.124146                0.124146               -4570.443604    6251.176056   30.248322        0.000000   40.727783                    1.0                      1.0                      1.0
+9        -4570.443481        -4570.567627      -4570.443481      25.299683      25.299683      -4570.567627        0.124146                0.124146               -4570.567871    6251.176270    0.000000      -99.999786   25.299683                    0.0                      1.0                      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=13817/8192, buf_size=888285/4096.[0m
+[12/20 13:47:30]  --------------------------------------------------------------------------------
+[12/20 13:47:30]  Iteration: 16 (0 solution, 15 counterexamples)
+[12/20 13:47:33]  Generator returned sat in 3.006684 secs.
+[12/20 13:47:33]  Candidate solution: 
+[1m[94mif(Ld_f[n][t] > Ld_f[n][t-1]):
+	expr = min(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1alpha,
+	           1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+else:
+	expr = 1/2c_f[n][t-1] + 1/2(S_f[n][t-1]-S_f[n][t-4]) + 1alpha
+
+if(1c_f[n][t-1] + 0(S_f[n][t-1]-S_f[n][t-4]) + -1expr + 0Indicator(Ld_f[n][t] > Ld_f[n][t-1]) > 0)
+	c_f[n][t] = max(alpha, 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha)
+elif("Last loss was >= 5 Rm ago and Last fast increase was >= 1 Rm ago"):
+	c_f[n][t] = max(alpha, min(3/2c_f[n][t-1], 0c_f[n][t-1] + 1expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 0alpha))
+else:
+	c_f[n][t] = max(alpha, 1c_f[n][t-1] + 0expr + 0(S_f[n][t-1]-S_f[n][t-4]) + 1alpha)
+if("Loss on fast increase"):
+	c_f[n][t] = c_f[n][t-2][0m
+[12/20 13:47:39]  Verifer returned unsat in 6.221628 secs.
+[12/20 13:48:38]  Improved gap from 0.0 to 3.125
+[12/20 13:48:39]  Improved number of small numbers from 49 to 136 out of a max of 136
+[12/20 13:48:39]  Verifer returned sat in 59.596941 secs.
+[12/20 13:48:39]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__tot_service_choice_t  adv__wasted_t     queue_t  bottle_queue_t  target_0,t  can_fast_increase_0,t  can_fast_increase_a_0,t  can_fast_increase_b_0,t
+0        -4324.408936        -4342.468506      -4324.408936       0.248291       0.248291      -4342.468506        0.000000                0.000000               -4342.468506    5825.324707   18.059570       18.059326   -1.000000                   -1.0                     -1.0                     -1.0
+1        -4324.408936        -4342.406250      -4324.408936       0.062256       0.062256      -4342.406250        0.000000                0.000000               -4342.406250    5907.265381   17.997314        0.000000   -1.000000                   -1.0                     -1.0                     -1.0
+2        -4324.408936        -4324.408936      -4324.408936      17.935547      17.935547      -4324.408936        0.000000                0.000000               -4324.470947    6004.140381    0.000000       -3.125000   -1.000000                    1.0                      1.0                      1.0
+3        -4021.221924        -4277.221924      -4021.221924     303.187012     303.187012      -4277.221924        0.062012                0.000000               -4277.221924    6004.140381  255.937988      200.000000   -1.000000                    0.0                      1.0                      0.0
+4        -4021.221924        -4221.283936      -4021.221924      17.935547      17.935547      -4221.283936        0.062012                0.062012               -4221.345703    6004.140381  200.000000      100.000000  185.810303                    0.0                      0.0                      0.0
+5        -4021.221924        -4022.877441      -4021.221924      19.529053      19.529053      -4022.877441        0.062012                0.062012               -4022.877441    6004.140381    1.593506        0.000000   71.122437                    0.0                      0.0                      1.0
+6        -4001.692871        -4021.283936      -4001.692871      21.122559      21.122559      -4021.283936        0.062012                0.062012               -4001.692871    6084.611328   19.529053        0.000000  162.123779                    0.0                      0.0                      1.0
+7        -3998.505859        -4001.693115      -3998.505859      22.716064      22.716064      -4001.693115        0.062012                0.062012               -4001.693115    6181.424316    3.125244        0.000000  140.123779                    0.0                      0.0                      1.0
+8        -3977.321533        -3998.567871      -3977.321533      24.309570      24.309570      -3998.567871        0.062012                0.062012               -3998.629883    6260.239746   21.184326       -0.000244  122.746948                    0.0                      0.0                      1.0
+9        -3972.602783        -3977.321289      -3972.602783      25.903076      25.903076      -3977.321289        0.062012                0.062012               -3977.321289    6260.239746    4.656494      -95.281494   25.903076                    1.0                      1.0                      1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, fast_decrease=True, fast_increase=False, alpha=6527/4096, buf_size=200.[0m
+[12/20 13:48:56]  --------------------------------------------------------------------------------
+[12/20 13:48:56]  Iteration: 17 (0 solution, 16 counterexamples)
+[12/20 13:48:57]  Generator returned unsat in 0.360570 secs.
+[12/20 13:48:57]  [96mNo more solutions found[0m
+[12/20 13:48:57]  Final solutions:
+[12/20 13:48:57]  Took 918.268718 secs.

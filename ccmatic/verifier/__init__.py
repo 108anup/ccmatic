@@ -699,6 +699,7 @@ def setup_cegis_basic(cc: CegisConfig, name=None):
     sd = setup_ccac_definitions(c, v)
     se = setup_ccac_environment(c, v)
     ccac_definitions = z3.And(*sd.assertion_list)
+    not_too_adversarial_init_cwnd(cc, c, se, v)
     environment = z3.And(*se.assertion_list)
 
     verifier_vars, definition_vars = get_cegis_vars(cc, c, v)
@@ -706,6 +707,13 @@ def setup_cegis_basic(cc: CegisConfig, name=None):
     return (c, s, v,
             ccac_domain, ccac_definitions, environment,
             verifier_vars, definition_vars)
+
+
+def not_too_adversarial_init_cwnd(
+        cc: CegisConfig, c: ModelConfig, s: MySolver, v: Variables):
+    for n in range(c.N):
+        for t in range(1, cc.history):
+            s.add(v.c_f[n][t] <= v.c_f[n][t-1] * 3/2)
 
 
 def setup_ccac_environment(c, v):
