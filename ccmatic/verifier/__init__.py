@@ -13,7 +13,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
-from cegis.util import get_raw_value
+from cegis.util import get_raw_value, z3_min
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -795,6 +795,33 @@ def get_periodic_constraints(cc: CegisConfig, c: ModelConfig, v: Variables):
     return z3.And(*periodic)
 
 
+def ramp_up_when_cwnd_reset_fi(cc: CegisConfig, c: ModelConfig, v: Variables):
+    first = cc.history
+
+    total_first_cwnd = 0
+    total_second_cwnd = 0
+    total_second_last_cwnd = 0
+    total_last_cwnd = 0
+    assert c.T-2 > first+1
+    for n in range(c.N):
+        total_first_cwnd += v.c_f[n][first]
+        total_second_cwnd += v.c_f[n][first+1]
+        total_second_last_cwnd += v.c_f[n][c.T-2]
+        total_last_cwnd += v.c_f[n][c.T-1]
+    assert isinstance(total_first_cwnd, z3.ArithRef)
+    assert isinstance(total_second_cwnd, z3.ArithRef)
+    assert isinstance(total_second_last_cwnd, z3.ArithRef)
+    assert isinstance(total_last_cwnd, z3.ArithRef)
+
+    min_initial_cwnd = z3_min(total_first_cwnd, total_second_cwnd)
+    min_final_cwnd = z3_min(total_second_last_cwnd, total_last_cwnd)
+    assert isinstance(min_initial_cwnd, z3.ArithRef)
+    assert isinstance(min_final_cwnd, z3.ArithRef)
+
+    ramp_up_cwnd = min_final_cwnd > min_initial_cwnd
+    return ramp_up_cwnd
+
+
 def get_desired_necessary(
         cc: CegisConfig, c: ModelConfig, v: Variables):
     first = cc.history
@@ -819,6 +846,7 @@ def get_desired_necessary(
     d.ramp_up_cwnd = z3.And(
         total_final_cwnd > total_initial_cwnd,
         total_final_rate > total_initial_rate)
+    d.ramp_up_cwnd = ramp_up_when_cwnd_reset_fi(cc, c, v)
     d.ramp_down_cwnd = z3.And(
         total_final_cwnd < total_initial_cwnd,
         total_final_rate < total_initial_rate)

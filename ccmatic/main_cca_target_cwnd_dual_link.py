@@ -289,6 +289,47 @@ def get_cex_function(ccmatic: CCmatic):
             counter_example: z3.ModelRef,
             verifier_vars: List[z3.ExprRef]) -> str:
         df = get_cex_df(counter_example, v, vn, c)
+
+        # target
+        first = cc_ideal.history
+        for n in range(c.N):
+            target_t = [-1] * first
+            for t in range(first, c.T):
+                # paced is already there to ensure r_f is set and c_f > 0
+
+                acked_bytes = v.S_f[n][t-c.R] - v.S_f[n][t-cc_ideal.history]
+                loss_detected = v.Ld_f[n][t] > v.Ld_f[n][t-c.R]
+
+                # RHS for expr
+                rhs_loss = (
+                    get_product_ite(
+                        coeffs['s_f[n]']['loss']['c_f[n]'], v.c_f[n][t-c.R],
+                        search_range_coeffs)
+                    + get_product_ite(
+                        coeffs['s_f[n]']['loss']['ack_f[n]'], acked_bytes,
+                        search_range_coeffs)
+                    + get_product_ite(
+                        consts['s_f[n]']['loss'], v.alpha,
+                        search_range_consts))
+                rhs_noloss = (
+                    get_product_ite(
+                        coeffs['s_f[n]']['noloss']['c_f[n]'], v.c_f[n][t-c.R],
+                        search_range_coeffs)
+                    + get_product_ite(
+                        coeffs['s_f[n]']['noloss']['ack_f[n]'], acked_bytes,
+                        search_range_coeffs)
+                    + get_product_ite(
+                        consts['s_f[n]']['noloss'], v.alpha,
+                        search_range_consts))
+                min_rhs = z3.If(rhs_noloss < rhs_loss, rhs_noloss, rhs_loss)
+                # min_rhs = rhs_loss  # In this case, fast decrease is violated
+                rhs_expr = z3.If(loss_detected, min_rhs, rhs_noloss)
+                assert isinstance(rhs_expr, z3.ArithRef)
+                target = get_raw_value(counter_example.eval(rhs_expr))
+                target_t.append(target)
+            df[f'target_{n},t'] = np.array(target_t).astype(float)
+
+        # can increase
         for n in range(c.N):
             can_fast_increase_t: List = [-1, -1]
             can_fast_increase_a_t: List = [-1, -1]
@@ -793,9 +834,9 @@ cc_adv.name = "adv"
 cc_adv.desired_util_f = 0.5
 cc_adv.desired_queue_bound_multiplier = 1.5
 cc_adv.desired_queue_bound_alpha = 3
-cc_adv.desired_loss_count_bound = 3
-cc_ideal.desired_large_loss_count_bound = 3
-cc_adv.desired_loss_amount_bound_multiplier = 1.5
+cc_adv.desired_loss_count_bound = 4
+cc_adv.desired_large_loss_count_bound = 4
+cc_adv.desired_loss_amount_bound_multiplier = 4
 cc_adv.desired_loss_amount_bound_alpha = 3
 
 cc_adv.ideal_link = False
