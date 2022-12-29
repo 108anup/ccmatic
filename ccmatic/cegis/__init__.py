@@ -21,6 +21,8 @@ class CegisConfig:
     template_mode_switching: bool = False
     template_loss_oracle: bool = True  # Use ECN marks
     template_qdel: bool = False  # For copa like algos
+    template_fi_reset: bool = False
+    # ^^ For infrequent losses with fast increase, revert to last cwnd on loss.
 
     # desired
     desired_util_f: Union[float, z3.ArithRef]

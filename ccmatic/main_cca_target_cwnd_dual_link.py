@@ -258,10 +258,13 @@ def get_template_definitions(
             assert isinstance(next_cwnd, z3.ArithRef)
             clamped_cwnd = z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha)
 
-            # Reset cwnd is loss happened on fast increase (FI)
-            # Previous was FI and loss detected in this window.
-            loss_on_fi = z3.And(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha, loss_detected)
-            reset_cwnd = v.c_f[n][t-2]  # the cwnd before last FI
+            loss_on_fi = z3.And(
+                v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha, loss_detected)
+            reset_cwnd = clamped_cwnd
+            if(cc.template_fi_reset):
+                # Reset cwnd is loss happened on fast increase (FI)
+                # Previous was FI and loss detected in this window.
+                reset_cwnd = v.c_f[n][t-2]  # the cwnd before last FI
 
             # next_cwnd = z3.If(v.c_f[n][t-1] < target_cwnd,
             #                   v.c_f[n][t-1] + v.alpha,
@@ -817,6 +820,7 @@ cc_ideal.dynamic_buffer = True
 cc_ideal.buffer_size_multiplier = 1
 cc_ideal.template_qdel = False
 cc_ideal.template_queue_bound = False
+cc_ideal.template_fi_reset = True
 cc_ideal.N = 1
 cc_ideal.T = TRACE_TIME
 cc_ideal.history = HISTORY

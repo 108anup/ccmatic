@@ -854,7 +854,8 @@ def get_desired_necessary(
     d.ramp_up_cwnd = z3.And(
         total_final_cwnd > total_initial_cwnd,
         total_final_rate > total_initial_rate)
-    d.ramp_up_cwnd = ramp_up_when_cwnd_reset_fi(cc, c, v)
+    if(cc.template_fi_reset):
+        d.ramp_up_cwnd = ramp_up_when_cwnd_reset_fi(cc, c, v)
     d.ramp_down_cwnd = z3.And(
         total_final_cwnd < total_initial_cwnd,
         total_final_rate < total_initial_rate)
