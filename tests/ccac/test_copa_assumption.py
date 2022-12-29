@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 import pandas as pd
 import logging
@@ -57,7 +58,16 @@ def test_copa_composition():
         #         get_raw_value(counter_example.eval(z3.Bool(f"incr_{n},{t}"))) for t in range(c.T)]
         #     df[f"decr_{n},t"] = [
         #         get_raw_value(counter_example.eval(z3.Bool(f"decr_{n},{t}"))) for t in range(c.T)]
-        ret = "\n{}".format(df)
+        df['token_t'] = [
+            get_raw_value(counter_example.eval(v.C0 + c.C*t - v.W[t] - v.S[t]))
+            for t in range(c.T)]
+        df['delA_t'] = [np.nan] + [
+            get_raw_value(counter_example.eval(v.A[t] - v.A[t-1]))
+            for t in range(1, c.T)]
+        df['delW_t'] = [np.nan] + [
+            get_raw_value(counter_example.eval(v.W[t] - v.W[t-1]))
+            for t in range(1, c.T)]
+        ret = "\n{}".format(df.astype(float))
         ret += "\nv.qdel[t][dt]\n"
         ret += "  " + " ".join([str(i) for i in range(c.T)]) + "\n"
         for t in range(c.T):
@@ -125,28 +135,52 @@ def test_copa_composition():
     #     )
     # known_assumption = z3.And(known_assumption_list)
 
-    # Monotonic assumption 21 (weakest)
-    known_assumption_list = []
-    for t in range(c.T):
-        # known_assumption_list.append(
-        #     z3.Or(
-        #         v.A[t] - v.A[t-1] + c.C <= 0,
-        #         v.S[t] - v.S[t-1] + v.A[t] - v.A[t-1] >= 0
-        #     ))
-        known_assumption_list.append(
-            z3.Or(
-                +v.A[t-0] - v.A[t-1] +
-                (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0,
-                - v.S[t-0] + v.S[t-1] - v.A[t-0] + v.A[t-1] <= 0
-            )
-        )
-    known_assumption_ccmatic_monotonic21 = z3.And(known_assumption_list)
+    # # Monotonic assumption 21 (weakest)
+    # known_assumption_list = []
+    # for t in range(1, c.T):
+    #     # known_assumption_list.append(
+    #     #     z3.Or(
+    #     #         v.A[t] - v.A[t-1] + c.C <= 0,
+    #     #         v.S[t] - v.S[t-1] + v.A[t] - v.A[t-1] >= 0
+    #     #     ))
+    #     known_assumption_list.append(
+    #         z3.Or(
+    #             +v.A[t-0] - v.A[t-1] +
+    #             (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0,
+    #             - v.S[t-0] + v.S[t-1] - v.A[t-0] + v.A[t-1] <= 0
+    #         )
+    #     )
+    # known_assumption_ccmatic_monotonic21 = z3.And(known_assumption_list)
 
-    # Copa works but bbr doesn't
-    # Ineq 0: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
-    # Ineq 1: -S[t-0] +S[t-1] -A[t-0] +A[t-1] +W[t-0] -W[t-1] +(C_0 + C(t-0)) -(C_0 + C(t-1)) <= 0
+    # # Copa works but bbr doesn't
+    # # Ineq 0: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
+    # # Ineq 1: -S[t-0] +S[t-1] -A[t-0] +A[t-1] +W[t-0] -W[t-1] +(C_0 + C(t-0)) -(C_0 + C(t-1)) <= 0
+    # known_assumption_list = []
+    # for t in range(1, c.T):
+    #     known_assumption_list.append(
+    #         z3.Or(
+    #             +v.S[t-0] + v.A[t-0] - v.A[t-1] +
+    #             v.W[t-0] - (v.C0 + c.C*(t-0)) <= 0,
+    #             -v.S[t-0] + v.S[t-1] - v.A[t-0] + v.A[t-1] + v.W[t-0] -
+    #             v.W[t-1] + (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0
+    #         )
+    #     )
+    # assumption_copa_not_bbr = z3.And(*known_assumption_list)
+
+    # copa but not BBR (filtered assumptions)
+    """
+    3, 0 --
+    Ineq 0: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
+    Ineq 1: -S[t-0] +S[t-1] -A[t-0] +A[t-1] +W[t-0] -W[t-1] +(C_0 + C(t-0)) -(C_0 + C(t-1)) <= 0
+    Clause 0: 0 or 1
+
+    13, 1 --
+    Ineq 0: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
+    Ineq 1: +S[t-0] +A[t-0] -A[t-1] +W[t-1] -(C_0 + C(t-0)) <= 0
+    Clause 0: ~1 or 0
+    """
     known_assumption_list = []
-    for t in range(c.T):
+    for t in range(1, c.T):
         known_assumption_list.append(
             z3.Or(
                 +v.S[t-0] + v.A[t-0] - v.A[t-1] +
@@ -155,7 +189,18 @@ def test_copa_composition():
                 v.W[t-1] + (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0
             )
         )
-    assumption_copa_not_bbr = z3.And(*known_assumption_list)
+    assumption_copa_not_bbr_filtered_1 = z3.And(*known_assumption_list)
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Or(
+                +v.S[t-0] + v.A[t-0] - v.A[t-1] +
+                v.W[t-0] - (v.C0 + c.C*(t-0)) <= 0,
+                +v.S[t-0] + v.A[t-0] - v.A[t-1] +
+                v.W[t-1] - (v.C0 + c.C*(t-0)) <= 0
+            )
+        )
+    assumption_copa_not_bbr_filtered_2 = z3.And(*known_assumption_list)
 
     verifier = MySolver()
     verifier.warn_undeclared = False
@@ -165,21 +210,16 @@ def test_copa_composition():
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
     # verifier.add(z3.Not(known_assumption))
-    verifier.add(assumption_copa_not_bbr)
+    # verifier.add(assumption_copa_not_bbr_filtered_1)
+    verifier.add(assumption_copa_not_bbr_filtered_2)
     # verifier.add(known_assumption_ccac)
-    # verifier.add(z3.Not(known_assumption_ccmatic2))
-    # verifier.add(z3.Not(known_assumption_ccmatic_monotonic21))
+    # verifier.add(z3.Not(desired))
+    verifier.add(v.S[-1] - v.S[0] >= c.C * c.T * 0.2)
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
-    verifier.add(z3.Not(desired))
-    # verifier.add(desired50)
-    # verifier.add(z3.Not(v.A[-1] >= v.A[0] + c.C))
-    # verifier.add(desired)
-    # verifier.add(v.A[0]-v.L[0]-v.S[0] == 0)
-    # verifier.add(v.c_f[0][4] == 100)
     # verifier.add(v.L[0] == 0)
 
     optimization_list = [
-        Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
+        Metric(cc.desired_util_f, 0.26, 1, 0.001, True),
         # Metric(delay_f, 0, 1, 0.001, True)
         # Metric(cc.desired_queue_bound_multiplier, 0, 8, 0.001, False)
     ]

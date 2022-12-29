@@ -47,15 +47,15 @@ cc.use_ref_cca = True
 cc.monotonic_inc_assumption = True
 
 cc.compose = True
-# cc.cca = "copa"
-cc.cca = "bbr"
+cc.cca = "copa"
+# cc.cca = "bbr"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
 elif(cc.cca == "bbr"):
     cc.history = 2 * cc.R
 
 cc.feasible_response = False
-util_frac = 0.1
+util_frac = 0.45
 
 # CCA under test
 (c, s, v,
