@@ -26,6 +26,7 @@ logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 
+QUANTIFIED_Z3 = False
 DEBUG = False
 cc = CegisConfig()
 # cc.compose = False
@@ -273,14 +274,15 @@ if DEBUG:
         assert(isinstance(definitions, z3.ExprRef))
         f.write(definitions.sexpr())
 
-ef = ExistsForall(
-    generator_vars, verifier_vars + definition_vars, search_constraints,
-    z3.Implies(definitions, specification), critical_generator_vars,
-    get_solution_str)
-# try_except(ef.run)
-try_except(ef.run_all)
-import sys
-sys.exit(0)
+if QUANTIFIED_Z3:
+    ef = ExistsForall(
+        generator_vars, verifier_vars + definition_vars, search_constraints,
+        z3.Implies(definitions, specification), critical_generator_vars,
+        get_solution_str)
+    # try_except(ef.run)
+    try_except(ef.run_all)
+    import sys
+    sys.exit(0)
 
 try:
     md = CegisMetaData(critical_generator_vars)
