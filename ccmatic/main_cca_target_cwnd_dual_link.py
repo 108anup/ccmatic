@@ -26,8 +26,8 @@ GlobalConfig().default_logger_setup(logger)
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
-HISTORY = 4
-TRACE_TIME = 10
+HISTORY = 5
+TRACE_TIME = 11
 TIME_BETWEEN_LARGE_LOSS = TRACE_TIME - HISTORY - 1 # units of Rm
 
 domain_clauses = []
@@ -823,7 +823,7 @@ cc_ideal.history = HISTORY
 cc_ideal.cca = "paced"
 
 cc_ideal.desired_util_f = 1
-cc_ideal.desired_queue_bound_multiplier = 2
+cc_ideal.desired_queue_bound_multiplier = 4
 cc_ideal.desired_queue_bound_alpha = 3
 cc_ideal.desired_loss_count_bound = 3
 cc_ideal.desired_large_loss_count_bound = 1
@@ -852,7 +852,7 @@ cc_adv = copy.copy(cc_ideal)
 cc_adv.name = "adv"
 
 cc_adv.desired_util_f = 0.5
-cc_adv.desired_queue_bound_multiplier = 2
+cc_adv.desired_queue_bound_multiplier = 4
 cc_adv.desired_queue_bound_alpha = 3
 cc_adv.desired_loss_count_bound = 4
 cc_adv.desired_large_loss_count_bound = 4
@@ -966,13 +966,14 @@ else:
     cc_ideal.reset_desired_z3(ideal.v.pre)
     ideal_metrics_fixed = [
         Metric(cc_ideal.desired_queue_bound_alpha, 0, 3, 0.001, False),
-        Metric(cc_ideal.desired_loss_amount_bound_multiplier, 0, 0, 0.001, False),
         Metric(cc_ideal.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
     ]
 
     ideal_metrics_optimize = [
         Metric(cc_ideal.desired_util_f, 0.9, 1, 0.001, True),
-        Metric(cc_ideal.desired_queue_bound_multiplier, 0, 1, 0.001, False),
+        Metric(cc_ideal.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+        Metric(cc_ideal.desired_loss_amount_bound_multiplier, 0, 1.5, 0.001, False),
+        Metric(cc_ideal.desired_large_loss_count_bound, 0, 1, 0.001, False),
         Metric(cc_ideal.desired_loss_count_bound, 0, 4, 0.001, False),
     ]
 
@@ -983,14 +984,15 @@ else:
     cc_adv.reset_desired_z3(adv.v.pre)
     adv_metrics_fixed = [
         Metric(cc_adv.desired_queue_bound_alpha, 0, 3, 0.001, False),
-        Metric(cc_adv.desired_loss_count_bound, 0, 3, 0.001, False),
         Metric(cc_adv.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
     ]
 
     adv_metrics_optimize = [
-        Metric(cc_adv.desired_loss_amount_bound_multiplier, 0, 1.5, 0.001, False),
         Metric(cc_adv.desired_util_f, 0.5, 1, 0.001, True),
-        Metric(cc_adv.desired_queue_bound_multiplier, 0, 1.5, 0.001, False),
+        Metric(cc_adv.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+        Metric(cc_adv.desired_loss_amount_bound_multiplier, 0, 4, 0.001, False),
+        Metric(cc_adv.desired_large_loss_count_bound, 0, 4, 0.001, False),
+        Metric(cc_adv.desired_loss_count_bound, 0, 4, 0.001, False),
     ]
 
     adv_os = OptimizationStruct(
@@ -1003,6 +1005,7 @@ else:
     solutions = [
         z3.And(*flatten([fixed_cond, ai, ad, comb_md])),
         z3.And(*flatten([fixed_cond, ai, td, comb_ad])),
+        z3.And(*flatten([fixed_cond, ai, td, rocc_ad, *fi_ti])),
     ]
     solution = solutions[args.optimize]
 
