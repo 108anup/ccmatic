@@ -26,6 +26,7 @@ def test_copa_composition():
 
     cc.compose = True
     cc.cca = "copa"
+    # cc.cca = "bbr"
     if(cc.cca == "copa"):
         cc.history = cc.R + cc.D
     elif(cc.cca == "bbr"):
@@ -196,11 +197,75 @@ def test_copa_composition():
             z3.Or(
                 +v.S[t-0] + v.A[t-0] - v.A[t-1] +
                 v.W[t-0] - (v.C0 + c.C*(t-0)) <= 0,
-                +v.S[t-0] + v.A[t-0] - v.A[t-1] +
-                v.W[t-1] - (v.C0 + c.C*(t-0)) <= 0
+                z3.Not(+v.S[t-0] + v.A[t-0] - v.A[t-1] +
+                       v.W[t-1] - (v.C0 + c.C*(t-0)) <= 0)
             )
         )
     assumption_copa_not_bbr_filtered_2 = z3.And(*known_assumption_list)
+    assumption_copa_not_bbr_filtered = z3.Or(
+        assumption_copa_not_bbr_filtered_1, assumption_copa_not_bbr_filtered_2)
+
+    """
+    9, 0 --
+    Ineq 0: -A[t-0] +A[t-1] +W[t-0] -W[t-1] <= 0
+    Ineq 1: -S[t-0] +A[t-1] -W[t-0] +W[t-1] +(C_0 + C(t-0)) -(C_0 + C(t-1)) <= 0
+    Clause 0: 0 or 1
+
+    10, 1 --
+    Ineq 0: -S[t-0] +S[t-1] +A[t-0] -A[t-1] <= 0
+    Ineq 1: -S[t-0] +S[t-1] -A[t-0] +A[t-1] +W[t-0] -W[t-1] <= 0
+    Clause 0: 0 or 1
+
+    3, 2 --
+    Ineq 0: +S[t-1] -A[t-0] +A[t-1] +W[t-0] -(C_0 + C(t-1)) <= 0
+    Ineq 1: +S[t-0] +A[t-0] -A[t-1] +W[t-0] -(C_0 + C(t-0)) <= 0
+    Clause 0: 0 or 1
+    """
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Or(
+                -v.A[t-0] + v.A[t-1] + v.W[t-0] - v.W[t-1] <= 0,
+                -v.S[t-0] + v.A[t-1] - v.W[t-0] + v.W[t-1] +
+                (v.C0 + c.C*(t-0)) - (v.C0 + c.C*(t-1)) <= 0
+            )
+        )
+    assumption_copa_not_dummy_filtered_1 = z3.And(*known_assumption_list)
+
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Or(
+                -v.S[t-0] + v.S[t-1] + v.A[t-0] - v.A[t-1] <= 0,
+                -v.S[t-0] + v.S[t-1] - v.A[t-0] +
+                v.A[t-1] + v.W[t-0] - v.W[t-1] <= 0
+            )
+        )
+    assumption_copa_not_dummy_filtered_2 = z3.And(*known_assumption_list)
+
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            z3.Or(
+                +v.S[t-1] - v.A[t-0] + v.A[t-1] +
+                v.W[t-0] - (v.C0 + c.C*(t-1)) <= 0,
+                +v.S[t-0] + v.A[t-0] - v.A[t-1] +
+                v.W[t-0] - (v.C0 + c.C*(t-0)) <= 0
+            )
+        )
+    assumption_copa_not_dummy_filtered_3 = z3.And(*known_assumption_list)
+    assumption_copa_not_dummy_filtered = z3.Or(
+        assumption_copa_not_dummy_filtered_1,
+        assumption_copa_not_dummy_filtered_2,
+        assumption_copa_not_dummy_filtered_3)
+
+    # del W <= del A + del S - CD
+    known_assumption_list = []
+    for t in range(1, c.T):
+        known_assumption_list.append(
+            +v.W[t-0] - v.W[t-1] <= +v.A[t-0] - v.A[t-1] + v.S[t-0] - v.S[t-1] - c.C * c.D
+        )
+    assumption_del_WAS = z3.And(*known_assumption_list)
 
     verifier = MySolver()
     verifier.warn_undeclared = False
@@ -209,17 +274,29 @@ def test_copa_composition():
     verifier.add(environment)
     verifier.add(cca_definitions)
     verifier.add(periodic_constriants)
-    # verifier.add(z3.Not(known_assumption))
+
+    # verifier.add(assumption_del_WAS)
+
+    # verifier.add(assumption_copa_not_bbr_filtered)
     # verifier.add(assumption_copa_not_bbr_filtered_1)
-    verifier.add(assumption_copa_not_bbr_filtered_2)
+    # verifier.add(assumption_copa_not_bbr_filtered_2)
+
+    # verifier.add(assumption_copa_not_dummy_filtered)
+    # verifier.add(assumption_copa_not_dummy_filtered_1)
+    verifier.add(assumption_copa_not_dummy_filtered_2)
+    # verifier.add(assumption_copa_not_dummy_filtered_3)
+
+    # verifier.add(z3.Not(known_assumption_ccac))
     # verifier.add(known_assumption_ccac)
-    # verifier.add(z3.Not(desired))
-    verifier.add(v.S[-1] - v.S[0] >= c.C * c.T * 0.2)
+
+    # verifier.add(desired)
+    verifier.add(z3.Not(desired))
+    # verifier.add(v.S[-1] - v.S[0] >= c.C * c.T * 0.2)
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
     # verifier.add(v.L[0] == 0)
 
     optimization_list = [
-        Metric(cc.desired_util_f, 0.26, 1, 0.001, True),
+        Metric(cc.desired_util_f, 0.1, 1, 0.001, True),
         # Metric(delay_f, 0, 1, 0.001, True)
         # Metric(cc.desired_queue_bound_multiplier, 0, 8, 0.001, False)
     ]
