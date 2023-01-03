@@ -827,7 +827,8 @@ def ramp_up_when_cwnd_reset_fi(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert isinstance(min_final_cwnd, z3.ArithRef)
 
     ramp_up_cwnd = min_final_cwnd > min_initial_cwnd
-    return ramp_up_cwnd
+    ramp_down_cwnd = min_final_cwnd < min_initial_cwnd
+    return ramp_up_cwnd, ramp_down_cwnd
 
 
 def get_desired_necessary(
@@ -855,7 +856,9 @@ def get_desired_necessary(
         total_final_cwnd > total_initial_cwnd,
         total_final_rate > total_initial_rate)
     if(cc.template_fi_reset):
-        d.ramp_up_cwnd = ramp_up_when_cwnd_reset_fi(cc, c, v)
+        ru, rd = ramp_up_when_cwnd_reset_fi(cc, c, v)
+        d.ramp_up_cwnd = ru
+        d.ramp_down_cwnd = rd
     d.ramp_down_cwnd = z3.And(
         total_final_cwnd < total_initial_cwnd,
         total_final_rate < total_initial_rate)

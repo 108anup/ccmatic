@@ -54,12 +54,13 @@ class CCmatic():
         for n in range(c.N):
             initial_cwnd = z3_min(v.c_f[n][first], v.c_f[n][first+1])
             final_cwnd = z3_min(v.c_f[n][-1], v.c_f[n][-2])
+            final_cwnd = v.c_f[n][-1]
             this_fi = z3.Implies(
                 initial_cwnd < 0.1 * mmBDP,
-                z3.Or(v.c_f[n][c.T-1] > initial_cwnd +
+                z3.Or(final_cwnd > initial_cwnd +
                       increase_time_steps*v.alpha,
-                      v.c_f[n][c.T-1] >= 0.5 * BDP,
-                      v.c_f[n][c.T-1] > 3/2 * initial_cwnd))
+                      final_cwnd >= 0.5 * BDP,
+                      final_cwnd > 3/2 * initial_cwnd))
             fast_increase_list.append(this_fi)
         fast_increase = z3.Or(*fast_increase_list)
 
