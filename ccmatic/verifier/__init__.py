@@ -699,7 +699,7 @@ def setup_cegis_basic(cc: CegisConfig, name=None):
     sd = setup_ccac_definitions(c, v)
     se = setup_ccac_environment(c, v)
     ccac_definitions = z3.And(*sd.assertion_list)
-    not_too_adversarial_init_cwnd(cc, c, se, v)
+    # not_too_adversarial_init_cwnd(cc, c, se, v)
     environment = z3.And(*se.assertion_list)
 
     verifier_vars, definition_vars = get_cegis_vars(cc, c, v)
