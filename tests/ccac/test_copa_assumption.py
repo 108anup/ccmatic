@@ -59,15 +59,18 @@ def test_copa_composition():
         #         get_raw_value(counter_example.eval(z3.Bool(f"incr_{n},{t}"))) for t in range(c.T)]
         #     df[f"decr_{n},t"] = [
         #         get_raw_value(counter_example.eval(z3.Bool(f"decr_{n},{t}"))) for t in range(c.T)]
-        df['token_t'] = [
-            get_raw_value(counter_example.eval(v.C0 + c.C*t - v.W[t] - v.S[t]))
-            for t in range(c.T)]
-        df['delA_t'] = [np.nan] + [
-            get_raw_value(counter_example.eval(v.A[t] - v.A[t-1]))
-            for t in range(1, c.T)]
         df['delW_t'] = [np.nan] + [
             get_raw_value(counter_example.eval(v.W[t] - v.W[t-1]))
             for t in range(1, c.T)]
+        df['delA_t'] = [np.nan] + [
+            get_raw_value(counter_example.eval(v.A[t] - v.A[t-1]))
+            for t in range(1, c.T)]
+        df['token_t'] = [
+            get_raw_value(counter_example.eval(v.C0 + c.C*t - v.W[t] - v.S[t]))
+            for t in range(c.T)]
+        df['delA-delW'] = df['delA_t'] - df['delW_t']
+        # df['delA-T'] = df['delA_t'] - df['token_t']
+        # df['delA-T-delW'] = df['delA-T'] - df['delW_t']
         ret = "\n{}".format(df.astype(float))
         ret += "\nv.qdel[t][dt]\n"
         ret += "  " + " ".join([str(i) for i in range(c.T)]) + "\n"
@@ -283,7 +286,7 @@ def test_copa_composition():
 
     # verifier.add(assumption_copa_not_dummy_filtered)
     # verifier.add(assumption_copa_not_dummy_filtered_1)
-    verifier.add(assumption_copa_not_dummy_filtered_2)
+    # verifier.add(assumption_copa_not_dummy_filtered_2)
     # verifier.add(assumption_copa_not_dummy_filtered_3)
 
     # verifier.add(z3.Not(known_assumption_ccac))
@@ -291,7 +294,7 @@ def test_copa_composition():
 
     # verifier.add(desired)
     verifier.add(z3.Not(desired))
-    # verifier.add(v.S[-1] - v.S[0] >= c.C * c.T * 0.2)
+    # verifier.add(v.S[-1] - v.S[0] < c.C * c.T * 0.3)
     # verifier.add(v.A[-1] >= v.A[0] + c.C)
     # verifier.add(v.L[0] == 0)
 
