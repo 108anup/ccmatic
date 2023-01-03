@@ -13,7 +13,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
-from cegis.util import get_raw_value, z3_min
+from cegis.util import get_raw_value, z3_max, z3_min
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -303,6 +303,55 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
             v.S_choice[t] >= S_lower)
         s.add(z3.Implies(feasible_choice, v.S[t] == v.S_choice[t]))
         s.add(z3.Implies(z3.Not(feasible_choice), v.S[t] == S_lower))
+
+
+def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    for n in range(c.T):
+
+        for et in range(1, c.T):
+            # TODO: Since qdelay is enumerated, we'd have to enumerate buffer
+            #  beliefs...
+            # # buffer beliefs
+            # s.add(v.min_buffer)
+            # s.add(v.max_buffer)
+
+            utilized = [None for _ in range(et)]
+            # bandwidth beliefs (C)
+            for st in range(et-1, -1, -1):
+                """
+                In summary C >= r * n/(n+1) always, if we additionally know that
+                sending rate is higher than C then, C <= r * n/(n-1).
+                """
+                window = et - st
+                measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
+                s.add(v.min_c[n][et] == z3_max(
+                    v.min_c[n][et-1], measured_c * window / (window + 1)))
+
+                # TODO: Check if qdel high for packet recvd means that
+                #  utilization was there or not.
+
+                # Encodes that utilization must have been high if loss happened
+                # or if queing delay was more than D
+                this_utilized = z3.Or(
+                    v.Ld_f[n][et] - v.Ld_f[et-1] > 0, v.qbound[et][c.D+1])
+                if(st + 1 == et):
+                    utilized[st] = this_utilized
+                else:
+                    utilized[st] = z3.And(utilized[st+1], this_utilized)
+
+                s.add(v.max_c[n][et] == z3.If(
+                    utilized[st],
+                    z3_min(v.max_c[n][et-1], measured_c * window / (window - 1)),
+                    v.max_c[n][et-1]))
+
+
+def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    # TODO: Use this only if we are requiring CCA to not reset beliefs when it thinks
+    #  network changed.
+    for n in range(c.N):
+        s.add(v.min_c[n][0] >= 0)
+        s.add(v.min_c[n][0] <= c.C)
+        s.add(v.max_c[n][0] >= c.C)
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
