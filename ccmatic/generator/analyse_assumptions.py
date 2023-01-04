@@ -429,6 +429,7 @@ def filter_print_assumptions(
                              None, None))
     logger.info("Filtered solutions: \n"+"\n".join(solution_strs))
 
+    os.makedirs(outdir, exist_ok=True)
     write_assumptions(
         filtered_list, assumption_records,
         get_solution_str, outdir, f'_filtered{suffix}')

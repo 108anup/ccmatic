@@ -315,6 +315,30 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             # s.add(v.min_buffer)
             # s.add(v.max_buffer)
 
+            for dt in range(et+1):
+                s.add(z3.Implies(
+                    v.qdel[et][dt],
+                    v.min_buffer[n][et] ==
+                    z3_max(v.min_buffer[n][et-1], dt-c.D)))
+            # TODO: is this the best way to handle the case when qdel > et?
+            s.add(z3.Implies(
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
+                v.min_buffer[n][et] ==
+                v.min_buffer[n][et-1]))
+
+            for dt in range(et+1):
+                s.add(z3.Implies(
+                    z3.And(v.Ld_f[n][et] > v.Ld_f[n][et], v.qdel[et][dt]),
+                    v.max_buffer[n][et] ==
+                    z3_min(v.max_buffer[n][et-1], dt+1)))
+            # TODO: is this the best way to handle the case when qdel > et?
+            s.add(z3.Implies(
+                z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et]),
+                      z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
+                v.max_buffer[n][et] ==
+                v.max_buffer[n][et-1]))
+
+
             utilized = [None for _ in range(et)]
             # bandwidth beliefs (C)
             for st in range(et-1, -1, -1):
