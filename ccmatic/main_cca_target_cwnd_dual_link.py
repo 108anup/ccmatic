@@ -211,6 +211,14 @@ def get_template_definitions(
                     z3.Or(*[v.Ld_f[n][_t] > v.Ld_f[n][_t-1]
                             for _t in range(begin, t+1)])),
                 z3.Not(v.c_f[n][t-1] - v.c_f[n][t-2] > v.alpha))
+            # Losses may be delayed in the adversarial link. But for adversarial
+            # link, large losses cannot be avoided. So we can do successive fast
+            # increases without waiting for losses. In reality losses will
+            # probably not be known within Rm and may take more time (queuing
+            # delay and aggregation). TODO: need to make realistic loss detection.
+            can_fast_increase = z3.Not(
+                    z3.Or(*[v.Ld_f[n][_t] > v.Ld_f[n][_t-1]
+                            for _t in range(begin, t+1)]))
 
             # RHS for cwnd
             rhs_cond = (
@@ -412,6 +420,7 @@ def get_solution_str(solution: z3.ModelRef,
     #      for rhs in rhss_condfi for shift in range(HISTORY)])) + " > 0"
 
     can_fast_increase = f"\"Last loss was >= {TIME_BETWEEN_LARGE_LOSS} Rm ago and Last fast increase was >= 1 Rm ago\""
+    can_fast_increase = f"\"Last loss was >= {TIME_BETWEEN_LARGE_LOSS} Rm ago\""
 
     # RHS for cwnd
     rhs_cond = (f"{solution.eval(coeffs['c_f[n]']['loss']['c_f[n]'])}"
@@ -1010,6 +1019,7 @@ else:
         z3.And(*flatten([fixed_cond, ai, ad, comb_md])),
         z3.And(*flatten([fixed_cond, ai, td, comb_ad])),
         z3.And(*flatten([fixed_cond, ai, td, rocc_ad, *fi_ti])),
+        z3.And(*flatten([fixed_cond, ai, td, comb_ad, *fi_ti])),
     ]
     solution = solutions[args.optimize]
 
@@ -1033,6 +1043,11 @@ else:
         verifier.add(link.definitions)
         verifier.add(link.environment)
         verifier.add(z3.Not(desired))
+        # verifier.add(c.buf_max == c.C * c.R / 10)
+        # for n in range(c.N):
+        #     for t in range(HISTORY):
+        #         verifier.add(v.c_f[n][t] == c.C * c.R * 0.99)
+        #         verifier.add(v.Ld_f[n][t+1] == v.L[t])
         # import ipdb; ipdb.set_trace()
         # verifier.add(v.c_f[0][first] >= 20 * mmBDP)
         # verifier.add(z3.Not(v.c_f[0][c.T-1] <= v.c_f[0][first]/2))
