@@ -26,7 +26,7 @@ def test_copa_composition():
 
     cc.compose = True
     cc.cca = "copa"
-    # cc.cca = "bbr"
+    # cc.cca = "paced"
     if(cc.cca == "copa"):
         cc.history = cc.R + cc.D
     elif(cc.cca == "bbr"):
@@ -65,6 +65,10 @@ def test_copa_composition():
         df['delA_t'] = [np.nan] + [
             get_raw_value(counter_example.eval(v.A[t] - v.A[t-1]))
             for t in range(1, c.T)]
+        df['delS_t'] = [np.nan] + [
+            get_raw_value(counter_example.eval(v.S[t] - v.S[t-1]))
+            for t in range(1, c.T)]
+        df['delA+delS'] = df['delA_t'] + df['delS_t']
         df['token_t'] = [
             get_raw_value(counter_example.eval(v.C0 + c.C*t - v.W[t] - v.S[t]))
             for t in range(c.T)]
@@ -194,6 +198,7 @@ def test_copa_composition():
             )
         )
     assumption_copa_not_bbr_filtered_1 = z3.And(*known_assumption_list)
+
     known_assumption_list = []
     for t in range(1, c.T):
         known_assumption_list.append(
@@ -276,7 +281,8 @@ def test_copa_composition():
     verifier.add(ccac_definitions)
     verifier.add(environment)
     verifier.add(cca_definitions)
-    verifier.add(periodic_constriants)
+    # verifier.add(periodic_constriants)
+    verifier.add(v.c_f[0][cc.history] > v.c_f[0][-1])
 
     # verifier.add(assumption_del_WAS)
 

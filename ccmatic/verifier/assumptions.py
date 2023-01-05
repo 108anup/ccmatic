@@ -134,6 +134,8 @@ def get_cca_definition(c: ModelConfig, v: Variables, pre=""):
         pass
     elif c.cca == "paced":
         cca_paced(c, s, v)
+    elif c.cca == "none":
+        pass
     else:
         assert False, "CCA {} not found".format(c.cca)
 
