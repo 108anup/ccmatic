@@ -148,11 +148,13 @@ if(cc.monotonic_inc_assumption):
         cc, prefix_novel)
     vn_novel = VariableNames(v_novel)
 
-    periodic_constriants_novel = get_periodic_constraints_ccac(
-        cc, c_novel, v_novel)
+    # periodic_constriants_novel = get_periodic_constraints_ccac(
+    #     cc, c_novel, v_novel)
     cca_definitions_novel = get_cca_definition(c_novel, v_novel)
+    # environment_novel = z3.And(
+    #     environment_novel, periodic_constriants_novel, cca_definitions_novel)
     environment_novel = z3.And(
-        environment_novel, periodic_constriants_novel, cca_definitions_novel)
+        environment_novel, cca_definitions_novel)
     desired_novel = z3.Or(v_novel.c_f[0][-1] > v_novel.c_f[0][cc.history],
                           v_novel.S[-1] - v_novel.S[0] >=
                           util_frac * c_novel.C * c_novel.T)
