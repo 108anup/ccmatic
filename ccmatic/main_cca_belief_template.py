@@ -52,7 +52,7 @@ cond_coeffs = [[z3.Real(f"Gen__coeff[{cv}]_cond{i}")
 
 critical_generator_vars = flatten(
     cond_coeffs) + flatten(expr_coeffs) + flatten(expr_consts)
-generator_vars = critical_generator_vars
+generator_vars: List[z3.ExprRef] = critical_generator_vars
 
 search_range_expr_coeffs = [1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
@@ -65,7 +65,7 @@ for expr_coeff in expr_coeffs:
 for expr_const in expr_consts:
     domain_clauses.append(
         z3.Or(*[expr_const == x for x in search_range_expr_consts]))
-for cond_coeff in cond_coeffs:
+for cond_coeff in flatten(cond_coeffs):
     domain_clauses.append(
         z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs]))
 
@@ -84,13 +84,13 @@ def get_template_definitions(
             conds = []
             exprs = []
             for ci in range(n_cond):
-                cond = 0
+                cond_lhs = 0
                 for cvi, cond_var_str in enumerate(cond_vars):
-                    cond_var = v.__getattribute__(cond_var_str)
+                    cond_var = v.__getattribute__(cond_var_str)[n][t-1]
 
                     # TODO: convert all vars to bytes?
                     # if(cond_var_str.endswith('_c')):
-                    #     # eval(f"v.{cond_var_str}")
+                    #     # eval(f"v.{cond_var_str}[n][t]")
                     #     cond_var = v.__getattribute__(cond_var_str)
                     # elif(cond_var_str == "min_buffer"):
                     #     cond_var = v.min_buffer * v.min_c
@@ -99,10 +99,10 @@ def get_template_definitions(
                     # else:
                     #     assert False
 
-                    cond += get_product_ite(
+                    cond_lhs += get_product_ite(
                         cond_coeffs[ci][cvi], cond_var,
                         search_range_cond_coeffs)
-                conds.append(cond)
+                conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
                 expr = \
@@ -125,7 +125,8 @@ def get_template_definitions(
 
             # Rate based CCA.
             template_definitions.append(
-                v.c_f[n][t] == np.inf)
+                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+    return template_definitions
 
 
 def get_solution_str(
@@ -156,3 +157,41 @@ def get_solution_str(
     ret += f"\n    r_f[n][t] = max(alpha, {get_expr(n_expr-1)})"
     return ret
 
+
+cc = CegisConfig()
+cc.name = "adv"
+cc.synth_ss = False
+cc.infinite_buffer = True
+cc.dynamic_buffer = False
+cc.buffer_size_multiplier = 1
+cc.template_qdel = True
+cc.template_queue_bound = True
+cc.template_fi_reset = False
+cc.template_beliefs = True
+cc.N = 1
+cc.T = 6
+cc.history = cc.R
+cc.cca = "none"
+
+cc.desired_util_f = 0.5
+cc.desired_queue_bound_multiplier = 4
+cc.desired_queue_bound_alpha = 3
+cc.desired_loss_count_bound = 0
+cc.desired_large_loss_count_bound = 0
+cc.desired_loss_amount_bound_multiplier = 0
+cc.desired_loss_amount_bound_alpha = 0
+
+cc.ideal_link = False
+cc.feasible_response = False
+
+link = CCmatic(cc)
+link.setup_config_vars()
+c, _, v = link.c, link.s, link.v
+template_definitions = get_template_definitions(cc, c, v)
+
+link.setup_cegis_loop(
+    search_constraints,
+    template_definitions, generator_vars, get_solution_str)
+
+link.run_cegis()
+# TODO: redine desired

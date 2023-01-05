@@ -321,7 +321,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     v.qdel[et][dt], v.max_qdel == dt+1))
             s.add(z3.Implies(
                 z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
-                v.max_qdel[n][et] == np.inf))
+                v.max_qdel[n][et] == 1000 * c.T))
 
             # buffer
             for dt in range(et+1):
@@ -382,8 +382,21 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #  network changed.
     for n in range(c.N):
         s.add(v.min_c[n][0] >= 0)
+        s.add(v.min_c[n][0] <= v.max_c[n][0])
         s.add(v.min_c[n][0] <= c.C)
         s.add(v.max_c[n][0] >= c.C)
+
+        s.add(v.min_buffer[n][0] >= 0)
+        s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
+        assert c.buf_min == c.buf_max
+        s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
+        s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
+
+        s.add(v.min_qdel[n][0] >= 0)
+        s.add(v.min_qdel[n][0] <= v.max_qdel[n][0])
+        assert c.buf_min == c.buf_max
+        s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
+        s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -723,6 +736,8 @@ def setup_ccac_definitions(c: ModelConfig, v: Variables):
         cca_paced(c, s, v)  # Defs to compute rate.
     if(c.feasible_response):
         service_choice(c, s, v)
+    if(c.beliefs):
+        update_beliefs(c, s, v)
 
     return s
 
@@ -765,6 +780,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
+    c.beliefs = cc.template_beliefs
 
     return c
 
@@ -834,6 +850,9 @@ def setup_ccac_environment(c, v):
         # Buffer taken from discrete choices
         # s.add(z3.Or(c.buf_min == c.C * (c.R + c.D),
         #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
+
+    if(c.beliefs):
+        initial_beliefs(c, s, v)
     return s
 
 

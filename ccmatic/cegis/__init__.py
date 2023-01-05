@@ -23,6 +23,7 @@ class CegisConfig:
     template_qdel: bool = False  # For copa like algos
     template_fi_reset: bool = False
     # ^^ For infrequent losses with fast increase, revert to last cwnd on loss.
+    template_beliefs: bool = False
 
     # desired
     desired_util_f: Union[float, z3.ArithRef]

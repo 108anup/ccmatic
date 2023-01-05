@@ -199,7 +199,7 @@ class CCmatic():
         if(val < 0):
             return f'-{-val}{suffix}'
 
-    def run_cegis(self, known_solution: Optional[z3.ExprRef]):
+    def run_cegis(self, known_solution: Optional[z3.ExprRef]=None):
         # Directly update any closures or critical_generator_vars
         # or any other expression before calling run function.
 
