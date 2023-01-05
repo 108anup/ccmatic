@@ -307,14 +307,23 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     for n in range(c.T):
-
         for et in range(1, c.T):
-            # TODO: Since qdelay is enumerated, we'd have to enumerate buffer
-            #  beliefs...
-            # # buffer beliefs
-            # s.add(v.min_buffer)
-            # s.add(v.max_buffer)
+            # qdel
+            for dt in range(et+1):
+                s.add(z3.Implies(
+                    v.qdel[et][dt], v.min_qdel == dt-c.D))
+            s.add(z3.Implies(
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
+                v.min_qdel[n][et] == 0))
 
+            for dt in range(et+1):
+                s.add(z3.Implies(
+                    v.qdel[et][dt], v.max_qdel == dt+1))
+            s.add(z3.Implies(
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
+                v.max_qdel[n][et] == np.inf))
+
+            # buffer
             for dt in range(et+1):
                 s.add(z3.Implies(
                     v.qdel[et][dt],
@@ -337,7 +346,6 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                       z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
                 v.max_buffer[n][et] ==
                 v.max_buffer[n][et-1]))
-
 
             utilized = [None for _ in range(et)]
             # bandwidth beliefs (C)
