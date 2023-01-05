@@ -47,15 +47,15 @@ cc.use_ref_cca = True
 cc.monotonic_inc_assumption = True
 
 cc.compose = True
-# cc.cca = "copa"
-cc.cca = "bbr"
+cc.cca = "copa"
+# cc.cca = "bbr"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
 elif(cc.cca == "bbr"):
     cc.history = 2 * cc.R
 
 cc.feasible_response = False
-util_frac = 0.45
+util_frac = 0.1
 
 # CCA under test
 (c, s, v,
@@ -63,32 +63,41 @@ util_frac = 0.45
  verifier_vars, definition_vars) = setup_cegis_basic(cc)
 vn = VariableNames(v)
 
-periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
+# periodic_constriants = get_periodic_constraints_ccac(cc, c, v)
 cca_definitions = get_cca_definition(c, v)
 cca_vvars = get_cca_vvars(c, v)
 verifier_vars.extend(flatten(cca_vvars))
-environment = z3.And(environment, periodic_constriants, cca_definitions)
-poor_utilization = v.S[-1] - v.S[0] < util_frac * c.C * c.T
+# environment = z3.And(environment, periodic_constriants, cca_definitions)
+environment = z3.And(environment, cca_definitions)
+assert c.N == 1
+desired = z3.Or(v.c_f[0][-1] > v.c_f[0][cc.history],
+                v.S[-1] - v.S[0] >= util_frac * c.C * c.T)
+poor_utilization = z3.Not(desired)
 
 # Referenece CCA
 if(cc.use_ref_cca):
     prefix_alt = "alt"
     (c_alt, s_alt, v_alt,
      ccac_domain_alt, ccac_definitions_alt, environment_alt,
-     verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(cc, prefix_alt)
+     verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(
+        cc, prefix_alt)
     c_alt.cca = dummy_cca
     vn_alt = VariableNames(v_alt)
 
-    periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
+    # periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
     cca_definitions_alt = get_cca_definition(c_alt, v_alt)
     if(c_alt.cca == "paced"):
         cca_definitions_alt = z3.And(cca_definitions_alt, z3.And(
             *[v_alt.c_f[n][t] == cc.template_cca_lower_bound
-              for t in range(c.T) for n in range(c.N)]))
+              for t in range(c_alt.T) for n in range(c_alt.N)]))
+    # environment_alt = z3.And(
+    #     environment_alt, periodic_constriants_alt, cca_definitions_alt)
     environment_alt = z3.And(
-        environment_alt, periodic_constriants_alt, cca_definitions_alt)
-    poor_utilization_alt = v_alt.S[-1] - \
-        v_alt.S[0] < util_frac * c_alt.C * c_alt.T
+        environment_alt, cca_definitions_alt)
+    desired_alt = z3.Or(v_alt.c_f[0][-1] > v_alt.c_f[0][cc.history],
+                        v_alt.S[-1] - v_alt.S[0] >=
+                        util_frac * c_alt.C * c_alt.T)
+    poor_utilization_alt = z3.Not(desired_alt)
 
 # Novel trace (for monotonically increasing CCAs)
 if(cc.monotonic_inc_assumption):
@@ -104,9 +113,10 @@ if(cc.monotonic_inc_assumption):
     cca_definitions_novel = get_cca_definition(c_novel, v_novel)
     environment_novel = z3.And(
         environment_novel, periodic_constriants_novel, cca_definitions_novel)
-    poor_utilization_novel = v_novel.S[-1] - \
-        v_novel.S[0] < util_frac * c_novel.C * c_novel.T
-
+    desired_novel = z3.Or(v_novel.c_f[0][-1] > v_novel.c_f[0][cc.history],
+                          v_novel.S[-1] - v_novel.S[0] >=
+                          util_frac * c_novel.C * c_novel.T)
+    poor_utilization_novel = z3.Not(desired_novel)
 
 # ----------------------------------------------------------------
 # TEMPLATE
@@ -517,9 +527,7 @@ lemmas = z3.And(
     ccac_domain,
     ccac_definitions,
 
-    cca_definitions,
-    environment,
-    periodic_constriants,
+    environment,  # includes CCA definition and periodic if present
 
     # z3.Not(poor_utilization)
 )
