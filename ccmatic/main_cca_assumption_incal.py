@@ -1,3 +1,5 @@
+import sys
+import argparse
 import functools
 import logging
 from typing import List
@@ -30,8 +32,43 @@ Since all def vars only depend on env vars. They are fixed...
 Though, need to ensure that each def var takes exactly one value.
 """
 
+
+def get_args():
+
+    parser = argparse.ArgumentParser(description='Synthesize assumptions')
+
+    parser.add_argument(
+        '--dut', required=True,
+        type=str, choices=["copa", "bbr"],
+        action='store')
+    parser.add_argument(
+        '--ref', required=True,
+        type=str, action='store',
+        choices=["paced", "bbr", "copa"])
+    parser.add_argument(
+        '--util', required=True,
+        type=float, action='store')
+
+    parser.add_argument('--solution-log-path', type=str,
+                        action='store', default=None)
+    parser.add_argument('--solution-seed-path', type=str,
+                        action='store', default=None)
+    parser.add_argument('--sort-assumptions', action='store_true', default=False)
+    parser.add_argument('--filter-assumptions', action='store_true', default=False)
+    parser.add_argument('-o', '--outdir', type=str,
+                        action='store', default="tmp")
+    parser.add_argument('--suffix', type=str,
+                        action='store', default="")
+    # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
+
+    args = parser.parse_args()
+    return args
+
+
+args = get_args()
 DEBUG = False
-dummy_cca = "paced"
+dummy_cca = args.ref
+# dummy_cca = "paced"
 # dummy_cca = "bbr"
 # dummy_cca = "copa"
 cc = CegisConfig()
@@ -47,7 +84,8 @@ cc.use_ref_cca = True
 cc.monotonic_inc_assumption = True
 
 cc.compose = True
-cc.cca = "copa"
+cc.cca = args.dut
+# cc.cca = "copa"
 # cc.cca = "bbr"
 if(cc.cca == "copa"):
     cc.history = cc.R + cc.D
@@ -55,7 +93,9 @@ elif(cc.cca == "bbr"):
     cc.history = 2 * cc.R
 
 cc.feasible_response = False
-util_frac = 0.1
+util_frac = args.util
+
+logger.info(f"Testing {cc.cca} comparing with {dummy_cca}, for utilization {util_frac}.")
 
 # CCA under test
 (c, s, v,
@@ -535,24 +575,6 @@ assert isinstance(lemmas, z3.ExprRef)
 
 if (__name__ == "__main__"):
 
-    def get_args():
-        import argparse
-        parser = argparse.ArgumentParser(description='Synthesize assumptions')
-        parser.add_argument('--solution-log-path', type=str,
-                            action='store', default=None)
-        parser.add_argument('--solution-seed-path', type=str,
-                            action='store', default=None)
-        parser.add_argument('--sort-assumptions', action='store_true', default=False)
-        parser.add_argument('--filter-assumptions', action='store_true', default=False)
-        parser.add_argument('-o', '--outdir', type=str,
-                            action='store', default="tmp")
-        parser.add_argument('--suffix', type=str,
-                            action='store', default="")
-        # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
-        args = parser.parse_args()
-        return args
-
-    args = get_args()
     if(args.sort_assumptions or args.filter_assumptions):
         import pandas as pd
         f = open(args.solution_log_path, 'r')
