@@ -47,7 +47,7 @@ expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
 cond_vars = ['min_c', 'max_c', 'min_buffer',
              'max_buffer', 'min_qdel', 'max_qdel']
-cond_coeffs = [[z3.Real(f"Gen__coeff[{cv}]_cond{i}")
+cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
 
 critical_generator_vars = flatten(
@@ -139,7 +139,7 @@ def get_solution_str(
         cond_str = ""
         for cvi, cond_var_str in enumerate(cond_vars):
             coeff = get_raw_value(solution.eval(cond_coeffs[ci][cvi]))
-            cond_str += f"+ {coeff}{cond_var_str}"
+            cond_str += f" + {coeff}{cond_var_str}"
         return cond_str
 
     def get_expr(ei):
@@ -161,7 +161,7 @@ def get_solution_str(
 cc = CegisConfig()
 cc.name = "adv"
 cc.synth_ss = False
-cc.infinite_buffer = True
+cc.infinite_buffer = False
 cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
 cc.template_qdel = True

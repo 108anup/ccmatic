@@ -306,19 +306,19 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
-    for n in range(c.T):
+    for n in range(c.N):
         for et in range(1, c.T):
             # qdel
             for dt in range(et+1):
                 s.add(z3.Implies(
-                    v.qdel[et][dt], v.min_qdel == dt-c.D))
+                    v.qdel[et][dt], v.min_qdel[n][et] == dt-c.D))
             s.add(z3.Implies(
                 z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
                 v.min_qdel[n][et] == 0))
 
             for dt in range(et+1):
                 s.add(z3.Implies(
-                    v.qdel[et][dt], v.max_qdel == dt+1))
+                    v.qdel[et][dt], v.max_qdel[n][et] == dt+1))
             s.add(z3.Implies(
                 z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
                 v.max_qdel[n][et] == 1000 * c.T))
@@ -347,8 +347,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 v.max_buffer[n][et] ==
                 v.max_buffer[n][et-1]))
 
-            utilized = [None for _ in range(et)]
             # bandwidth beliefs (C)
+            utilized = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
                 """
                 In summary C >= r * n/(n+1) always, if we additionally know that
@@ -365,16 +365,23 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # Encodes that utilization must have been high if loss happened
                 # or if queing delay was more than D
                 this_utilized = z3.Or(
-                    v.Ld_f[n][et] - v.Ld_f[et-1] > 0, v.qbound[et][c.D+1])
+                    v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0, v.qbound[st+1][c.D+1])
                 if(st + 1 == et):
                     utilized[st] = this_utilized
                 else:
+                    assert utilized[st+1] is not None
                     utilized[st] = z3.And(utilized[st+1], this_utilized)
 
-                s.add(v.max_c[n][et] == z3.If(
-                    utilized[st],
-                    z3_min(v.max_c[n][et-1], measured_c * window / (window - 1)),
-                    v.max_c[n][et-1]))
+                if(window - 1 > 0):
+                    # this_upper_bound = z3.If(
+                    #     utilized[st], measured_c * window / (window - 1),
+                    #     v.max_c[n][et-1])
+                    # assert isinstance(this_upper_bound, z3.ArithRef)
+                    # s.add(v.max_c[n][et] == z3_min(this_upper_bound, v.max_c[n][et-1]))
+                    s.add(v.max_c[n][et] == z3.If(
+                        utilized[st],
+                        z3_min(v.max_c[n][et-1], measured_c * window / (window - 1)),
+                        v.max_c[n][et-1]))
 
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
