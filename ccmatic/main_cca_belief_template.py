@@ -45,18 +45,23 @@ n_cond = n_expr - 1
 expr_coeffs = [z3.Real(f"Gen__coeff_expr{i}") for i in range(n_expr)]
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
-cond_vars = ['min_c', 'max_c', 'min_buffer',
-             'max_buffer', 'min_qdel', 'max_qdel']
+cond_vars = ['min_c', 'max_c',
+             # 'min_buffer', 'max_buffer',
+             'min_qdel', 'max_qdel']
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
+cond_consts = [z3.Real(f"Gen__const_cond{i}")
+               for i in range(n_cond)]
 
-critical_generator_vars = flatten(
-    cond_coeffs) + flatten(expr_coeffs) + flatten(expr_consts)
+critical_generator_vars = flatten(cond_coeffs) \
+    + flatten(expr_coeffs) + flatten(expr_consts) \
+    + flatten(cond_consts)
 generator_vars: List[z3.ExprRef] = critical_generator_vars
 
 search_range_expr_coeffs = [1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
 search_range_cond_coeffs = [-1, 0, 1]
+search_range_cond_consts = list(range(-10, 11))
 
 domain_clauses = []
 for expr_coeff in expr_coeffs:
@@ -68,6 +73,10 @@ for expr_const in expr_consts:
 for cond_coeff in flatten(cond_coeffs):
     domain_clauses.append(
         z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs]))
+for cond_const in cond_consts:
+    domain_clauses.append(
+        z3.Or(*[cond_const == x for x in search_range_cond_consts]))
+
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
@@ -102,6 +111,7 @@ def get_template_definitions(
                     cond_lhs += get_product_ite(
                         cond_coeffs[ci][cvi], cond_var,
                         search_range_cond_coeffs)
+                cond_lhs += cond_consts[ci]
                 conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
@@ -139,16 +149,29 @@ def get_solution_str(
         cond_str = ""
         for cvi, cond_var_str in enumerate(cond_vars):
             coeff = get_raw_value(solution.eval(cond_coeffs[ci][cvi]))
-            cond_str += f" + {coeff}{cond_var_str}"
+            if(coeff != 0):
+                cond_str += f"+ {coeff}{cond_var_str} "
+        const = get_raw_value(solution.eval(cond_consts[ci]))
+        if(const != 0):
+            cond_str += f"+ {const} "
+        if(cond_str == ""):
+            cond_str = "0 "
+        cond_str += "> 0"
         return cond_str
 
     def get_expr(ei):
         expr_str = ""
         coeff = get_raw_value(solution.eval(expr_coeffs[ei]))
         const = get_raw_value(solution.eval(expr_consts[ei]))
-        return f"{coeff}min_c + {const}alpha"
+        if(coeff != 0):
+            expr_str += f"{coeff}min_c"
+        if(const != 0):
+            expr_str += f" + {const}alpha"
+        if(expr_str == ""):
+            expr_str = "0"
+        return expr_str
 
-    ret += f"\nif ({get_cond(0)}):"
+    ret += f"if ({get_cond(0)}):"
     ret += f"\n    r_f[n][t] = max(alpha, {get_expr(0)})"
     for ci in range(1, n_cond):
         ret += f"\nelif ({get_cond(ci)}):"

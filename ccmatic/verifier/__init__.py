@@ -306,12 +306,12 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    # Qdel
     for n in range(c.N):
         for et in range(1, c.T):
-            # qdel
             for dt in range(et+1):
                 s.add(z3.Implies(
-                    v.qdel[et][dt], v.min_qdel[n][et] == dt-c.D))
+                    v.qdel[et][dt], v.min_qdel[n][et] == max(0, dt-c.D)))
             s.add(z3.Implies(
                 z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
                 v.min_qdel[n][et] == 0))
@@ -323,31 +323,36 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
                 v.max_qdel[n][et] == 1000 * c.T))
 
-            # buffer
-            for dt in range(et+1):
+    # Buffer
+    if(c.buf_min is not None):
+        for n in range(c.N):
+            for et in range(1, c.T):
+                for dt in range(et+1):
+                    s.add(z3.Implies(
+                        v.qdel[et][dt],
+                        v.min_buffer[n][et] ==
+                        z3_max(v.min_buffer[n][et-1], dt-c.D)))
+                # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
-                    v.qdel[et][dt],
+                    z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
                     v.min_buffer[n][et] ==
-                    z3_max(v.min_buffer[n][et-1], dt-c.D)))
-            # TODO: is this the best way to handle the case when qdel > et?
-            s.add(z3.Implies(
-                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
-                v.min_buffer[n][et] ==
-                v.min_buffer[n][et-1]))
+                    v.min_buffer[n][et-1]))
 
-            for dt in range(et+1):
+                for dt in range(et+1):
+                    s.add(z3.Implies(
+                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et], v.qdel[et][dt]),
+                        v.max_buffer[n][et] ==
+                        z3_min(v.max_buffer[n][et-1], dt+1)))
+                # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
-                    z3.And(v.Ld_f[n][et] > v.Ld_f[n][et], v.qdel[et][dt]),
+                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et]),
+                          z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
                     v.max_buffer[n][et] ==
-                    z3_min(v.max_buffer[n][et-1], dt+1)))
-            # TODO: is this the best way to handle the case when qdel > et?
-            s.add(z3.Implies(
-                z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et]),
-                      z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
-                v.max_buffer[n][et] ==
-                v.max_buffer[n][et-1]))
+                    v.max_buffer[n][et-1]))
 
-            # bandwidth beliefs (C)
+    # Bandwidth beliefs (C)
+    for n in range(c.N):
+        for et in range(1, c.T):
             """
             In summary C >= r * n/(n+1) always, if we additionally know that
             sending rate is higher than C then, C <= r * n/(n-1).
@@ -395,13 +400,14 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         s.add(v.min_c[n][0] <= c.C)
         s.add(v.max_c[n][0] >= c.C)
 
-        s.add(v.min_buffer[n][0] >= 0)
-        s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
-        if(c.buf_min is not None):
-            assert c.buf_min == c.buf_max
+    if(c.buf_min is not None):
+        for n in range(c.N):
+            s.add(v.min_buffer[n][0] >= 0)
+            s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
             s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
             s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
+    for n in range(c.N):
         s.add(v.min_qdel[n][0] >= 0)
         s.add(v.min_qdel[n][0] <= v.max_qdel[n][0])
         if(c.buf_min is not None):
@@ -724,12 +730,15 @@ def get_cegis_vars(
     if(c.beliefs):
         definition_vars.extend(flatten(
             [v.min_c[:, 1:], v.max_c[:, 1:],
-             v.min_buffer[:, 1:], v.max_buffer[:, 1:],
              v.min_qdel[:, 1:], v.max_qdel[:, 1:]]))
         verifier_vars.extend(flatten(
             [v.min_c[:, :1], v.max_c[:, :1],
-             v.min_buffer[:, :1], v.max_buffer[:, :1],
              v.min_qdel[:, :1], v.max_qdel[:, :1]]))
+        if(c.buf_min is not None):
+            definition_vars.extend(flatten(
+                [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+            verifier_vars.extend(flatten(
+                [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
 
     return verifier_vars, definition_vars
 
@@ -1340,10 +1349,13 @@ def get_cex_df(
             cex_dict.update({
                 get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
                 get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
-                get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
-                get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n]),
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
                 get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])})
+        if(c.buf_min is not None):
+            for n in range(c.N):
+                cex_dict.update({
+                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
+                    get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})
