@@ -9,7 +9,7 @@ from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
 from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate_qbound_env,
-                              calculate_qdel_defs, calculate_qdel_env,
+                              calculate_qdel_defs, calculate_qdel_env, check_config,
                               exceed_queue_defs, fifo_service, get_desired_in_ss,
                               last_decrease_defs, monotone_defs, monotone_env,
                               setup_ccac_for_cegis)
@@ -195,6 +195,7 @@ class IdealLink:
 
     @staticmethod
     def setup_cegis_basic(cc: CegisConfig):
+        check_config(cc)
         c = setup_ccac_for_cegis(cc)
         s = MySolver()
         s.warn_undeclared = False

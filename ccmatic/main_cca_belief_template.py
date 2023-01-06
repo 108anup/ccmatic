@@ -24,6 +24,21 @@ logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
 
+def get_args():
+
+    parser = argparse.ArgumentParser(description='Belief template')
+
+    parser.add_argument('--infinite-buffer', action='store_true', default=True)
+    parser.add_argument('--finite-buffer', action='store_true', default=False)
+    parser.add_argument('--dynamic-buffer', action='store_true', default=False)
+    args = parser.parse_args()
+    return args
+
+
+args = get_args()
+assert args.infinite_buffer + args.finite_buffer + args.dynamic_buffer == 1
+logger.info(args)
+
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
@@ -54,9 +69,9 @@ cond_consts = [z3.Real(f"Gen__const_cond{i}")
                for i in range(n_cond)]
 
 critical_generator_vars = flatten(cond_coeffs) \
-    + flatten(expr_coeffs) + flatten(expr_consts) \
+    + flatten(expr_coeffs) + flatten(expr_consts)
+generator_vars: List[z3.ExprRef] = critical_generator_vars \
     + flatten(cond_consts)
-generator_vars: List[z3.ExprRef] = critical_generator_vars
 
 search_range_expr_coeffs = [1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
@@ -184,11 +199,11 @@ def get_solution_str(
 cc = CegisConfig()
 cc.name = "adv"
 cc.synth_ss = False
-cc.infinite_buffer = True
-cc.dynamic_buffer = False
+cc.infinite_buffer = args.infinite_buffer
+cc.dynamic_buffer = args.dynamic_buffer
 cc.buffer_size_multiplier = 1
 cc.template_qdel = True
-cc.template_queue_bound = True
+cc.template_queue_bound = False
 cc.template_fi_reset = False
 cc.template_beliefs = True
 cc.N = 1
@@ -199,10 +214,17 @@ cc.cca = "none"
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
-cc.desired_loss_count_bound = 0
-cc.desired_large_loss_count_bound = 0
-cc.desired_loss_amount_bound_multiplier = 0
-cc.desired_loss_amount_bound_alpha = 0
+if(cc.infinite_buffer):
+    cc.desired_loss_count_bound = 0
+    cc.desired_large_loss_count_bound = 0
+    cc.desired_loss_amount_bound_multiplier = 0
+    cc.desired_loss_amount_bound_alpha = 0
+else:
+    cc.desired_loss_count_bound = 3
+    cc.desired_large_loss_count_bound = 3
+    cc.desired_loss_amount_bound_multiplier = 3
+    cc.desired_loss_amount_bound_alpha = 3
+
 
 cc.ideal_link = False
 cc.feasible_response = False

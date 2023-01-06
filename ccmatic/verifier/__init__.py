@@ -1,3 +1,4 @@
+import math
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -308,44 +309,45 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # Qdel
     for n in range(c.N):
-        for et in range(1, c.T):
-            for dt in range(et+1):
+        for et in range(c.T):
+            for dt in range(c.T):
                 s.add(z3.Implies(
                     v.qdel[et][dt], v.min_qdel[n][et] == max(0, dt-c.D)))
             s.add(z3.Implies(
-                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
-                v.min_qdel[n][et] == 0))
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
+                v.min_qdel[n][et] == c.T-c.D))
 
-            for dt in range(et+1):
+            for dt in range(c.T):
                 s.add(z3.Implies(
                     v.qdel[et][dt], v.max_qdel[n][et] == dt+1))
             s.add(z3.Implies(
-                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
                 v.max_qdel[n][et] == 1000 * c.T))
 
     # Buffer
     if(c.buf_min is not None):
         for n in range(c.N):
             for et in range(1, c.T):
-                for dt in range(et+1):
+                for dt in range(c.T):
                     s.add(z3.Implies(
                         v.qdel[et][dt],
                         v.min_buffer[n][et] ==
                         z3_max(v.min_buffer[n][et-1], dt-c.D)))
                 # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
-                    z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)]),
-                    v.min_buffer[n][et] ==
-                    v.min_buffer[n][et-1]))
+                    z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
+                    v.min_buffer[n][et] == z3_min(
+                        c.T-c.D,
+                        v.min_buffer[n][et-1])))
 
                 for dt in range(et+1):
                     s.add(z3.Implies(
-                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et], v.qdel[et][dt]),
+                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et-1], v.qdel[et][dt]),
                         v.max_buffer[n][et] ==
                         z3_min(v.max_buffer[n][et-1], dt+1)))
                 # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
-                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et]),
+                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
                           z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
                     v.max_buffer[n][et] ==
                     v.max_buffer[n][et-1]))
@@ -374,8 +376,10 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
                 # Encodes that utilization must have been high if loss happened
                 # or if queing delay was more than D
-                this_utilized = z3.Or(
-                    v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0, v.qbound[st+1][c.D+1])
+                high_delay = z3.Or(*[v.qdel[st+1][dt]
+                                     for dt in range(c.D+1, c.T)])
+                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                this_utilized = z3.Or(loss, high_delay)
                 if(st + 1 == et):
                     utilized[st] = this_utilized
                 else:
@@ -407,13 +411,14 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
             s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
-    for n in range(c.N):
-        s.add(v.min_qdel[n][0] >= 0)
-        s.add(v.min_qdel[n][0] <= v.max_qdel[n][0])
-        if(c.buf_min is not None):
-            assert c.buf_min == c.buf_max
-            s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
-            s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
+    # Part of def vars now.
+    # for n in range(c.N):
+    #     s.add(v.min_qdel[n][0] >= 0)
+    #     s.add(v.min_qdel[n][0] <= v.max_qdel[n][0])
+    #     if(c.buf_min is not None):
+    #         assert c.buf_min == c.buf_max
+    #         s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
+    #         s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -538,6 +543,17 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
                 z3.Not(v.qbound[t][dt]),
                 z3.Not(v.qbound[t+1][dt+1])))
 
+    # Queueing delay cannot be more than buffer/C + D.
+    if(c.buf_min is not None):
+        max_delay_float = c.buf_min/c.C + c.D
+        max_delay_ceil = math.ceil(max_delay_float)
+        lowest_unallowed_delay = max_delay_ceil
+        if(max_delay_float == max_delay_ceil):
+            lowest_unallowed_delay = max_delay_ceil + 1
+        if(lowest_unallowed_delay <= c.T - 1):
+            for t in range(c.T):
+                s.add(z3.Not(v.qbound[t][lowest_unallowed_delay]))
+
 
 def last_decrease_defs(c: ModelConfig, s: MySolver, v: Variables):
 
@@ -627,6 +643,20 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
                 v.qdel[t1][dt1],
                 z3.Or(*[v.qdel[t2][dt2] for dt2 in range(min(c.T, dt1+1+1))])
             ))
+
+    # Queueing delay cannot be more than buffer/C + D.
+    if(c.buf_min is not None):
+        max_delay_float = c.buf_min/c.C + c.D
+        max_delay_ceil = math.ceil(max_delay_float)
+        lowest_unallowed_delay = max_delay_ceil
+        if(max_delay_float == max_delay_ceil):
+            lowest_unallowed_delay = max_delay_ceil + 1
+        for t in range(c.T):
+            for dt in range(lowest_unallowed_delay, c.T):
+                s.add(z3.Not(v.qdel[t][dt]))
+            s.add(1 == z3.Sum(
+                *[v.qdel[t][dt]
+                  for dt in range(min(c.T, lowest_unallowed_delay))]))
 
 
 def fifo_service(c: ModelConfig, s: MySolver, v: Variables):
@@ -730,10 +760,9 @@ def get_cegis_vars(
     if(c.beliefs):
         definition_vars.extend(flatten(
             [v.min_c[:, 1:], v.max_c[:, 1:],
-             v.min_qdel[:, 1:], v.max_qdel[:, 1:]]))
+             v.min_qdel, v.max_qdel]))
         verifier_vars.extend(flatten(
-            [v.min_c[:, :1], v.max_c[:, :1],
-             v.min_qdel[:, :1], v.max_qdel[:, :1]]))
+            [v.min_c[:, :1], v.max_c[:, :1]]))
         if(c.buf_min is not None):
             definition_vars.extend(flatten(
                 [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
@@ -815,7 +844,14 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     return c
 
 
+def check_config(cc: CegisConfig):
+    # Don't use both of them together as they will produce different values for
+    # non-deterministically chosen queing delays.
+    assert not (cc.template_queue_bound and cc.template_qdel)
+
+
 def setup_cegis_basic(cc: CegisConfig, name=None):
+    check_config(cc)
     if(name is not None):
         cc.name = name
     c = setup_ccac_for_cegis(cc)
@@ -1395,7 +1431,7 @@ def get_cex_df(
                     qdelay.append(dt+1)
                     break
         assert len(qdelay) == c.T
-        df["qdelay_t"] = np.array(qdelay).astype(float)
+        df["qbound_t"] = np.array(qdelay).astype(float)
         for n in range(c.N):
             df[f"last_decrease_f_{n},t"] = np.array(
                 [counter_example.eval(x).as_fraction()
@@ -1409,6 +1445,20 @@ def get_cex_df(
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
         # ret += "\n{}".format(counter_example.eval(qsize_thresh))
+
+    if(c.calculate_qdel):
+        qdelay = []
+        for t in range(c.T):
+            this_value = c.T
+            for dt in range(c.T):
+                value = counter_example.eval(v.qdel[t][dt])
+                bool_value = bool(value)
+                if(bool_value):
+                    this_value = min(this_value, dt)
+                    break
+            qdelay.append(this_value)
+        assert len(qdelay) == c.T
+        df["qdelay_t"] = np.array(qdelay).astype(float)
 
     return df.astype(float)
 
