@@ -161,7 +161,7 @@ def get_solution_str(
 cc = CegisConfig()
 cc.name = "adv"
 cc.synth_ss = False
-cc.infinite_buffer = False
+cc.infinite_buffer = True
 cc.dynamic_buffer = False
 cc.buffer_size_multiplier = 1
 cc.template_qdel = True

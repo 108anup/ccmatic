@@ -348,17 +348,22 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 v.max_buffer[n][et-1]))
 
             # bandwidth beliefs (C)
+            """
+            In summary C >= r * n/(n+1) always, if we additionally know that
+            sending rate is higher than C then, C <= r * n/(n-1).
+            """
+            overall_lower = v.min_c[n][et-1]
+            overall_upper = v.max_c[n][et-1]
             utilized = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
-                """
-                In summary C >= r * n/(n+1) always, if we additionally know that
-                sending rate is higher than C then, C <= r * n/(n-1).
-                """
                 window = et - st
                 measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
-                s.add(v.min_c[n][et] == z3_max(
-                    v.min_c[n][et-1], measured_c * window / (window + 1)))
 
+                # LOWER
+                this_lower = measured_c * window / (window + 1)
+                overall_lower = z3_max(overall_lower, this_lower)
+
+                # UPPER
                 # TODO: Check if qdel high for packet recvd means that
                 #  utilization was there or not.
 
@@ -373,15 +378,12 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     utilized[st] = z3.And(utilized[st+1], this_utilized)
 
                 if(window - 1 > 0):
-                    # this_upper_bound = z3.If(
-                    #     utilized[st], measured_c * window / (window - 1),
-                    #     v.max_c[n][et-1])
-                    # assert isinstance(this_upper_bound, z3.ArithRef)
-                    # s.add(v.max_c[n][et] == z3_min(this_upper_bound, v.max_c[n][et-1]))
-                    s.add(v.max_c[n][et] == z3.If(
-                        utilized[st],
-                        z3_min(v.max_c[n][et-1], measured_c * window / (window - 1)),
-                        v.max_c[n][et-1]))
+                    this_upper = z3.If(utilized[st], measured_c * window / (window - 1), v.max_c[n][et-1])
+                    assert isinstance(this_upper, z3.ArithRef)
+                    overall_upper = z3_min(overall_upper, this_upper)
+
+            s.add(v.min_c[n][et] == overall_lower)
+            s.add(v.max_c[n][et] == overall_upper)
 
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
@@ -395,15 +397,17 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
         s.add(v.min_buffer[n][0] >= 0)
         s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
-        assert c.buf_min == c.buf_max
-        s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
-        s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
+        if(c.buf_min is not None):
+            assert c.buf_min == c.buf_max
+            s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
+            s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
         s.add(v.min_qdel[n][0] >= 0)
         s.add(v.min_qdel[n][0] <= v.max_qdel[n][0])
-        assert c.buf_min == c.buf_max
-        s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
-        s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
+        if(c.buf_min is not None):
+            assert c.buf_min == c.buf_max
+            s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
+            s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -716,6 +720,16 @@ def get_cegis_vars(
     if(c.mode_switch):
         definition_vars.extend(flatten(v.mode_f[:, 1:]))
         verifier_vars.extend(flatten(v.mode_f[:, :1]))
+
+    if(c.beliefs):
+        definition_vars.extend(flatten(
+            [v.min_c[:, 1:], v.max_c[:, 1:],
+             v.min_buffer[:, 1:], v.max_buffer[:, 1:],
+             v.min_qdel[:, 1:], v.max_qdel[:, 1:]]))
+        verifier_vars.extend(flatten(
+            [v.min_c[:, :1], v.max_c[:, :1],
+             v.min_buffer[:, :1], v.max_buffer[:, :1],
+             v.min_qdel[:, :1], v.max_qdel[:, :1]]))
 
     return verifier_vars, definition_vars
 
@@ -1321,6 +1335,15 @@ def get_cex_df(
     if(c.feasible_response):
         cex_dict.update({
             get_name_for_list(vn.S_choice): _get_model_value(v.S_choice)})
+    if(c.beliefs):
+        for n in range(c.N):
+            cex_dict.update({
+                get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
+                get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
+                get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
+                get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n]),
+                get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
+                get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])})
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})
