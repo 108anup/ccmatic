@@ -118,6 +118,7 @@ class DesiredContainer:
     desired_necessary: Optional[z3.BoolRef] = None
     desired_in_ss: Optional[z3.BoolRef] = None
     desired_invariant: Optional[z3.BoolRef] = None
+    desired_belief_invariant: Optional[z3.BoolRef] = None
 
     fefficient: Optional[z3.BoolRef] = None
     bounded_queue: Optional[z3.BoolRef] = None
@@ -307,6 +308,8 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    assert(c.beliefs)
+
     # Qdel
     for n in range(c.N):
         for et in range(c.T):
@@ -332,7 +335,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     s.add(z3.Implies(
                         v.qdel[et][dt],
                         v.min_buffer[n][et] ==
-                        z3_max(v.min_buffer[n][et-1], dt-c.D)))
+                        z3_max(v.min_buffer[n][et-1], max(0, dt-c.D))))
                 # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
                     z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
@@ -396,6 +399,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    assert(c.beliefs)
+
     # TODO: Use this only if we are requiring CCA to not reset beliefs when it thinks
     #  network changed.
     for n in range(c.N):
@@ -411,6 +416,11 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
             s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
+            for dt in range(c.T):
+                s.add(z3.Implies(
+                    v.qdel[0][dt],
+                    v.min_buffer[n][0] == max(0, dt-c.D)))
+
     # Part of def vars now.
     # for n in range(c.N):
     #     s.add(v.min_qdel[n][0] >= 0)
@@ -419,6 +429,49 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #         assert c.buf_min == c.buf_max
     #         s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
     #         s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
+
+
+def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
+    assert(c.beliefs)
+
+    first = cc.history
+    none_degrade_list = []
+    atleast_one_improves_list = []
+
+    for n in range(c.N):
+        atleast_one_improves_list.extend([
+            v.max_c[n][c.T-1] < v.max_c[n][first],
+            v.min_c[n][c.T-1] > v.min_c[n][first],
+        ])
+        if(c.buf_min):
+            atleast_one_improves_list.extend([
+                v.max_buffer[n][c.T-1] < v.max_buffer[n][first],
+                v.min_buffer[n][c.T-1] > v.min_buffer[n][first]
+            ])
+
+        none_degrade_list.extend([
+            v.max_c[n][c.T-1] <= v.max_c[n][first],
+            v.min_c[n][c.T-1] >= v.min_c[n][first],
+        ])
+        if(c.buf_min):
+            none_degrade_list.extend([
+                v.max_buffer[n][c.T-1] <= v.max_buffer[n][first],
+                v.min_buffer[n][c.T-1] >= v.min_buffer[n][first]
+            ])
+
+    none_degrade = z3.And(*none_degrade_list)
+    atleast_one_improves = z3.Or(*atleast_one_improves_list)
+    return z3.And(none_degrade, atleast_one_improves)
+
+
+def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
+    d = get_desired_in_ss(cc, c, v)
+    beliefs_improve = get_beliefs_improve(cc, c, v)
+    invariant = z3.Or(d.desired_in_ss, beliefs_improve)
+    assert isinstance(invariant, z3.BoolRef)
+    d.desired_belief_invariant = invariant
+
+    return d
 
 
 def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):

@@ -28,7 +28,7 @@ def get_args():
 
     parser = argparse.ArgumentParser(description='Belief template')
 
-    parser.add_argument('--infinite-buffer', action='store_true', default=True)
+    parser.add_argument('--infinite-buffer', action='store_true', default=False)
     parser.add_argument('--finite-buffer', action='store_true', default=False)
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
     args = parser.parse_args()
@@ -55,14 +55,17 @@ elif (cond):
 """
 
 
-n_expr = 4
+n_expr = 2
 n_cond = n_expr - 1
 expr_coeffs = [z3.Real(f"Gen__coeff_expr{i}") for i in range(n_expr)]
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
 cond_vars = ['min_c', 'max_c',
-             # 'min_buffer', 'max_buffer',
              'min_qdel', 'max_qdel']
+if(not args.infinite_buffer):
+    cond_vars += ['min_buffer', 'max_buffer']
+cv_to_cvi = {x: i for i, x in enumerate(cond_vars)}
+
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
 cond_consts = [z3.Real(f"Gen__const_cond{i}")
@@ -92,6 +95,29 @@ for cond_const in cond_consts:
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
 
+# Limit the search space
+# Only 4 instead of 9 expressions.
+for ei in range(n_expr):
+    domain_clauses.append(
+        z3.Or(*[z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
+                z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
+                z3.And(*[expr_coeffs[ei] == 2, expr_consts[ei] == 0]),
+                z3.And(*[expr_coeffs[ei] == 1/2, expr_consts[ei] == 0])])
+    )
+
+# Only compare qtys with the same units.
+for ci in range(n_cond):
+    c_non_zero = z3.Or(cond_coeffs[ci][cv_to_cvi['min_c']] != 0,
+                       cond_coeffs[ci][cv_to_cvi['max_c']] != 0)
+    delay_cvs = ['min_qdel', 'max_qdel', 'min_buffer', 'max_buffer']
+    if(args.infinite_buffer):
+        delay_cvs = ['min_qdel', 'max_qdel']
+    delay_non_zero = z3.Or(
+        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in delay_cvs])
+    domain_clauses.extend(
+        [z3.Implies(c_non_zero, z3.Not(delay_non_zero)),
+         z3.Implies(delay_non_zero, z3.Not(c_non_zero))]
+    )
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
@@ -196,6 +222,39 @@ def get_solution_str(
     return ret
 
 
+# ----------------------------------------------------------------
+# KNOWN SOLUTIONS
+# (for debugging)
+known_solution = None
+
+"""
+if(min_qdel > 0):
+    r = 1/2 min_c
+else:
+    r = 2 min_c
+"""
+known_solution_list = [
+    expr_coeffs[0] == 1/2,
+    cond_coeffs[0][cv_to_cvi['min_qdel']] == 1
+]
+for cv in cond_vars:
+    if(cv != 'min_qdel'):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 2 for i in range(1, n_expr)] +
+    [expr_consts[i] == 0 for i in range(n_expr)] +
+    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+
+# known_solution = z3.And(*known_solution_list)
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert isinstance(search_constraints, z3.BoolRef)
+
+# ----------------------------------------------------------------
+# ADVERSARIAL LINK
 cc = CegisConfig()
 cc.name = "adv"
 cc.synth_ss = False
@@ -210,6 +269,8 @@ cc.N = 1
 cc.T = 6
 cc.history = cc.R
 cc.cca = "none"
+
+# cc.use_belief_invariant = True
 
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
@@ -237,6 +298,6 @@ template_definitions = get_template_definitions(cc, c, v)
 link.setup_cegis_loop(
     search_constraints,
     template_definitions, generator_vars, get_solution_str)
+link.critical_generator_vars = critical_generator_vars
 
 link.run_cegis()
-# TODO: redine desired

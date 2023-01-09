@@ -8,7 +8,7 @@ from ccac.variables import VariableNames
 
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import get_renamed_vars, try_except
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
+from ccmatic.verifier import (get_belief_invariant, get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.ideal import IdealLink
@@ -76,6 +76,9 @@ class CCmatic():
         if(cc.synth_ss):
             d = get_desired_ss_invariant(cc, c, v)
             desired = d.desired_invariant
+        elif(cc.use_belief_invariant):
+            d = get_belief_invariant(cc, c, v)
+            desired = d.desired_belief_invariant
         else:
             d = get_desired_necessary(cc, c, v)
             desired = d.desired_necessary

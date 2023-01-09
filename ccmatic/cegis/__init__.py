@@ -54,6 +54,7 @@ class CegisConfig:
     compose: bool = True
 
     synth_ss: bool = False
+    use_belief_invariant: bool = False
     feasible_response: bool = False
 
     # For assumption synthesis
