@@ -55,7 +55,7 @@ elif (cond):
 """
 
 
-n_expr = 2
+n_expr = 4
 n_cond = n_expr - 1
 expr_coeffs = [z3.Real(f"Gen__coeff_expr{i}") for i in range(n_expr)]
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
@@ -64,7 +64,16 @@ cond_vars = ['min_c', 'max_c',
              'min_qdel', 'max_qdel']
 if(not args.infinite_buffer):
     cond_vars += ['min_buffer', 'max_buffer']
+    cond_vars += ['min_buffer_bytes', 'max_buffer_bytes']
 cv_to_cvi = {x: i for i, x in enumerate(cond_vars)}
+
+# Units of cond vars
+bytes_cvs = ['min_c', 'max_c', 'min_buffer_bytes', 'max_buffer_bytes']
+time_cvs = ['min_qdel', 'max_qdel', 'min_buffer', 'max_buffer']
+if(args.infinite_buffer):
+    time_cvs = ['min_qdel', 'max_qdel']
+if(args.infinite_buffer or 'max_buffer_bytes' not in cond_vars):
+    bytes_cvs = ['min_c', 'max_c']
 
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
@@ -78,7 +87,10 @@ generator_vars: List[z3.ExprRef] = critical_generator_vars \
 
 search_range_expr_coeffs = [1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
-search_range_cond_coeffs = [-1, 0, 1]
+search_range_cond_coeffs_time = [-1, 0, 1]
+search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
+search_range_cond_coeffs = list(
+    set(search_range_cond_coeffs_bytes + search_range_cond_coeffs_time))
 search_range_cond_consts = list(range(-10, 11))
 
 domain_clauses = []
@@ -89,8 +101,12 @@ for expr_const in expr_consts:
     domain_clauses.append(
         z3.Or(*[expr_const == x for x in search_range_expr_consts]))
 for cond_coeff in flatten(cond_coeffs):
-    domain_clauses.append(
-        z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs]))
+    if(any(x in cond_coeff.decl().name() for x in bytes_cvs)):
+        domain_clauses.append(
+            z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs_bytes]))
+    elif(any(x in cond_coeff.decl().name() for x in time_cvs)):
+        domain_clauses.append(
+            z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs_time]))
 for cond_const in cond_consts:
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
@@ -99,24 +115,23 @@ for cond_const in cond_consts:
 # Only 4 instead of 9 expressions.
 for ei in range(n_expr):
     domain_clauses.append(
-        z3.Or(*[z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
-                z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
-                z3.And(*[expr_coeffs[ei] == 2, expr_consts[ei] == 0]),
-                z3.And(*[expr_coeffs[ei] == 1/2, expr_consts[ei] == 0])])
-    )
+        z3.Or(*[
+            z3.And(*[expr_coeffs[ei] == 2, expr_consts[ei] == 0]),
+            z3.And(*[expr_coeffs[ei] == 1/2, expr_consts[ei] == 0]),
+            expr_coeffs[ei] == 1,
+            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
+            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
+        ]))
 
 # Only compare qtys with the same units.
 for ci in range(n_cond):
-    c_non_zero = z3.Or(cond_coeffs[ci][cv_to_cvi['min_c']] != 0,
-                       cond_coeffs[ci][cv_to_cvi['max_c']] != 0)
-    delay_cvs = ['min_qdel', 'max_qdel', 'min_buffer', 'max_buffer']
-    if(args.infinite_buffer):
-        delay_cvs = ['min_qdel', 'max_qdel']
-    delay_non_zero = z3.Or(
-        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in delay_cvs])
+    bytes_non_zero = z3.Or(
+        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in bytes_cvs])
+    time_non_zero = z3.Or(
+        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in time_cvs])
     domain_clauses.extend(
-        [z3.Implies(c_non_zero, z3.Not(delay_non_zero)),
-         z3.Implies(delay_non_zero, z3.Not(c_non_zero))]
+        [z3.Implies(bytes_non_zero, z3.Not(time_non_zero)),
+         z3.Implies(time_non_zero, z3.Not(bytes_non_zero))]
     )
 
 search_constraints = z3.And(*domain_clauses)
@@ -136,7 +151,17 @@ def get_template_definitions(
             for ci in range(n_cond):
                 cond_lhs = 0
                 for cvi, cond_var_str in enumerate(cond_vars):
-                    cond_var = v.__getattribute__(cond_var_str)[n][t-1]
+                    if(cond_var_str.endswith('_c')):
+                        cond_var = v.__getattribute__(cond_var_str)[n][t-1] * c.R
+                    elif(cond_var_str.endswith('_buffer_bytes')):
+                        if(cond_var_str == 'min_buffer_bytes'):
+                            cond_var = v.min_buffer[n][t-1] * v.min_c[n][t-1]
+                        elif(cond_var_str == 'max_buffer_bytes'):
+                            cond_var = v.max_buffer[n][t-1] * v.max_c[n][t-1]
+                        else:
+                            assert False
+                    else:
+                        cond_var = v.__getattribute__(cond_var_str)[n][t-1]
 
                     # TODO: convert all vars to bytes?
                     # if(cond_var_str.endswith('_c')):

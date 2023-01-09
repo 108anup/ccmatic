@@ -1,0 +1,1293 @@
+[01/09 16:44:20]  Namespace(infinite_buffer=False, finite_buffer=True, dynamic_buffer=False)
+[01/09 16:44:20]  --------------------------------------------------------------------------------
+[01/09 16:44:20]  Iteration: 1 (0 solution, 0 counterexamples)
+[01/09 16:44:20]  Generator returned sat in 0.006715 secs.
+[01/09 16:44:20]  Candidate solution: 
+[1m[94mif (+ 6 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 10 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:44:22]  Improved gap from 0.43010752688172044 to 48.4375
+[01/09 16:44:23]  Improved number of small numbers from 109 to 110 out of a max of 134
+[01/09 16:44:23]  Verifer returned sat in 2.477482 secs.
+[01/09 16:44:23]  sf_get_cex returned in 2.543298 secs.
+[01/09 16:44:23]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0         -142.441196         -154.873152       -142.441196       0.430176       0.430108       -154.873152             0.0                     0.0       72.871304           100.0                0.0                2.0                  0.0             2.430108     154.443044              0.000000            243.010753  12.431956       12.001848       1.0
+1         -106.005544         -154.443044       -106.005544   36448.083837      36.435652       -154.443044             0.0                     0.0       72.871304           100.0                1.0                3.0                  1.0             2.430108     206.005371             72.871304            243.010753  48.437500       -0.000173       2.0
+2          -69.569892         -105.575437        -69.569892   36484.089382      36.435652       -105.575437             0.0                     0.0       72.871304           100.0                0.0                1.0                  1.0             2.430108     257.137937             72.871304            243.010753  36.005544      -12.431956       0.0
+3          -33.134241          -57.137937        -33.134241   36471.657426      36.435652        -57.137937             0.0                     0.0       72.871304           100.0                0.0                1.0                  1.0             2.430108     308.700437             72.871304            243.010753  24.003696      -24.433804       0.0
+4            3.301411           -8.700437          3.301411   36459.655578      36.435652         -8.700437             0.0                     0.0       72.871304           100.0                0.0                1.0                  1.0             2.430108     360.262937             72.871304            243.010753  12.001848      -36.435652       0.0
+5           39.737063           39.737063         39.737063   36447.653730      36.435652         39.737063             0.0                     0.0       72.871304           100.0                0.0                1.0                  1.0             2.430108     360.262939             72.871304            243.010753   0.000000      -99.999997       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=40079/2048, buf_size=200.[0m
+[01/09 16:44:23]  --------------------------------------------------------------------------------
+[01/09 16:44:23]  Iteration: 2 (0 solution, 1 counterexamples)
+[01/09 16:44:23]  Generator returned sat in 0.207935 secs.
+[01/09 16:44:23]  Candidate solution: 
+[1m[94mif (+ -1min_c + -1max_c + 1min_buffer_bytes + -1max_buffer_bytes + 10 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_c + -8 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1min_qdel + -1max_qdel + -1min_buffer + 1max_buffer + 8 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:44:25]  Improved number of small numbers from 126 to 126 out of a max of 133
+[01/09 16:44:25]  Verifer returned sat in 2.530306 secs.
+[01/09 16:44:25]  sf_get_cex returned in 2.589452 secs.
+[01/09 16:44:25]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0          602.795699          320.430108        602.795699       0.430176       0.430108        320.430108        0.000000                0.000000        9.784946      101.075269                2.0                4.0                  2.0             3.430108     308.700437             19.569892            346.699040  282.365591      200.000000       3.0
+1          622.365591          501.290323        622.365591   19852.258065      19.569892        501.290323        0.000000                0.000000       90.430108      101.075269                0.0                2.0                  2.0             3.430108     308.700437            180.860215            346.699040  121.075269      119.569892       1.0
+2          803.225806          513.225806        803.225806  180981.290323     180.860215        513.225806        0.430108                0.000000       90.430108      101.075269                1.0                3.0                  2.0             3.430108     308.700437            180.860215            346.699040  289.569892      200.000000       2.0
+3          984.086022          602.795699        984.086022  181150.215054     180.860215        602.795699       81.290323                0.430108       90.430108      101.075269                2.0                4.0                  2.0             3.430108     308.700437            180.860215            346.699040  300.000000      200.000000       3.0
+4         1164.946237          784.516129       1164.946237  181241.505376     180.860215        784.516129      162.150538               81.290323       92.817204      101.075269                1.0                3.0                  2.0             3.000000     308.700437            185.634409            303.225806  218.279570      200.000000       2.0
+5         1350.580645          803.225806       1350.580645  186014.838710     185.634409        803.225806      247.784946              162.150538       92.817204      100.645161                1.0                3.0                  2.0             3.000000     308.700437            185.634409            301.935484  299.569892      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=3, loss_amount=23044/93, alpha=1820/93, buf_size=200.[0m
+[01/09 16:44:25]  --------------------------------------------------------------------------------
+[01/09 16:44:25]  Iteration: 3 (0 solution, 2 counterexamples)
+[01/09 16:44:26]  Generator returned sat in 0.381934 secs.
+[01/09 16:44:26]  Candidate solution: 
+[1m[94mif (+ 1min_buffer + 1max_buffer + -3 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_qdel + 1max_qdel + 4 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 5 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:44:28]  Improved gap from 0.0 to 48.4375
+[01/09 16:44:29]  Improved number of small numbers from 85 to 108 out of a max of 134
+[01/09 16:44:29]  Verifer returned sat in 2.726292 secs.
+[01/09 16:44:29]  sf_get_cex returned in 2.784988 secs.
+[01/09 16:44:29]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0         1426.314209         1407.947021       1426.314209       0.429688       0.430176       1407.947021        0.010742                0.000000       36.328125           100.0                0.0                2.0                  0.0             3.010986     308.700195                   0.0            301.098633  18.356445       18.356129       1.0
+1         1462.639209         1414.181469       1462.639209   36343.367188      36.325000       1414.181469        0.010742                0.010742       36.328125           100.0                0.0                2.0                  0.0             2.000000     354.019043                   0.0            200.000000  48.446998       -0.000023       1.0
+2         1498.967334         1462.631469       1498.967334   36376.582740      36.328125       1462.631469        0.010742                0.010742       36.328125           100.0                0.0                1.0                  0.0             2.000000     405.578564                   0.0            200.000000  36.325123      -12.112377       0.0
+3         1535.295459         1511.068969       1535.295459   36364.460865      36.328125       1511.068969        0.010742                0.010742       36.328125           100.0                0.0                1.0                  0.0             2.000000     457.141064                   0.0            200.000000  24.215748      -24.221752       0.0
+4         1571.623584         1559.506469       1571.623584   36352.351490      36.328125       1559.506469        0.010742                0.010742       36.331250           100.0                0.0                1.0                  0.0             2.000000     508.703564                   0.0            200.000000  12.106373      -36.331127       0.0
+5         1607.954834         1607.943969       1607.954834   36343.367115      36.331250       1607.943969        0.010742                0.010742       38.752500           100.0                0.0                1.0                  0.0             2.000000     508.703613                   0.0            200.000000   0.000123      -99.999828       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1/320, buf_size=200.[0m
+[01/09 16:44:29]  --------------------------------------------------------------------------------
+[01/09 16:44:29]  Iteration: 4 (0 solution, 3 counterexamples)
+[01/09 16:44:29]  Generator returned sat in 0.465305 secs.
+[01/09 16:44:29]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + 1min_buffer + -1max_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1max_c + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_qdel + 1max_qdel + -1max_buffer > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:44:31]  Improved gap from 0.0 to 48.4375
+[01/09 16:44:31]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 16:44:31]  Verifer returned sat in 1.779665 secs.
+[01/09 16:44:31]  sf_get_cex returned in 1.839421 secs.
+[01/09 16:44:31]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       -31221.347900       -31225.019775     -31221.347900       0.429443       0.429932     -31225.019775             0.0                     0.0         68.4375           100.0                2.0                4.0                  2.0             2.570312     307.844238               136.875             257.03125   3.671875        3.671875       3.0
+1       -31172.480713       -31224.590088     -31172.480713   48870.859375      48.867188     -31224.590088             0.0                     0.0         68.4375           100.0                2.0                4.0                  2.0             2.570312     354.875732               136.875             257.03125  52.109375       -0.429443       3.0
+2       -31123.613525       -31172.051025     -31123.613525   48919.296875      48.867188     -31172.051025             0.0                     0.0         68.4375           100.0                0.0                1.0                  2.0             2.570312     406.437988               136.875             257.03125  48.437500        0.000000       0.0
+3       -31074.746338       -31123.183838     -31074.746338   48915.625000      48.867188     -31123.183838             0.0                     0.0         68.4375           100.0                0.0                1.0                  2.0             2.570312     457.570801               136.875             257.03125  48.437500        0.000000       0.0
+4       -31025.879150       -31074.746338     -31025.879150   48915.625000      48.867188     -31074.746338             0.0                     0.0         68.4375           100.0                0.0                2.0                  2.0             2.570312     508.703613               136.875             257.03125  48.867188        0.000000       1.0
+5       -30977.011963       -31025.449707     -30977.011963   48916.054688      48.867188     -31025.449707             0.0                     0.0         68.4375           100.0                0.0                1.0                  2.0             2.570312     508.703857               136.875             257.03125  48.437744      -51.132568       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=2505/128, buf_size=200.[0m
+[01/09 16:44:31]  --------------------------------------------------------------------------------
+[01/09 16:44:31]  Iteration: 5 (0 solution, 4 counterexamples)
+[01/09 16:44:32]  Generator returned sat in 0.464523 secs.
+[01/09 16:44:32]  Candidate solution: 
+[1m[94mif (+ -1min_c + 1max_c + 1min_buffer_bytes + -8 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1max_buffer_bytes + 7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_c + 1max_c + 1max_buffer_bytes > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)[0m
+[01/09 16:44:37]  Improved gap from 0.0 to 48.4375
+[01/09 16:44:38]  Improved number of small numbers from 104 to 108 out of a max of 134
+[01/09 16:44:38]  Verifer returned sat in 5.884295 secs.
+[01/09 16:44:38]  sf_get_cex returned in 5.944719 secs.
+[01/09 16:44:38]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -341385.156309      -341385.180916    -341385.156309       0.429443       0.429932    -341385.180916        0.012303                0.000000       49.993848           100.0                0.0                1.0                  0.0             2.012303     157.837891                   0.0            201.230315   0.012303        0.000048       0.0
+1      -341335.162461      -341385.168612    -341335.162461   49993.873031      49.993848    -341385.168612        0.012303                0.012303       49.993848           100.0                0.0                2.0                  0.0             2.000000     207.843994                   0.0            200.000000  49.993848        0.000000       1.0
+2      -341285.168612      -341335.174764    -341285.168612   50043.854577      49.993848    -341335.174764        0.012303                0.012303       49.993848           100.0                0.0                2.0                  0.0             2.000000     257.850098                   0.0            200.000000  49.993848       -0.000048       1.0
+3      -341235.174764      -341285.168612    -341235.174764   50043.854577      49.993848    -341285.168612        0.012303                0.012303       49.993848           100.0                0.0                1.0                  0.0             2.000000     307.856201                   0.0            200.000000  49.981545       -0.000096       0.0
+4      -341185.180916      -341235.174764    -341185.180916   50043.842274      49.993848    -341235.174764        0.012303                0.012303       49.993848           100.0                0.0                1.0                  0.0             2.000000     357.862449                   0.0            200.000000  49.981545        0.000000       0.0
+5      -341135.187067      -341185.193219    -341135.187067   50043.842274      49.993848    -341185.193219        0.012303                0.012303       49.993848           100.0                0.0                2.0                  0.0             2.000000     357.862549                   0.0            200.000000  49.993848      -50.006052       1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=81869/4096, buf_size=200.[0m
+[01/09 16:44:38]  --------------------------------------------------------------------------------
+[01/09 16:44:38]  Iteration: 6 (0 solution, 5 counterexamples)
+[01/09 16:44:40]  Generator returned sat in 1.530740 secs.
+[01/09 16:44:40]  Candidate solution: 
+[1m[94mif (+ 1min_c + -1min_buffer_bytes + 10 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1max_qdel + -10 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1max_c + 1min_buffer_bytes + -1max_buffer_bytes + 9 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:44:50]  Improved gap from 1.67181396484375 to 100
+[01/09 16:44:53]  Improved number of small numbers from 66 to 73 out of a max of 134
+[01/09 16:44:53]  Verifer returned sat in 12.766343 secs.
+[01/09 16:44:53]  sf_get_cex returned in 12.827694 secs.
+[01/09 16:44:53]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -241225.542235      -241425.979789    -241225.542235       0.429199       0.429932    -241425.979789        0.429443                0.000000       99.939169      100.011963                2.0                4.0                  2.0             2.008057  -99901.229359            199.878338            200.829686  200.008111      100.129773       3.0
+1      -241025.663898      -241226.101452    -241025.663898  200078.775235     199.878338    -241226.101452        0.437554                0.429443       99.939169      100.011963                0.0                2.0                  2.0             2.000000  -99901.229359            199.878338            200.023926  200.000000      200.000000       1.0
+2      -240825.785560      -241126.101452    -240825.785560  200078.775235     199.878338    -241126.101452      100.315892                0.437554       99.959446      100.011963                0.0                2.0                  2.0             2.000000  -99901.229359            199.918892            200.023926  200.000000      200.000000       1.0
+3      -240625.866668      -241126.036565    -240625.866668  200219.207679     199.918892    -241126.036565      200.234784              100.315892       99.959446      100.011963                1.0                3.0                  2.0             2.000000  -99901.229359            199.918892            200.023926  299.935113      200.000000       2.0
+4      -240425.947776      -240926.101452    -240425.947776  200419.061684     199.918892    -240926.101452      300.153675              200.234784       99.975668      100.011963                1.0                3.0                  2.0             2.000000  -99901.229359            199.951335            200.023926  200.000000      200.000000       2.0
+5      -240225.996441      -240926.093341    -240225.996441  200451.488748     199.951335    -240926.093341      400.105011              300.153675       99.975668      100.002704                1.0                3.0                  2.0             2.000000  -99901.229359            199.951335            200.005407  299.991889      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=5, 
+, large_loss_count=4, loss_amount=767208289418002384/1919616614441265, alpha=389/2048, buf_size=200.[0m
+[01/09 16:44:53]  --------------------------------------------------------------------------------
+[01/09 16:44:53]  Iteration: 7 (0 solution, 6 counterexamples)
+[01/09 16:44:56]  Generator returned sat in 2.880527 secs.
+[01/09 16:44:56]  Candidate solution: 
+[1m[94mif (+ 1max_c + 1min_buffer_bytes + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_c + -1max_c + -1min_buffer_bytes + 3 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + 1max_qdel + -9 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:45:00]  Improved number of small numbers from 102 to 102 out of a max of 133
+[01/09 16:45:00]  Verifer returned sat in 3.637793 secs.
+[01/09 16:45:00]  sf_get_cex returned in 3.698170 secs.
+[01/09 16:45:00]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       -43067.419612       -43367.419612     -43067.419612       0.429199       0.429932     -43367.419612        0.000000                0.000000       80.000000      238.235294                1.0                3.0                  1.0             3.294118  -99901.229359             80.000000            784.775087  300.000000      200.000000       2.0
+1       -42967.713730       -43205.654907     -42967.713730  100005.882353      99.705882     -43205.654907        0.000000                0.000000       80.882353      238.235294                2.0                4.0                  2.0             3.294118  -99901.229359            161.764706            784.775087  237.941176      199.705882       3.0
+2       -42867.125495       -43129.478436     -42867.125495  100826.176471     100.588235     -43129.478436        0.294118                0.000000       80.882353      237.941176                2.0                4.0                  2.0             3.294118  -99901.229359            161.764706            783.806228  262.058824      200.000000       3.0
+3       -42766.537260       -43042.713730     -42766.537260  100850.588235     100.588235     -43042.713730        0.882353                0.294118       81.176471      162.352941                1.0                3.0                  2.0             3.000000  -99901.229359            162.352941            487.058824  275.294118      200.000000       2.0
+4       -42665.654907       -42867.419612     -42665.654907  101158.529412     100.882353     -42867.419612        1.764706                0.882353      100.000000      162.352941                1.0                3.0                  2.0             3.000000  -99901.229359            200.000000            487.058824  200.000000      200.000000       2.0
+5       -42545.949024       -42805.360789     -42545.949024  119907.647059     119.705882     -42805.360789       21.470588                1.764706      100.000000      133.431373                1.0                3.0                  2.0             3.000000  -99901.229359            200.000000            400.294118  237.941176      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=365/17, alpha=335/17, buf_size=200.[0m
+[01/09 16:45:00]  --------------------------------------------------------------------------------
+[01/09 16:45:00]  Iteration: 8 (0 solution, 7 counterexamples)
+[01/09 16:45:02]  Generator returned sat in 2.323728 secs.
+[01/09 16:45:02]  Candidate solution: 
+[1m[94mif (+ 1min_c + -1max_c + 1min_buffer_bytes + -4 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + -6 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + 1max_qdel + 1min_buffer + 1max_buffer + -8 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:45:04]  Improved number of small numbers from 102 to 133 out of a max of 133
+[01/09 16:45:04]  Verifer returned sat in 2.000973 secs.
+[01/09 16:45:04]  sf_get_cex returned in 2.061897 secs.
+[01/09 16:45:04]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       -43539.927002       -43732.201416     -43539.927002       0.429199       0.429932     -43732.201416        0.000000                0.000000       97.424805      194.420410                1.0                3.0                  1.0             2.428955   -99521.85498             97.424805            472.238443  192.274414      106.867188       2.0
+1       -43345.077393       -43636.922363     -43345.077393  195041.883789     194.849609     -43636.922363        1.716797                0.000000       97.424805      194.420410                0.0                2.0                  1.0             2.428955   -99521.85498             97.424805            472.238443  290.128174      200.000000       1.0
+2       -43150.227783       -43539.497803     -43150.227783  195141.454346     194.849609     -43539.497803       96.566406                1.716797       97.424805      194.420410                0.0                2.0                  1.0             2.000000   -99521.85498             97.424805            388.840820  292.703613      200.000000       1.0
+3       -42955.378174       -43442.072754     -42955.378174  195238.879395     194.849609     -43442.072754      191.416016               96.566406       97.424805      194.420410                1.0                3.0                  1.0             2.000000   -99521.85498             97.424805            388.840820  295.278564      200.000000       2.0
+4       -42760.528564       -43247.223389     -42760.528564  195336.303955     194.849609     -43247.223389      286.265625              191.416016       97.424805      194.420410                1.0                3.0                  1.0             2.000000   -99521.85498             97.424805            388.840820  200.429199      200.000000       2.0
+5       -42565.678955       -43246.794189     -42565.678955  195336.304199     194.849609     -43246.794189      381.115234              286.265625       97.424805      130.042725                2.0                4.0                  2.0             2.000000   -99521.85498            194.849609            260.085449  300.000000      200.000000       3.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=5, 
+, large_loss_count=5, loss_amount=48563/128, alpha=879/2048, buf_size=200.[0m
+[01/09 16:45:04]  --------------------------------------------------------------------------------
+[01/09 16:45:04]  Iteration: 9 (0 solution, 8 counterexamples)
+[01/09 16:45:08]  Generator returned sat in 2.933493 secs.
+[01/09 16:45:08]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + -1max_buffer + 8 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1max_qdel + 1min_buffer + 1max_buffer + -9 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1min_c + -10 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:45:11]  Improved gap from 1.4678899082568808 to 100
+[01/09 16:45:12]  Improved number of small numbers from 97 to 100 out of a max of 134
+[01/09 16:45:12]  Verifer returned sat in 3.805550 secs.
+[01/09 16:45:12]  sf_get_cex returned in 3.866110 secs.
+[01/09 16:45:12]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       -43767.695568       -43978.425549     -43767.695568       0.428955       0.429688     -43978.425549        0.429199                0.000000       50.000000      124.978760                2.0                4.0                  2.0             3.428955  -99200.524402            100.000000            428.546553  210.300781           200.0       3.0
+1       -43667.695568       -43876.708752     -43667.695568  100210.729980     100.000000     -43876.708752        0.429199                0.429199       50.858398      124.978760                2.0                4.0                  2.0             3.428955  -99200.524402            101.716797            428.546553  208.583984           200.0       3.0
+2       -43565.978772       -43853.017639     -43565.978772  101925.810059     101.716797     -43853.017639        2.145996                0.429199       50.858398      124.978760                2.0                4.0                  2.0             3.428955  -99200.524402            101.716797            428.546553  284.892871           200.0       3.0
+3       -43464.261975       -43768.124768     -43464.261975  102003.835742     101.716797     -43768.124768        3.862793                2.145996       52.575195      105.150391                2.0                4.0                  2.0             3.428955  -99200.524402            105.150391            360.555966  300.000000           200.0       3.0
+4       -43359.111584       -43668.124768     -43359.111584  105454.253418     105.150391     -43668.124768        9.013184                3.862793       62.060156      103.433594                2.0                4.0                  2.0             3.428955  -99200.524402            124.120312            354.669147  300.000000           200.0       3.0
+5       -43234.991272       -43566.407971     -43234.991272  124429.325684     124.120312     -43566.407971       33.133496                9.013184       71.652417      103.004395                1.0                3.0                  2.0             3.000000  -99200.524402            143.304834            309.013184  298.283203           200.0       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=4, loss_amount=83723/2560, alpha=879/2048, buf_size=200.[0m
+[01/09 16:45:12]  --------------------------------------------------------------------------------
+[01/09 16:45:12]  Iteration: 10 (0 solution, 9 counterexamples)
+[01/09 16:45:15]  Generator returned sat in 3.273038 secs.
+[01/09 16:45:15]  Candidate solution: 
+[1m[94mif (+ 1min_c + -1max_c + 1min_buffer_bytes > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_c + 1min_buffer_bytes + -1max_buffer_bytes > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_c + -1max_c + 1min_buffer_bytes + 4 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:45:23]  Improved gap from 0.019561432679329433 to 100
+[01/09 16:45:24]  Improved number of small numbers from 86 to 91 out of a max of 134
+[01/09 16:45:24]  Verifer returned sat in 8.896906 secs.
+[01/09 16:45:24]  sf_get_cex returned in 8.959534 secs.
+[01/09 16:45:24]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       -43702.415564       -43979.826522     -43702.415564       0.428955       0.429443     -43979.826522        0.428955                0.000000       50.214478      138.490967                0.0                1.0                  0.0                  2.0  -99265.804651              0.000000            276.981934  276.982003      200.000000       0.0
+1       -43601.986608       -43878.539657     -43601.986608  100706.366037     100.428955     -43878.539657        0.857910                0.428955       50.643433      138.490967                0.0                2.0                  0.0                  2.0  -99265.804651              0.000000            276.981934  275.695138      200.000000       1.0
+2       -43500.699743       -43776.394881     -43500.699743  101563.418283     101.286865     -43776.394881        2.144775                0.857910       67.810547      138.490967                1.0                3.0                  1.0                  2.0  -99265.804651             67.810547            276.981934  273.550363      200.000000       2.0
+3       -43365.078649       -43702.844519     -43365.078649  135896.788888     135.621094     -43702.844519       37.765869                2.144775       69.245501      138.490967                2.0                4.0                  2.0                  2.0  -99265.804651            138.491002            276.981934  300.000000      200.000000       3.0
+4       -43276.262104       -43519.619700     -43276.262104   89154.311628      88.816546     -43519.619700       37.765869               37.765869       92.041364      138.490967                1.0                3.0                  2.0                  2.0  -99265.804651            184.082729            276.981934  205.591727      188.816546       2.0
+5       -43164.649694       -43500.270788     -43164.649694  111855.766915     111.612409     -43500.270788       38.194824               37.765869       92.041364      119.888933                1.0                3.0                  2.0                  2.0  -99265.804651            184.082729            239.777867  297.426270      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=38233/1024, alpha=80163/4096, buf_size=200.[0m
+[01/09 16:45:24]  --------------------------------------------------------------------------------
+[01/09 16:45:24]  Iteration: 11 (0 solution, 10 counterexamples)
+[01/09 16:45:31]  Generator returned sat in 6.026140 secs.
+[01/09 16:45:31]  Candidate solution: 
+[1m[94mif (+ -1min_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_c + 1min_buffer_bytes + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_c + -1max_c + -1min_buffer_bytes + -1max_buffer_bytes + 5 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:45:46]  Improved gap from 0.000724852651163895 to 48.4375
+[01/09 16:45:47]  Improved number of small numbers from 96 to 99 out of a max of 134
+[01/09 16:45:47]  Verifer returned sat in 15.722123 secs.
+[01/09 16:45:47]  sf_get_cex returned in 15.782956 secs.
+[01/09 16:45:47]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       -43421.574604       -43439.921491     -43421.574604       0.428955       0.429443     -43439.921491             0.0                     0.0       36.328125           100.0                1.0                3.0                  1.0             2.267822  -99465.811035             36.328125            226.782227  18.346887       18.346747       2.0
+1       -43385.246479       -43433.702710     -43385.246479   36346.471887      36.328125     -43433.702710             0.0                     0.0       36.328125           100.0                2.0                4.0                  2.0             2.267822  -99420.486084             72.656250            226.782227  48.456231       -0.000176       3.0
+2       -43348.918354       -43385.240235     -43348.918354   36376.581231      36.328125     -43385.240235             0.0                     0.0       36.328125           100.0                0.0                1.0                  2.0             2.267822  -99368.929651             72.656250            226.782227  36.321881      -12.115619       0.0
+3       -43312.590229       -43336.802735     -43312.590229   36364.446881      36.328125     -43336.802735             0.0                     0.0       36.328125           100.0                0.0                1.0                  2.0             2.267822  -99317.367151             72.656250            226.782227  24.212506      -24.224994       0.0
+4       -43276.262104       -43288.365235     -43276.262104   36352.337506      36.328125     -43288.365235             0.0                     0.0       36.334369           100.0                0.0                1.0                  2.0             2.267822  -99265.804651             72.668738            226.782227  12.103131      -36.334369       0.0
+5       -43239.927735       -43239.927735     -43239.927735   36346.471887      36.334369     -43239.927735             0.0                     0.0       38.754995           100.0                0.0                1.0                  2.0             2.267822  -99265.804443             77.509990            226.782227   0.000000      -99.999792       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=80055/4004, buf_size=200.[0m
+[01/09 16:45:47]  --------------------------------------------------------------------------------
+[01/09 16:45:47]  Iteration: 12 (0 solution, 11 counterexamples)
+[01/09 16:45:51]  Generator returned sat in 3.221585 secs.
+[01/09 16:45:51]  Candidate solution: 
+[1m[94mif (+ 1min_buffer_bytes + -7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + -1max_qdel + 3 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_buffer + 7 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:45:57]  Improved gap from 1.1224069604960267 to 48.4375
+[01/09 16:45:58]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 16:45:58]  Verifer returned sat in 6.769876 secs.
+[01/09 16:45:58]  sf_get_cex returned in 6.827962 secs.
+[01/09 16:45:58]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       622296.357422       622295.184326     622296.357422       0.428711       0.429199     622295.184326             0.0                     0.0        72.65625           100.0                0.0                2.0                  0.0                  2.0  -99185.433838               0.00000                 200.0   1.173096        1.173096       1.0
+1       622349.442627       622295.613037     622349.442627   53086.378174      53.085205     622295.613037             0.0                     0.0        72.65625           100.0                1.0                3.0                  1.0                  2.0  -99139.692139              72.65625                 200.0  53.829590        0.000000       2.0
+2       622385.770752       622349.442627     622385.770752   36381.954590      36.328125     622349.442627             0.0                     0.0        72.65625           100.0                0.0                2.0                  1.0                  2.0  -99088.129639              72.65625                 200.0  36.328125      -12.109375       1.0
+3       622422.098877       622397.880127     622422.098877   36364.453125      36.328125     622397.880127             0.0                     0.0        72.65625           100.0                0.0                1.0                  1.0                  2.0  -99036.567139              72.65625                 200.0  24.218750      -24.218750       0.0
+4       622458.427002       622446.317627     622458.427002   36352.343750      36.328125     622446.317627             0.0                     0.0        72.65625           100.0                0.0                1.0                  1.0                  2.0  -98985.004639              72.65625                 200.0  12.109375      -36.328125       0.0
+5       622494.755127       622494.755127     622494.755127   36340.234375      36.328125     622494.755127             0.0                     0.0        72.65625           100.0                0.0                1.0                  1.0                  2.0  -98985.004639              72.65625                 200.0   0.000000     -100.000000       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=80163/4096, buf_size=200.[0m
+[01/09 16:45:58]  --------------------------------------------------------------------------------
+[01/09 16:45:58]  Iteration: 13 (0 solution, 12 counterexamples)
+[01/09 16:46:06]  Generator returned sat in 7.984996 secs.
+[01/09 16:46:06]  Candidate solution: 
+[1m[94mif (+ -1min_c + 1min_buffer_bytes + 2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + 1max_qdel + -1min_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1max_qdel + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:46:18]  Improved gap from 0.2898550724637681 to 100
+[01/09 16:46:18]  Improved number of small numbers from 134 to 134 out of a max of 134
+[01/09 16:46:18]  Verifer returned sat in 12.149850 secs.
+[01/09 16:46:18]  sf_get_cex returned in 12.211116 secs.
+[01/09 16:46:18]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       622493.469482       622295.184326     622493.469482       0.428711       0.429199     622295.184326        0.428711                0.000000       98.713867      102.143555                0.0                2.0                  0.0             2.428711  -98985.004639              0.000000            248.077168  197.856445       99.571289       1.0
+1       622690.897217       622493.469482     622690.897217  197626.019531     197.427734     622493.469482        0.428711                0.428711       99.142578      102.143555                0.0                1.0                  0.0             1.000000  -98985.004639              0.000000            102.143555  196.999023      196.999023       0.0
+2       622809.611084       622591.325928     622809.611084  118911.294922     118.713867     622591.325928       16.141602                0.428711       99.142578      102.143555                0.0                2.0                  0.0             1.000000  -98985.004639              0.000000            102.143555  202.143555      200.000000       1.0
+3       623007.896240       622693.469482     623007.896240  198503.441406     198.285156     622693.469482      114.426758               16.141602       99.571289      102.143555                0.0                2.0                  0.0             1.000000  -98985.004639              0.000000            102.143555  200.000000      200.000000       1.0
+4       623207.038818       622693.469482     623207.038818  199457.004883     199.142578     622693.469482      213.569336              114.426758       99.571289      102.143555                0.0                2.0                  0.0             1.000000  -98985.004639              0.000000            102.143555  300.000000      200.000000       1.0
+5       623406.181396       622793.898193     623406.181396  199656.147461     199.142578     622793.898193      312.711914              213.569336       99.571289      100.428711                1.0                3.0                  1.0             1.000000  -98985.004639             99.571289            100.428711  299.571289      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=3, loss_amount=159889/512, alpha=20041/1024, buf_size=200.[0m
+[01/09 16:46:18]  --------------------------------------------------------------------------------
+[01/09 16:46:18]  Iteration: 14 (0 solution, 13 counterexamples)
+[01/09 16:46:26]  Generator returned sat in 6.452153 secs.
+[01/09 16:46:26]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + -1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_qdel + -1max_qdel + -1min_buffer + -1max_buffer + 7 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:46:26]  Improved number of small numbers from 133 to 133 out of a max of 133
+[01/09 16:46:26]  Verifer returned sat in 0.334916 secs.
+[01/09 16:46:26]  sf_get_cex returned in 0.396113 secs.
+[01/09 16:46:26]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0        622529.61084       622229.610840      622529.61084       0.428711       0.429199     622229.610840             0.0                     0.0       99.571289      200.000000                2.0                4.0                  2.0                  4.0  -98985.004883            199.142578            800.000000  300.000000           200.0       3.0
+1        622609.61084       622429.610840      622609.61084   80300.000000      80.000000     622429.610840             0.0                     0.0      100.000000      200.000000                0.0                2.0                  2.0                  4.0  -98985.004883            200.000000            800.000000  180.000000           180.0       1.0
+2        622809.61084       622429.610840      622809.61084  200180.000000     200.000000     622429.610840            80.0                     0.0      100.000000      200.000000                0.0                2.0                  2.0                  4.0  -98985.004883            200.000000            800.000000  300.000000           200.0       1.0
+3        623009.61084       622629.610840      623009.61084  200380.000000     200.000000     622629.610840           180.0                    80.0      100.000000      200.000000                0.0                2.0                  2.0                  2.0  -98985.004883            200.000000            400.000000  200.000000           200.0       1.0
+4        623209.61084       622629.610840      623209.61084  200380.000000     200.000000     622629.610840           280.0                   180.0      100.000000      200.000000                0.0                2.0                  2.0                  2.0  -98985.004883            200.000000            400.000000  300.000000           200.0       1.0
+5        623409.61084       622827.038574      623409.61084  200580.000000     200.000000     622827.038574           380.0                   280.0      100.000000      197.427734                1.0                3.0                  2.0                  2.0  -98985.004883            200.000000            394.855469  202.572266           200.0       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=4, loss_amount=380, alpha=20041/1024, buf_size=200.[0m
+[01/09 16:46:26]  --------------------------------------------------------------------------------
+[01/09 16:46:26]  Iteration: 15 (0 solution, 14 counterexamples)
+[01/09 16:46:32]  Generator returned sat in 5.564363 secs.
+[01/09 16:46:32]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1max_buffer > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:46:36]  Improved gap from 16.3265306122449 to 48.4375
+[01/09 16:46:36]  Improved number of small numbers from 106 to 107 out of a max of 134
+[01/09 16:46:36]  Verifer returned sat in 3.699624 secs.
+[01/09 16:46:36]  sf_get_cex returned in 3.760225 secs.
+[01/09 16:46:36]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       622441.707802       622423.367046     622441.707802       0.428223       0.428711     622423.367046             0.0                     0.0       36.334332           100.0                1.0                3.0                  1.0             2.006207  -99133.448975             36.334332            200.620655  18.340755       18.340614       2.0
+1       622478.042133       622429.610840     622478.042133   36352.672309      36.334332     622429.610840             0.0                     0.0       36.334332           100.0                2.0                4.0                  2.0             2.006207  -99088.130127             72.668663            200.620655  48.431293       -0.006207       3.0
+2       622514.376465       622478.048340     622514.376465   36382.762848      36.334332     622478.048340             0.0                     0.0       36.334332           100.0                0.0                1.0                  2.0             2.006207  -99036.567627             72.668663            200.620655  36.328125      -12.109375       0.0
+3       622550.717003       622526.485840     622550.717003   36376.866233      36.340538     622526.485840             0.0                     0.0       36.334332           100.0                0.0                1.0                  2.0             2.006207  -98985.005127             72.668663            200.620655  24.231163      -24.206337       0.0
+4       622587.057541       622574.923340     622587.057541   36364.769271      36.340538     622574.923340             0.0                     0.0       36.334332           100.0                0.0                1.0                  2.0             2.006207  -98933.442627             72.668663            200.620655  12.134201      -36.303299       0.0
+5       622623.398079       622623.360840     622623.398079   36352.672309      36.340538     622623.360840             0.0                     0.0       38.750000           100.0                0.0                1.0                  2.0             2.006207  -98881.880371             77.500000            200.620655   0.037239      -48.400505       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=25/4028, buf_size=200.[0m
+[01/09 16:46:36]  --------------------------------------------------------------------------------
+[01/09 16:46:36]  Iteration: 16 (0 solution, 15 counterexamples)
+[01/09 16:46:52]  Generator returned sat in 14.796113 secs.
+[01/09 16:46:52]  Candidate solution: 
+[1m[94mif (+ 1min_c + -1min_buffer_bytes + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_qdel + 1max_qdel + 1min_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_c + 1max_c + -1min_buffer_bytes + 6 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:46:58]  Improved gap from 3.237556561085973 to 100
+[01/09 16:46:59]  Improved number of small numbers from 107 to 132 out of a max of 134
+[01/09 16:46:59]  Verifer returned sat in 6.875538 secs.
+[01/09 16:46:59]  sf_get_cex returned in 6.938232 secs.
+[01/09 16:46:59]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0        89107.840820        88844.415283      89107.840820       0.428223       0.428711      88844.415283        0.000000                0.000000       80.856445      163.854004                0.0                2.0                  0.0             3.428223  -98881.880371              0.000000            561.728009  263.425537           200.0       1.0
+1        89208.269043        88922.060059      89208.269043  100691.648193     100.428223      88922.060059        0.428223                0.000000       80.856445      163.854004                1.0                3.0                  1.0             3.428223  -98881.880371             80.856445            561.728009  285.780762           200.0       2.0
+2        89308.697266        89007.841064      89308.697266  100714.431641     100.428223      89007.841064        0.856445                0.428223       80.856445      163.425781                1.0                3.0                  1.0             3.000000  -98881.880371             80.856445            490.277344  299.999756           200.0       2.0
+3        89409.125488        89170.410400      89409.125488  100729.078857     100.428223      89170.410400        1.284668                0.856445       82.783447      162.997559                1.0                3.0                  1.0             3.000000  -98881.880371             82.783447            488.992676  237.430420           200.0       2.0
+4        89511.480713        89254.906738      89511.480713  102593.939697     102.355225      89254.906738        3.639893                1.284668       83.211670      136.830485                1.0                3.0                  1.0             3.000000  -98881.880371             83.211670            410.491455  252.934082           200.0       2.0
+5        89614.264160        89308.269287      89614.264160  103040.021240     102.783447      89308.269287        6.423340                3.639893       83.211670      115.963501                1.0                3.0                  1.0             3.000000  -98881.880371             83.211670            347.890503  299.571533           200.0       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=5, 
+, large_loss_count=0, loss_amount=6139/1024, alpha=40083/2048, buf_size=200.[0m
+[01/09 16:46:59]  --------------------------------------------------------------------------------
+[01/09 16:46:59]  Iteration: 17 (0 solution, 16 counterexamples)
+[01/09 16:47:15]  Generator returned sat in 14.960541 secs.
+[01/09 16:47:15]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + 1max_qdel + -1min_buffer > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_c + -1min_buffer_bytes + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_qdel + 1max_qdel + 1min_buffer + 1max_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:47:19]  Improved gap from 0.0 to 48.4375
+[01/09 16:47:20]  Improved number of small numbers from 81 to 90 out of a max of 134
+[01/09 16:47:20]  Verifer returned sat in 5.595572 secs.
+[01/09 16:47:20]  sf_get_cex returned in 5.658025 secs.
+[01/09 16:47:20]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -614978.061606      -614996.385757    -614978.061606       0.427979       0.428711    -614996.385757             0.0                     0.0       36.347002           100.0                0.0                2.0                  0.0             2.016113  605022.346191                   0.0            201.611328  18.324151       18.324137       1.0
+1      -614941.730950      -614990.252506    -614941.730950   36348.979880      36.330656    -614990.252506             0.0                     0.0       36.347002           100.0                0.0                2.0                  0.0             2.016113  605067.675293                   0.0            201.611328  48.521556       -0.016106       1.0
+2      -614905.400294      -614941.714604    -614905.400294   36379.177285      36.330656    -614941.714604             0.0                     0.0       36.347002           100.0                0.0                1.0                  0.0             2.016113  605119.237553                   0.0            201.611328  36.314309      -12.123191       0.0
+3      -614869.069638      -614893.277104    -614869.069638   36366.970038      36.330656    -614893.277104             0.0                     0.0       36.347002           100.0                0.0                1.0                  0.0             2.016113  605170.800053                   0.0            201.611328  24.207465      -24.230035       0.0
+4      -614832.738983      -614844.839604    -614832.738983   36354.863193      36.330656    -614844.839604             0.0                     0.0       36.353226           100.0                0.0                1.0                  0.0             2.016113  605222.362553                   0.0            201.611328  12.100621      -36.336879       0.0
+5      -614796.402104      -614796.402104    -614796.402104   36348.979880      36.336879    -614796.402104             0.0                     0.0       38.770081           100.0                0.0                1.0                  0.0             2.016113  605222.362793                   0.0            201.611328   0.000000      -99.999760       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=325/19882, buf_size=200.[0m
+[01/09 16:47:20]  --------------------------------------------------------------------------------
+[01/09 16:47:20]  Iteration: 18 (0 solution, 17 counterexamples)
+[01/09 16:47:31]  Generator returned sat in 9.769021 secs.
+[01/09 16:47:31]  Candidate solution: 
+[1m[94mif (+ -1max_c + 1min_buffer_bytes + 7 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + 1max_qdel + 1min_buffer + 1max_buffer + -5 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_c + -1min_buffer_bytes + -7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:47:44]  Improved gap from 7.8 to 100
+[01/09 16:47:45]  Improved number of small numbers from 91 to 93 out of a max of 134
+[01/09 16:47:45]  Verifer returned sat in 14.110641 secs.
+[01/09 16:47:45]  sf_get_cex returned in 14.176211 secs.
+[01/09 16:47:45]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -578013.593226      -578298.545212    -578013.593226       0.427979       0.428467    -578298.545212        0.000000                0.000000        0.000000      106.572021                1.0                3.0                  1.0                  2.0  568226.217575              0.000000            213.144043  284.951986      186.663900       2.0
+1      -577994.021205      -578104.353155    -577994.021205   19856.973470      19.572021    -578104.353155        0.000000                0.000000       97.096029      106.572021                0.0                2.0                  1.0                  2.0  568226.217575             97.096029            213.144043  110.331950      106.235921       1.0
+2      -577799.829148      -578007.257126    -577799.829148  194302.389242     194.192057    -578007.257126        0.427979                0.000000       97.096029      106.572021                0.0                2.0                  1.0                  2.0  568226.217575             97.096029            213.144043  207.000000      200.000000       1.0
+3      -577605.637090      -577900.257126    -577605.637090  194399.485270     194.192057    -577900.257126       94.620036                0.427979       99.572021      106.572021                0.0                2.0                  1.0                  2.0  568226.217575             99.572021            213.144043  200.000000      200.000000       1.0
+4      -577406.493047      -577900.257126    -577406.493047  199438.663005     199.144043    -577900.257126      193.764079               94.620036       99.572021      106.572021                0.0                2.0                  1.0                  2.0  568226.217575             99.572021            213.144043  300.000000      200.000000       1.0
+5      -577207.349004      -577793.257324    -577207.349004  199637.807048     199.144043    -577793.257324      292.908122              193.764079       99.572021      106.572021                1.0                3.0                  1.0                  2.0  568226.217575             99.572021            213.144043  293.000198      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=3, loss_amount=3599255/12288, alpha=80167/4096, buf_size=200.[0m
+[01/09 16:47:45]  --------------------------------------------------------------------------------
+[01/09 16:47:45]  Iteration: 19 (0 solution, 18 counterexamples)
+[01/09 16:47:51]  Generator returned sat in 4.932599 secs.
+[01/09 16:47:51]  Candidate solution: 
+[1m[94mif (+ -1max_qdel + 1max_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1min_c + 1max_c + -9 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + -1max_qdel + -1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:47:57]  Improved gap from 6.238688151041667 to 48.4375
+[01/09 16:47:57]  Improved number of small numbers from 104 to 134 out of a max of 134
+[01/09 16:47:57]  Verifer returned sat in 5.729410 secs.
+[01/09 16:47:57]  sf_get_cex returned in 5.796549 secs.
+[01/09 16:47:57]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -578045.997803      -578045.997803    -578045.997803       0.427734       0.428223    -578045.997803             0.0                     0.0          96.875           100.0                2.0                4.0                  2.0                  2.0  568071.958008                193.75                 200.0   0.000000        0.000000       3.0
+1      -577997.560303      -578045.569824    -577997.560303   48437.500000      48.437500    -578045.569824             0.0                     0.0          96.875           100.0                0.0                1.0                  2.0                  2.0  568123.092529                193.75                 200.0  48.009521       -0.427979       0.0
+2      -577949.122803      -577997.132324    -577949.122803   48485.509521      48.437500    -577997.132324             0.0                     0.0          96.875           100.0                0.0                1.0                  2.0                  2.0  568174.655029                193.75                 200.0  48.009521       -0.427979       0.0
+3      -577900.685303      -577948.694824    -577900.685303   48485.509521      48.437500    -577948.694824             0.0                     0.0          96.875           100.0                0.0                1.0                  2.0                  2.0  568226.217529                193.75                 200.0  48.009521       -0.427979       0.0
+4      -577852.247803      -577900.257080    -577852.247803   48485.509521      48.437500    -577900.257080             0.0                     0.0          96.875           100.0                0.0                1.0                  2.0                  2.0  568272.385986                193.75                 200.0  48.009277       -5.822021       0.0
+5      -577803.810303      -577846.425537    -577803.810303   48485.509277      48.437500    -577846.425537             0.0                     0.0          96.875           100.0                0.0                1.0                  2.0                  2.0  568272.386230                193.75                 200.0  42.615234      -57.384277       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=40083/2048, buf_size=200.[0m
+[01/09 16:47:57]  --------------------------------------------------------------------------------
+[01/09 16:47:57]  Iteration: 20 (0 solution, 19 counterexamples)
+[01/09 16:48:11]  Generator returned sat in 13.057843 secs.
+[01/09 16:48:11]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + 4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + 1min_buffer + 1max_buffer + -5 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + 1max_qdel + 1min_buffer + -7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 16:48:15]  Improved gap from 0.85546875 to 48.4375
+[01/09 16:48:16]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 16:48:16]  Verifer returned sat in 4.496627 secs.
+[01/09 16:48:16]  sf_get_cex returned in 4.558430 secs.
+[01/09 16:48:16]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -629702.879883      -629703.307617    -629702.879883       0.427734       0.428223    -629703.307617        0.427734                0.000000       97.730469           100.0                0.0                2.0                  0.0                  2.0  600591.848633                   0.0                 200.0   0.000000       -0.000244       1.0
+1      -629654.014648      -629702.879883    -629654.014648   48865.662109      48.865234    -629702.879883        0.427734                0.427734       97.730469           100.0                0.0                1.0                  0.0                  1.0  600642.983643                   0.0                 100.0  48.437500        0.000000       0.0
+2      -629605.149414      -629654.442383    -629605.149414   48914.099609      48.865234    -629654.442383        0.427734                0.427734       97.730469           100.0                0.0                2.0                  0.0                  1.0  600693.690674                   0.0                 100.0  48.865234       -0.427734       1.0
+3      -629556.284180      -629605.149414    -629556.284180   48914.527344      48.865234    -629605.149414        0.427734                0.427734       97.730469           100.0                0.0                1.0                  0.0                  1.0  600745.252930                   0.0                 100.0  48.437500       -0.000244       0.0
+4      -629507.418945      -629556.284180    -629507.418945   48914.099609      48.865234    -629556.284180        0.427734                0.427734       97.730469           100.0                0.0                1.0                  0.0                  1.0  600796.387695                   0.0                 100.0  48.437500       -0.000244       0.0
+5      -629458.553711      -629503.735352    -629458.553711   48914.099609      48.865234    -629503.735352        0.427734                0.427734       97.730469           100.0                0.0                1.0                  0.0                  1.0  600843.839111                   0.0                 100.0  44.753906       -3.683594       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=10021/512, buf_size=200.[0m
+[01/09 16:48:16]  --------------------------------------------------------------------------------
+[01/09 16:48:16]  Iteration: 21 (0 solution, 20 counterexamples)
+[01/09 16:48:27]  Generator returned sat in 9.855270 secs.
+[01/09 16:48:27]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + -1max_qdel + 1min_buffer + 1max_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1max_qdel + 1min_buffer + -5 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:48:30]  Improved gap from 25.2138671875 to 48.4375
+[01/09 16:48:30]  Improved number of small numbers from 109 to 134 out of a max of 134
+[01/09 16:48:30]  Verifer returned sat in 3.167511 secs.
+[01/09 16:48:30]  sf_get_cex returned in 3.227231 secs.
+[01/09 16:48:30]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -537802.563477      -537807.958008    -537802.563477       0.427490       0.428223    -537807.958008             0.0                     0.0          96.875           100.0                0.0                2.0                  0.0                  2.0  600597.243408                   0.0                 200.0   5.394531        5.394531       1.0
+1      -537754.125977      -537807.958008    -537754.125977   48442.894531      48.437500    -537807.958008             0.0                     0.0          96.875           100.0                0.0                2.0                  0.0                  2.0  600643.411377                   0.0                 200.0  53.832031        0.000000       1.0
+2      -537705.688477      -537754.125977    -537705.688477   48491.332031      48.437500    -537754.125977             0.0                     0.0          96.875           100.0                0.0                2.0                  0.0                  2.0  600694.973877                   0.0                 200.0  48.437500        0.000000       1.0
+3      -537657.250977      -537705.688477    -537657.250977   48485.937500      48.437500    -537705.688477             0.0                     0.0          96.875           100.0                0.0                2.0                  0.0                  2.0  600746.536377                   0.0                 200.0  48.437500        0.000000       1.0
+4      -537608.813477      -537657.250977    -537608.813477   48485.937500      48.437500    -537657.250977             0.0                     0.0          96.875           100.0                0.0                2.0                  0.0                  2.0  600798.098633                   0.0                 200.0  48.437500       -0.000244       1.0
+5      -537560.375977      -537608.385498    -537560.375977   48485.937500      48.437500    -537608.385498             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0                  2.0  600798.098633                   0.0                 200.0  48.009521      -51.562744       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1751/4096, buf_size=200.[0m
+[01/09 16:48:30]  --------------------------------------------------------------------------------
+[01/09 16:48:30]  Iteration: 22 (0 solution, 21 counterexamples)
+[01/09 16:49:26]  Generator returned sat in 55.145127 secs.
+[01/09 16:49:26]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + -1max_qdel + -1min_buffer + -1max_buffer + 6 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_c + 1max_c + -1min_buffer_bytes + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:49:29]  Improved gap from 49.7862548828125 to 100
+[01/09 16:49:29]  Improved number of small numbers from 108 to 133 out of a max of 134
+[01/09 16:49:29]  Verifer returned sat in 2.850359 secs.
+[01/09 16:49:29]  sf_get_cex returned in 2.910730 secs.
+[01/09 16:49:29]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -537152.128662      -537358.541016    -537152.128662       0.427490       0.428223    -537358.541016        0.427490                0.000000       81.282471      122.992188                0.0                2.0                  0.0              2.57251  600694.973877              0.000000            316.398603  205.984863      198.717529       1.0
+1      -537051.273682      -537319.823486    -537051.273682  101061.392822     100.854980    -537319.823486        0.427490                0.427490       81.282471      122.992188                1.0                3.0                  1.0              2.57251  600694.973877             81.282471            316.398603  268.122314      199.572510       2.0
+2      -536950.418701      -537235.976074    -536950.418701  101123.530273     100.854980    -537235.976074        0.854980                0.427490       81.282471      122.564941                1.0                3.0                  1.0              2.57251  600694.973877             81.282471            315.299509  284.702393      200.000000       2.0
+3      -536849.563721      -537074.693604    -536849.563721  101140.537842     100.854980    -537074.693604        1.709961                0.854980       81.709961      122.564941                1.0                3.0                  1.0              2.57251  600694.973877             81.709961            315.299509  223.419922      200.000000       2.0
+4      -536748.281250      -536989.563721    -536748.281250  101507.600586     101.282471    -536989.563721        2.992432                1.709961       82.564941      122.564941                1.0                3.0                  1.0              2.57251  600694.973877             82.564941            315.299509  238.290039      200.000000       2.0
+5      -536646.143799      -536950.846191    -536646.143799  102378.733643     102.137451    -536950.846191        5.129883                2.992432       82.564941      101.923706                1.0                3.0                  1.0              2.57251  600694.973877             82.564941            262.199729  299.572510      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=19261/4096, alpha=80169/4096, buf_size=200.[0m
+[01/09 16:49:29]  --------------------------------------------------------------------------------
+[01/09 16:49:29]  Iteration: 23 (0 solution, 22 counterexamples)
+[01/09 16:50:34]  Generator returned sat in 63.141672 secs.
+[01/09 16:50:34]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_qdel + -1max_qdel + -1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_buffer_bytes + -2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:50:45]  Improved gap from 12.82470703125 to 48.4375
+[01/09 16:50:45]  Improved number of small numbers from 134 to 134 out of a max of 134
+[01/09 16:50:45]  Verifer returned sat in 11.305719 secs.
+[01/09 16:50:45]  sf_get_cex returned in 11.371645 secs.
+[01/09 16:50:45]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t   queue_t  bottle_queue_t  qdelay_t
+0      -537247.872070      -537272.090820    -537247.872070       0.427490       0.428223    -537272.090820         0.42749                 0.00000        49.29248           100.0                0.0                1.0                  0.0                  2.0  600615.791016                   0.0                 200.0  23.79126        23.79126       0.0
+1      -537223.225830      -537271.663330    -537223.225830   24670.458984      24.646240    -537271.663330         0.42749                 0.42749        49.29248           100.0                0.0                2.0                  0.0                  2.0  600666.926025                   0.0                 200.0  48.01001        -0.42749       1.0
+2      -537174.360840      -537223.225830    -537174.360840   48913.427734      48.864990    -537223.225830         0.42749                 0.42749        49.29248           100.0                0.0                1.0                  0.0                  2.0  600718.488525                   0.0                 200.0  48.43750         0.00000       0.0
+3      -537149.714600      -537174.788330    -537149.714600   24695.105225      24.646240    -537174.788330         0.42749                 0.42749        49.29248           100.0                0.0                2.0                  0.0                  2.0  600770.051025                   0.0                 200.0  24.64624       -23.79126       1.0
+4      -537100.849609      -537126.350830    -537100.849609   48890.063965      48.864990    -537126.350830         0.42749                 0.42749        49.29248           100.0                0.0                1.0                  0.0                  2.0  600821.613525                   0.0                 200.0  25.07373       -23.36377       0.0
+5      -537076.203369      -537076.630859    -537076.203369   24671.741455      24.646240    -537076.630859         0.42749                 0.42749        49.29248           100.0                0.0                1.0                  0.0                  2.0  600871.893555                   0.0                 200.0   0.00000       -48.43750       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1751/4096, buf_size=200.[0m
+[01/09 16:50:45]  --------------------------------------------------------------------------------
+[01/09 16:50:45]  Iteration: 24 (0 solution, 23 counterexamples)
+[01/09 16:50:50]  Generator returned sat in 3.956355 secs.
+[01/09 16:50:50]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1max_qdel + 1max_buffer > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1max_qdel + 1max_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 16:51:00]  Improved gap from 2.137451171875 to 48.4375
+[01/09 16:51:00]  Improved number of small numbers from 124 to 124 out of a max of 134
+[01/09 16:51:00]  Verifer returned sat in 9.503807 secs.
+[01/09 16:51:00]  sf_get_cex returned in 9.572265 secs.
+[01/09 16:51:00]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -535579.135254      -535579.135254    -535579.135254       0.427490       0.428223    -535579.135254             0.0                     0.0       24.904175           100.0                0.0                1.0                  0.0                  2.0  600615.363525                   0.0                 200.0   0.000000        -2.22583       0.0
+1      -535529.326904      -535576.909424    -535529.326904   49808.349609      49.808350    -535576.909424             0.0                     0.0       24.904175           100.0                0.0                1.0                  0.0                  2.0  600666.926025                   0.0                 200.0  47.582520        -0.85498       0.0
+2      -535479.518555      -535528.471924    -535479.518555   49855.932129      49.808350    -535528.471924             0.0                     0.0       24.904175           100.0                0.0                1.0                  0.0                  2.0  600717.972656                   0.0                 200.0  48.953369         0.00000       0.0
+3      -535429.710205      -535479.518555    -535429.710205   49857.302979      49.808350    -535479.518555             0.0                     0.0       32.463623           100.0                0.0                2.0                  0.0                  2.0  600768.164307                   0.0                 200.0  49.808350         0.00000       1.0
+4      -535406.804565      -535429.710205    -535406.804565   22955.447998      22.905640    -535429.710205             0.0                     0.0       36.799805           100.0                0.0                2.0                  0.0                  2.0  600819.726807                   0.0                 200.0  22.905640       -25.53186       1.0
+5      -535379.562744      -535379.562744    -535379.562744   27264.726929      27.241821    -535379.562744             0.0                     0.0       39.469336           100.0                0.0                1.0                  0.0                  2.0  600869.579346                   0.0                 200.0   0.000000       -48.43750       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=78299/8192, buf_size=200.[0m
+[01/09 16:51:00]  --------------------------------------------------------------------------------
+[01/09 16:51:00]  Iteration: 25 (0 solution, 24 counterexamples)
+[01/09 16:51:36]  Generator returned sat in 35.034984 secs.
+[01/09 16:51:36]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + -1min_buffer + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 4 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 16:51:50]  Improved gap from 17.435897435897434 to 48.4375
+[01/09 16:51:50]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 16:51:50]  Verifer returned sat in 13.842762 secs.
+[01/09 16:51:50]  sf_get_cex returned in 13.913216 secs.
+[01/09 16:51:50]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -553783.165039      -553801.524170    -553783.165039       0.427002       0.427734    -553801.524170        0.427002                0.000000        72.65625           100.0                1.0                3.0                  1.0             3.427002  618841.372314              72.65625            342.700195  17.932129       17.932129       2.0
+1      -553746.836914      -553801.524170    -553746.836914   36346.484131      36.328125    -553801.524170        0.427002                0.427002        72.65625           100.0                1.0                3.0                  1.0             3.427002  618887.112061              72.65625            342.700195  54.260254        0.000000       2.0
+2      -553710.508789      -553747.263916    -553710.508789   36382.812256      36.328125    -553747.263916        0.427002                0.427002        72.65625           100.0                0.0                2.0                  1.0             3.427002  618938.674561              72.65625            342.700195  36.328125      -12.109375       1.0
+3      -553674.180664      -553698.826416    -553674.180664   36364.880127      36.328125    -553698.826416        0.427002                0.427002        72.65625           100.0                0.0                1.0                  1.0             3.427002  618990.237061              72.65625            342.700195  24.218750      -24.218750       0.0
+4      -553637.852539      -553650.388916    -553637.852539   36352.770752      36.328125    -553650.388916        0.427002                0.427002        72.65625           100.0                0.0                1.0                  1.0             3.427002  619041.799561              72.65625            342.700195  12.109375      -36.328125       0.0
+5      -553601.524414      -553601.951416    -553601.524414   36340.661377      36.328125    -553601.951416        0.427002                0.427002        72.65625           100.0                0.0                1.0                  1.0             3.427002  619093.362061              72.65625            342.700195   0.000000      -48.437500       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1749/4096, buf_size=200.[0m
+[01/09 16:51:50]  --------------------------------------------------------------------------------
+[01/09 16:51:50]  Iteration: 26 (0 solution, 25 counterexamples)
+[01/09 16:52:29]  Generator returned sat in 37.006077 secs.
+[01/09 16:52:29]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:52:29]  Improved gap from 36.86187744140625 to 100
+[01/09 16:52:30]  Improved number of small numbers from 109 to 134 out of a max of 134
+[01/09 16:52:30]  Verifer returned sat in 0.951892 secs.
+[01/09 16:52:30]  sf_get_cex returned in 1.012015 secs.
+[01/09 16:52:30]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -554223.654541      -554423.654297    -554223.654541       0.426758       0.427490    -554423.654297        0.426758                0.000000       99.572998      100.427002                0.0                1.0                  0.0                  2.0  618887.111816                   0.0            200.854004  199.572998      199.572998       0.0
+1      -554122.800537      -554423.654297    -554122.800537  101054.003662     100.854004    -554423.654297        0.853760                0.426758       99.572998      100.427002                0.0                1.0                  0.0                  1.0  618887.111816                   0.0            100.427002  300.000000      200.000000       0.0
+2      -554021.946533      -554223.654297    -554021.946533  101154.857666     100.854004    -554223.654297        1.707764                0.853760      100.000000      100.427002                0.0                2.0                  0.0                  1.0  618887.111816                   0.0            100.427002  200.000000      200.000000       1.0
+3      -553920.665527      -554223.654297    -553920.665527  101482.713623     101.281006    -554223.654297        2.988770                1.707764      100.000000      100.000000                0.0                2.0                  0.0                  1.0  618887.111816                   0.0            100.000000  300.000000      200.000000       1.0
+4      -553819.384521      -554025.362549    -553819.384521  101583.994629     101.281006    -554025.362549        4.269775                2.988770      100.000000      100.000000                1.0                3.0                  1.0                  1.0  618887.111816                 100.0            100.000000  201.708252      200.000000       2.0
+5      -553718.103516      -554023.654297    -553718.103516  101486.983887     101.281006    -554023.654297        5.550781                4.269775      100.000000      100.000000                2.0                4.0                  2.0                  1.0  618887.111816                 200.0            100.000000  300.000000      200.000000       3.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=5, 
+, large_loss_count=0, loss_amount=19239/4096, alpha=5247/4096, buf_size=200.[0m
+[01/09 16:52:30]  --------------------------------------------------------------------------------
+[01/09 16:52:30]  Iteration: 27 (0 solution, 26 counterexamples)
+[01/09 16:53:48]  Generator returned sat in 77.023974 secs.
+[01/09 16:53:48]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + -1min_buffer + 5 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_qdel + 1max_qdel + -1min_buffer + -1max_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + 6 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:53:49]  Improved number of small numbers from 123 to 125 out of a max of 133
+[01/09 16:53:49]  Verifer returned sat in 0.903853 secs.
+[01/09 16:53:49]  sf_get_cex returned in 0.969720 secs.
+[01/09 16:53:49]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -554223.227295      -554465.095785    -554223.227295       0.426514       0.427246    -554465.095785        0.000000                0.000000       80.853516      171.360840                0.0                2.0                  0.0             4.572998  618887.111572              0.000000            783.632786  241.868490      200.000000       1.0
+1      -554122.800537      -554375.014893    -554122.800537  100668.626302     100.426758    -554375.014893        0.426758                0.000000       80.853516      171.360840                1.0                3.0                  1.0             4.572998  618887.111572             80.853516            783.632786  251.787598      200.000000       2.0
+2      -554082.373779      -554285.787842    -554082.373779   40678.972168      40.426758    -554285.787842        0.426758                0.426758       80.853516      171.360840                2.0                4.0                  2.0             4.572998  618887.111572            161.707031            783.632786  202.987305      140.426758       3.0
+3      -553920.666748      -554123.227295    -553920.666748  161910.445312     161.707031    -554123.227295        2.560547                0.426758       85.467122      170.934245                1.0                3.0                  2.0             4.572998  618887.111572            170.934245            781.681968  200.000000      200.000000       2.0
+4      -553749.732503      -554023.227295    -553749.732503  171136.805339     170.934245    -554023.227295       73.494792                2.560547       88.373698      147.289497                0.0                2.0                  2.0             2.000000  618887.111572            176.747396            294.578993  200.000000      200.000000       1.0
+5      -553641.785563      -553975.015055    -553641.785563  108220.434896     107.946940    -553975.015055       81.441732               73.494792       88.373698      122.520182                1.0                3.0                  2.0             2.000000  618887.111572            176.747396            245.040365  251.787760      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=1, loss_amount=124439/1536, alpha=20043/1024, buf_size=200.[0m
+[01/09 16:53:49]  --------------------------------------------------------------------------------
+[01/09 16:53:49]  Iteration: 28 (0 solution, 27 counterexamples)
+[01/09 16:55:13]  Generator returned sat in 82.702924 secs.
+[01/09 16:55:13]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + 1max_qdel + 1min_buffer + -1max_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + -1max_qdel + -1max_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_c + -1min_buffer_bytes + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:55:19]  Improved gap from 9.643262987012987 to 100
+[01/09 16:55:20]  Improved number of small numbers from 87 to 93 out of a max of 134
+[01/09 16:55:20]  Verifer returned sat in 6.819782 secs.
+[01/09 16:55:20]  sf_get_cex returned in 6.886427 secs.
+[01/09 16:55:20]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -554247.160368      -554426.222038    -554247.160368       0.426270       0.427002    -554426.222038        0.000000                0.000000       55.661096      120.938232                0.0                2.0                  0.0              2.42627  618887.111572              0.000000            293.428748  179.061670      179.061670       1.0
+1      -554135.838175      -554358.909074    -554135.838175  111501.254053     111.322192    -554358.909074        0.000000                0.000000       55.661096      120.938232                0.0                2.0                  0.0              2.42627  618887.111572              0.000000            293.428748  223.070898      190.383862       1.0
+2      -554024.515983      -554246.733854    -554024.515983  111545.263281     111.322192    -554246.733854        1.706055                0.000000       59.829395      120.938232                0.0                2.0                  0.0              2.42627  618887.111572              0.000000            293.428748  220.511816      200.000000       1.0
+3      -553904.857194      -554126.222038    -553904.857194  119881.006934     119.658789    -554126.222038       21.364844                1.706055       77.562345      120.938232                0.0                2.0                  0.0              2.00000  618887.111572              0.000000            241.876465  200.000000      200.000000       1.0
+4      -553749.732503      -554126.222038    -553749.732503  155346.055599     155.124691    -554126.222038       76.489535               21.364844       77.562345      120.511816                0.0                2.0                  0.0              2.00000  618887.111572              0.000000            241.023633  300.000000      200.000000       1.0
+5      -553594.607812      -554004.857422    -553594.607812  155501.180290     155.124691    -554004.857422      131.614225               76.489535       77.562345      120.511816                1.0                3.0                  1.0              2.00000  618887.111572             77.562345            241.023633  278.635384      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=4, loss_amount=4043189/30720, alpha=873/2048, buf_size=200.[0m
+[01/09 16:55:20]  --------------------------------------------------------------------------------
+[01/09 16:55:20]  Iteration: 29 (0 solution, 28 counterexamples)
+[01/09 16:55:56]  Generator returned sat in 34.571617 secs.
+[01/09 16:55:56]  Candidate solution: 
+[1m[94mif (+ -1min_c + 1max_c + -1min_buffer_bytes + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1max_qdel + 1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1max_qdel + -1max_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 16:56:08]  Improved gap from 19.1474609375 to 48.4375
+[01/09 16:56:09]  Improved number of small numbers from 125 to 132 out of a max of 134
+[01/09 16:56:09]  Verifer returned sat in 12.138687 secs.
+[01/09 16:56:09]  sf_get_cex returned in 12.205112 secs.
+[01/09 16:56:09]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -552941.987305      -552948.237305    -552941.987305       0.426270       0.426758    -552948.237305         0.42627                 0.00000       64.583333           100.0                0.0                2.0                  0.0                  2.0  617409.126709              0.000000                 200.0   5.823730        5.823730       1.0
+1      -552909.695638      -552942.413574    -552909.695638   32297.916667      32.291667    -552942.413574         0.42627                 0.42627       64.583333           100.0                1.0                3.0                  1.0                  2.0  617454.865479             64.583333                 200.0  32.291667      -16.145833       2.0
+2      -552845.112305      -552893.976074    -552845.112305   64616.051270      64.583333    -552893.976074         0.42627                 0.42627       64.583333           100.0                0.0                1.0                  1.0                  2.0  617506.427979             64.583333                 200.0  48.437500        0.000000       0.0
+3      -552812.820638      -552845.538574    -552812.820638   32340.530436      32.291667    -552845.538574         0.42627                 0.42627       64.583333           100.0                0.0                2.0                  1.0                  2.0  617557.990479             64.583333                 200.0  32.291667      -16.145833       1.0
+4      -552780.528971      -552797.101074    -552780.528971   32324.384603      32.291667    -552797.101074         0.42627                 0.42627       64.583333           100.0                0.0                1.0                  1.0                  2.0  617609.552979             64.583333                 200.0  16.145833      -32.291667       0.0
+5      -552748.237305      -552748.663574    -552748.237305   32308.238770      32.291667    -552748.663574         0.42627                 0.42627       64.583333           100.0                0.0                1.0                  1.0                  2.0  617609.553223             64.583333                 200.0   0.000000      -99.999756       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1745/4096, buf_size=200.[0m
+[01/09 16:56:09]  --------------------------------------------------------------------------------
+[01/09 16:56:09]  Iteration: 30 (0 solution, 29 counterexamples)
+[01/09 16:56:17]  Generator returned sat in 6.405108 secs.
+[01/09 16:56:17]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + 1max_qdel + -1min_buffer + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 6 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1min_qdel + -1max_qdel + 1min_buffer + -1max_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 16:56:20]  Improved gap from 8.525390625 to 100
+[01/09 16:56:20]  Improved number of small numbers from 104 to 134 out of a max of 134
+[01/09 16:56:20]  Verifer returned sat in 3.529284 secs.
+[01/09 16:56:20]  sf_get_cex returned in 3.594600 secs.
+[01/09 16:56:20]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -574519.712646      -574672.270020    -574519.712646       0.426270       0.426758    -574672.270020        0.426270                0.000000       75.426270      233.098877                0.0                1.0                  0.0                  2.0  639080.601807              0.000000            466.197754  152.131104       99.573486       0.0
+1      -574368.860107      -574519.712402    -574368.860107  151005.096436     150.852539    -574519.712402        0.426270                0.426270       76.278809      233.098877                0.0                1.0                  0.0                  1.0  639080.601807              0.000000            233.098877  150.426025      150.426025       0.0
+2      -574216.302490      -574519.286133    -574216.302490  152708.469482     152.557617    -574519.286133        3.409912                0.426270       76.278809      233.098877                0.0                2.0                  0.0                  1.0  639080.601807              0.000000            233.098877  299.573730      200.000000       1.0
+3      -574063.744873      -574368.860107    -574063.744873  152860.600830     152.557617    -574368.860107       55.967529                3.409912       76.278809      233.098877                0.0                2.0                  0.0                  1.0  639080.601807              0.000000            233.098877  249.147705      200.000000       1.0
+4      -573911.187256      -574286.613281    -573911.187256  152862.732422     152.557617    -574286.613281      108.525146               55.967529       77.557617      232.672852                1.0                3.0                  1.0                  1.0  639080.601807             77.557617            232.672852  266.900879      200.000000       2.0
+5      -573756.072021      -574219.286377    -573756.072021  155490.660400     155.115234    -574219.286377      163.640381              108.525146       77.557617      149.573730                1.0                3.0                  1.0                  1.0  639080.601807             77.557617            149.573730  299.573975      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=4, loss_amount=668525/4096, alpha=873/2048, buf_size=200.[0m
+[01/09 16:56:20]  --------------------------------------------------------------------------------
+[01/09 16:56:20]  Iteration: 31 (0 solution, 30 counterexamples)
+[01/09 16:58:25]  Generator returned sat in 122.746844 secs.
+[01/09 16:58:25]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + -1max_buffer + 5 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 10 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 7 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:58:29]  Improved gap from 0.1340969876126126 to 100
+[01/09 16:58:31]  Improved number of small numbers from 82 to 85 out of a max of 134
+[01/09 16:58:31]  Verifer returned sat in 6.162720 secs.
+[01/09 16:58:31]  sf_get_cex returned in 6.231630 secs.
+[01/09 16:58:31]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -574248.136277      -574503.234201    -574248.136277       0.426025       0.426514    -574503.234201        0.153564                0.000000       50.080334      211.441895                0.0                1.0                  0.0                  4.0  639080.601807              0.000000            845.767578  254.944359      199.992517       0.0
+1      -574147.975610      -574412.857329    -574147.975610  100415.765427     100.160668    -574412.857329        0.306748                0.153564       50.080334      211.441895                0.0                2.0                  0.0                  2.0  639080.601807              0.000000            422.883789  264.574971      200.000000       1.0
+2      -574088.885645      -574291.639087    -574088.885645   59354.846899      59.089965    -574291.639087        0.306748                0.306748       70.531705      211.441895                1.0                3.0                  1.0                  2.0  639080.601807             70.531705            422.883789  202.446694      159.089965       2.0
+3      -573947.822235      -574179.372059    -573947.822235  141266.162497     141.063409    -574179.372059        0.460123                0.306748       80.965536      161.931071                1.0                3.0                  1.0                  2.0  639080.601807             80.965536            323.862142  231.089701      200.000000       2.0
+4      -573785.891164      -574048.282358    -573785.891164  162162.620878     161.931071    -574048.282358       62.391194                0.460123       91.143743      151.650614                0.0                2.0                  1.0                  2.0  639080.601807             91.143743            303.301229  200.000000      200.000000       1.0
+5      -573685.737790      -574048.282358    -573685.737790  100415.765427     100.153374    -574048.282358       62.544568               62.391194       91.143743      113.737961                0.0                2.0                  1.0                  2.0  639080.601807             91.143743            227.475921  300.000000      200.000000       1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=1, loss_amount=14436000/231949, alpha=2089775/231949, buf_size=200.[0m
+[01/09 16:58:31]  --------------------------------------------------------------------------------
+[01/09 16:58:31]  Iteration: 32 (0 solution, 31 counterexamples)
+[01/09 16:58:49]  Generator returned sat in 16.229306 secs.
+[01/09 16:58:49]  Candidate solution: 
+[1m[94mif (+ -1max_qdel + 1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_c + -1max_c + 10 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_buffer + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 16:59:01]  Improved gap from 0.42626953125 to 48.4375
+[01/09 16:59:02]  Improved number of small numbers from 120 to 123 out of a max of 134
+[01/09 16:59:02]  Verifer returned sat in 12.896770 secs.
+[01/09 16:59:02]  sf_get_cex returned in 12.969011 secs.
+[01/09 16:59:02]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -574214.256929      -574248.029250    -574214.256929       0.426025       0.426270    -574248.029250             0.0                     0.0       24.471726           100.0                0.0                1.0                  0.0             2.253174  639080.601562                   0.0            225.317383  33.772321       33.772077       0.0
+1      -574195.871512      -574243.803060    -574195.871512   18419.188988      18.385417    -574243.803060             0.0                     0.0       24.471726           100.0                0.0                2.0                  0.0             2.253174  639127.938116                   0.0            225.317383  47.931548       -0.505952       1.0
+2      -574146.928060      -574195.365560    -574146.928060   48991.383929      48.943452    -574195.365560             0.0                     0.0       24.471726           100.0                0.0                1.0                  0.0             2.253174  639179.500616                   0.0            225.317383  48.437500        0.000000       0.0
+3      -574128.542643      -574146.928060    -574128.542643   18433.854167      18.385417    -574146.928060             0.0                     0.0       32.291667           100.0                0.0                2.0                  0.0             2.253174  639231.062988                   0.0            225.317383  18.385417      -30.052211       1.0
+4      -574063.959310      -574097.731631    -574063.959310   64601.718750      64.583333    -574097.731631             0.0                     0.0       36.517857           100.0                0.0                1.0                  0.0             2.253174  639281.866455                   0.0            225.317383  33.772321      -14.665411       0.0
+5      -574045.573893      -574048.282227    -574045.573893   18419.188988      18.385417    -574048.282227             0.0                     0.0       39.104167           100.0                0.0                1.0                  0.0             2.253174  639281.866455                   0.0            225.317383   2.708333      -96.279994       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1765/96, buf_size=200.[0m
+[01/09 16:59:02]  --------------------------------------------------------------------------------
+[01/09 16:59:02]  Iteration: 33 (0 solution, 32 counterexamples)
+[01/09 16:59:13]  Generator returned sat in 9.576128 secs.
+[01/09 16:59:13]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1max_qdel + 5 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_qdel + -1max_qdel + -1max_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 16:59:19]  Improved gap from 3.408203125 to 48.4375
+[01/09 16:59:19]  Improved number of small numbers from 109 to 109 out of a max of 134
+[01/09 16:59:19]  Verifer returned sat in 5.789500 secs.
+[01/09 16:59:19]  sf_get_cex returned in 5.853598 secs.
+[01/09 16:59:19]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -610196.264754      -610214.631942    -610196.264754       0.426025       0.426270    -610214.631942          0.0125                  0.0000       36.332813           100.0                0.0                2.0                  0.0                  2.0  639080.601562              0.000000                 200.0  18.354688       18.354688       1.0
+1      -610159.938192      -610208.431942    -610159.938192   36344.929688      36.326563    -610208.431942          0.0125                  0.0125       36.332813           100.0                1.0                3.0                  1.0                  2.0  639125.920312             36.332813                 200.0  48.481250        0.000000       2.0
+2      -610123.611629      -610159.950692    -610123.611629   36375.056250      36.326563    -610159.950692          0.0125                  0.0125       36.332813           100.0                0.0                2.0                  1.0                  2.0  639177.482812             36.332813                 200.0  36.326563      -12.110938       1.0
+3      -610087.285067      -610111.513192    -610087.285067   36362.901563      36.326563    -610111.513192          0.0125                  0.0125       36.332813           100.0                0.0                1.0                  1.0                  2.0  639229.045312             36.332813                 200.0  24.215625      -24.221875       0.0
+4      -610050.958504      -610063.075692    -610050.958504   36350.790625      36.326563    -610063.075692          0.0125                  0.0125       36.339062           100.0                0.0                1.0                  1.0                  2.0  639280.607812             36.339062                 200.0  12.104688      -36.332813       0.0
+5      -610014.625692      -610014.638192    -610014.625692   36344.929688      36.332813    -610014.638192          0.0125                  0.0125       38.758750           100.0                0.0                1.0                  1.0                  2.0  639280.607812             38.758750                 200.0   0.000000     -100.000000       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1/160, buf_size=200.[0m
+[01/09 16:59:19]  --------------------------------------------------------------------------------
+[01/09 16:59:19]  Iteration: 34 (0 solution, 33 counterexamples)
+[01/09 17:00:11]  Generator returned sat in 50.139533 secs.
+[01/09 17:00:11]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + 5 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + -1min_buffer + -1max_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 17:00:39]  Improved gap from 1.9791666666666667 to 48.4375
+[01/09 17:00:39]  Improved number of small numbers from 109 to 134 out of a max of 134
+[01/09 17:00:39]  Verifer returned sat in 27.955025 secs.
+[01/09 17:00:39]  sf_get_cex returned in 28.025130 secs.
+[01/09 17:00:39]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       -657133.77124      -657139.169434     -657133.77124       0.425781       0.426025    -657139.169434             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686005.138916                   0.0            357.397461   5.398193        5.398193       0.0
+1       -657085.33374      -657139.169434     -657085.33374   48442.898193      48.437500    -657139.169434             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686050.877441                   0.0            357.397461  53.835693       -0.425781       0.0
+2       -657036.89624      -657084.907959     -657036.89624   48491.335693      48.437500    -657084.907959             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686102.439941                   0.0            357.397461  48.011719       -0.425781       0.0
+3       -656988.45874      -657036.470459     -656988.45874   48485.511719      48.437500    -657036.470459             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686154.002441                   0.0            357.397461  48.011719       -0.425781       0.0
+4       -656940.02124      -656988.032959     -656940.02124   48485.511719      48.437500    -656988.032959             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686205.564941                   0.0            357.397461  48.011719       -0.425781       0.0
+5       -656891.58374      -656939.595459     -656891.58374   48485.511719      48.437500    -656939.595459             0.0                     0.0          96.875           100.0                0.0                1.0                  0.0             3.573975  686257.127441                   0.0            357.397461  48.011719       -0.425781       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=1743/4096, buf_size=200.[0m
+[01/09 17:00:39]  --------------------------------------------------------------------------------
+[01/09 17:00:39]  Iteration: 35 (0 solution, 34 counterexamples)
+[01/09 17:01:11]  Generator returned sat in 29.861128 secs.
+[01/09 17:01:11]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + -1max_qdel + -1max_buffer + 8 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1max_c + 1min_buffer_bytes > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 17:01:13]  Improved gap from 1.703125 to 100
+[01/09 17:01:14]  Improved number of small numbers from 134 to 134 out of a max of 134
+[01/09 17:01:14]  Verifer returned sat in 2.580923 secs.
+[01/09 17:01:14]  sf_get_cex returned in 2.638422 secs.
+[01/09 17:01:14]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -656803.786865      -657103.361084    -656803.786865       0.425781       0.426025    -657103.361084        0.000000                0.000000       99.148438      100.425781                0.0                2.0                  0.0             5.574219  685869.330566                   0.0            559.795273  299.574219      199.574219       1.0
+1      -656703.786865      -656903.361084    -656703.786865  100299.574219     100.000000    -656903.361084        0.000000                0.000000      100.000000      100.425781                0.0                2.0                  0.0             5.574219  685869.330566                   0.0            559.795273  199.574219      199.574219       1.0
+2      -656602.935303      -656803.361084    -656602.935303  101051.136719     100.851562    -656803.361084        0.425781                0.000000      100.000000      100.425781                0.0                2.0                  0.0             5.574219  685869.330566                   0.0            559.795273  200.000000      200.000000       1.0
+3      -656502.083740      -656703.361084    -656502.083740  101051.988281     100.851562    -656703.361084        1.277344                0.425781      100.000000      100.425781                0.0                2.0                  0.0             2.000000  685869.330566                   0.0            200.851562  200.000000      200.000000       1.0
+4      -656401.232178      -656703.361084    -656401.232178  101052.839844     100.851562    -656703.361084        2.128906                1.277344      100.000000      100.000000                0.0                2.0                  0.0             2.000000  685869.330566                   0.0            200.000000  300.000000      200.000000       1.0
+5      -656300.380615      -656505.915771    -656300.380615  101153.691406     100.851562    -656505.915771        2.980469                2.128906      100.000000      100.000000                1.0                3.0                  1.0             2.000000  685869.330566                 100.0            200.000000  202.554688      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=763/256, alpha=109/128, buf_size=200.[0m
+[01/09 17:01:14]  --------------------------------------------------------------------------------
+[01/09 17:01:14]  Iteration: 36 (0 solution, 35 counterexamples)
+[01/09 17:02:26]  Generator returned sat in 70.581861 secs.
+[01/09 17:02:26]  Candidate solution: 
+[1m[94mif (+ -1max_qdel + 1min_buffer + 2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ 1min_qdel + -1max_qdel + 1min_buffer + -1max_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1max_qdel + -1min_buffer + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 17:02:28]  Improved gap from 19.81132075471698 to 100
+[01/09 17:02:29]  Improved number of small numbers from 89 to 92 out of a max of 134
+[01/09 17:02:29]  Verifer returned sat in 2.697762 secs.
+[01/09 17:02:29]  sf_get_cex returned in 2.766038 secs.
+[01/09 17:02:29]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -773737.154228      -773935.168795    -773737.154228       0.425293       0.425537    -773935.168795        0.000000                0.000000       67.375895      139.432861                1.0                3.0                  1.0                  2.0  685869.330322             67.375895            278.865723  198.014567      166.950358       2.0
+1      -773602.402437      -773843.111747    -773602.402437  134949.804932     134.751790    -773843.111747        1.702148                0.000000       67.375895      139.432861                0.0                2.0                  1.0                  2.0  685869.330322             67.375895            278.865723  239.007161      200.000000       1.0
+2      -773535.452079      -773773.182629    -773535.452079   67191.067383      66.950358    -773773.182629        1.702148                1.702148       67.375895      139.432861                1.0                3.0                  1.0                  2.0  685869.330322             67.375895            278.865723  236.028402      166.950358       2.0
+3      -773400.700289      -773704.104586    -773400.700289  134989.520915     134.751790    -773704.104586        3.404297                1.702148       67.375895      139.007161                1.0                3.0                  1.0                  2.0  685869.330322             67.375895            278.014323  300.000000      200.000000       2.0
+4      -773265.948499      -773568.501721    -773265.948499  135055.194661     134.751790    -773568.501721       38.156087                3.404297       73.333415      137.305013                1.0                3.0                  1.0                  2.0  685869.330322             73.333415            274.610026  264.397135      200.000000       2.0
+5      -773119.281669      -773497.721529    -773119.281669  146969.382650     146.666829    -773497.721529       84.822917               38.156087       73.333415      115.130073                1.0                3.0                  1.0                  2.0  685869.330322             73.333415            230.260145  293.616943      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=4, loss_amount=255347/3072, alpha=1743/4096, buf_size=200.[0m
+[01/09 17:02:29]  --------------------------------------------------------------------------------
+[01/09 17:02:29]  Iteration: 37 (0 solution, 36 counterexamples)
+[01/09 17:03:02]  Generator returned sat in 31.574143 secs.
+[01/09 17:03:02]  Candidate solution: 
+[1m[94mif (+ -1min_c + 1max_c + -1min_buffer_bytes + -10 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_c + -1max_c + 1min_buffer_bytes + -6 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_buffer_bytes + 1max_buffer_bytes + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)[0m
+[01/09 17:03:27]  Improved gap from 4.027895181741336 to 48.4375
+[01/09 17:03:27]  Improved number of small numbers from 103 to 105 out of a max of 134
+[01/09 17:03:27]  Verifer returned sat in 24.796374 secs.
+[01/09 17:03:27]  sf_get_cex returned in 24.866338 secs.
+[01/09 17:03:27]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       -11543.258595       -11554.105951     -11543.258595       0.425293       0.425293     -11554.105951        0.240234                0.000000       75.661058           100.0                0.0                2.0                  0.0                  2.0  -76480.668457                   0.0                 200.0  10.607121       10.606977       1.0
+1       -11505.428066       -11548.096335     -11505.428066   37841.376202      37.830529     -11548.096335        0.240234                0.240234       75.661058           100.0                0.0                2.0                  0.0                  2.0  -76435.115428                   0.0                 200.0  42.428035       -6.009465       1.0
+2       -11467.597537       -11499.658835     -11467.597537   37873.197115      37.830529     -11499.658835        0.240234                0.240234       75.661058           100.0                0.0                1.0                  0.0                  2.0  -76383.552928                   0.0                 200.0  31.821064      -16.616436       0.0
+3       -11429.767008       -11451.221335     -11429.767008   37862.590144      37.830529     -11451.221335        0.240234                0.240234       75.661058           100.0                0.0                1.0                  0.0                  2.0  -76331.990428                   0.0                 200.0  21.214093      -27.223407       0.0
+4       -11391.936479       -11402.783835     -11391.936479   37851.983173      37.830529     -11402.783835        0.240234                0.240234       75.661058           100.0                0.0                1.0                  0.0                  2.0  -76280.427928                   0.0                 200.0  10.607121      -37.830379       0.0
+5       -11354.105951       -11354.346335     -11354.105951   37841.376202      37.830529     -11354.346335        0.240234                0.240234       75.661058           100.0                0.0                1.0                  0.0                  2.0  -76228.865479                   0.0                 200.0   0.000150      -48.437400       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=10117/512, buf_size=200.[0m
+[01/09 17:03:27]  --------------------------------------------------------------------------------
+[01/09 17:03:27]  Iteration: 38 (0 solution, 37 counterexamples)
+[01/09 17:04:43]  Generator returned sat in 73.564099 secs.
+[01/09 17:04:43]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + 1max_buffer + -3 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1max_qdel + -1min_buffer + 4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 17:04:52]  Improved gap from 32.908040364583336 to 48.4375
+[01/09 17:04:52]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 17:04:52]  Verifer returned sat in 8.914050 secs.
+[01/09 17:04:52]  sf_get_cex returned in 8.974357 secs.
+[01/09 17:04:52]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -215151.398682      -215155.096924    -215151.398682       0.425049       0.425049    -215155.096924             0.0                     0.0       48.862793           100.0                2.0                4.0                  2.0             3.425293  164067.726318             97.725586            342.529297   3.698242        3.698242       3.0
+1      -215102.535889      -215154.671631    -215102.535889   48866.491211      48.862793    -215154.671631             0.0                     0.0       48.862793           100.0                1.0                3.0                  2.0             3.425293  164114.739990             97.725586            342.529297  52.135742       -0.425293       2.0
+2      -215053.673096      -215102.110596    -215053.673096   48914.928711      48.862793    -215102.110596             0.0                     0.0       48.862793           100.0                0.0                1.0                  2.0             3.425293  164166.302490             97.725586            342.529297  48.437500        0.000000       0.0
+3      -215004.385010      -215053.673096    -215004.385010   49336.523438      49.288086    -215053.673096             0.0                     0.0       48.862793           100.0                0.0                2.0                  2.0             3.425293  164217.014404             97.725586            342.529297  49.288086        0.000000       1.0
+4      -214955.522217      -215004.385010    -214955.522217   48912.081055      48.862793    -215004.385010             0.0                     0.0       48.862793           100.0                0.0                2.0                  2.0             3.425293  164268.151611             97.725586            342.529297  48.862793        0.000000       1.0
+5      -214906.659424      -214955.522217    -214906.659424   48911.655762      48.862793    -214955.522217             0.0                     0.0       48.862793           100.0                0.0                2.0                  2.0             3.425293  164318.863525             97.725586            342.529297  48.862793       -0.425293       1.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=871/2048, buf_size=200.[0m
+[01/09 17:04:52]  --------------------------------------------------------------------------------
+[01/09 17:04:52]  Iteration: 39 (0 solution, 38 counterexamples)
+[01/09 17:05:59]  Generator returned sat in 65.116210 secs.
+[01/09 17:05:59]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_qdel + -1min_buffer + 7 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_buffer_bytes + 2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 17:06:05]  Improved gap from 0.85009765625 to 48.4375
+[01/09 17:06:05]  Improved number of small numbers from 98 to 103 out of a max of 134
+[01/09 17:06:05]  Verifer returned sat in 5.727916 secs.
+[01/09 17:06:05]  sf_get_cex returned in 5.795982 secs.
+[01/09 17:06:05]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -157208.974756      -157208.974756    -157208.974756       0.424805       0.424805    -157208.974756             0.0                     0.0       40.255029           100.0                0.0                2.0                  0.0                  2.0  164062.751953                   0.0                 200.0   0.000000        0.000000       1.0
+1      -157168.719727      -157208.549805    -157168.719727   40255.029297      40.255029    -157208.549805             0.0                     0.0       40.255029           100.0                0.0                1.0                  0.0                  2.0  164113.889404                   0.0                 200.0  39.830078       -8.607520       0.0
+2      -157128.464697      -157160.112207    -157128.464697   40294.859375      40.255029    -157160.112207             0.0                     0.0       40.255029           100.0                0.0                1.0                  0.0                  2.0  164165.451904                   0.0                 200.0  31.647510      -16.789990       0.0
+3      -157088.209668      -157111.674707    -157088.209668   40286.676807      40.255029    -157111.674707             0.0                     0.0       40.255029           100.0                0.0                1.0                  0.0                  2.0  164217.014160                   0.0                 200.0  23.465039      -24.972705       0.0
+4      -157047.954639      -157057.837305    -157047.954639   40278.494336      40.255029    -157057.837305             0.0                     0.0       40.255029           100.0                0.0                1.0                  0.0                  2.0  164263.177002                   0.0                 200.0   9.882666      -38.554834       0.0
+5      -157007.699609      -157009.399658    -157007.699609   40264.911963      40.255029    -157009.399658             0.0                     0.0       40.255029           100.0                0.0                1.0                  0.0                  2.0  164314.739258                   0.0                 200.0   1.700049      -46.737549       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=40089/2048, buf_size=200.[0m
+[01/09 17:06:05]  --------------------------------------------------------------------------------
+[01/09 17:06:05]  Iteration: 40 (0 solution, 39 counterexamples)
+[01/09 17:11:59]  Generator returned sat in 351.404581 secs.
+[01/09 17:11:59]  Candidate solution: 
+[1m[94mif (+ 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_qdel + -1max_qdel + 1max_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1min_c + -1max_c + 3 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 17:12:07]  Improved gap from 17.76061776061776 to 48.4375
+[01/09 17:12:08]  Improved number of small numbers from 101 to 103 out of a max of 134
+[01/09 17:12:08]  Verifer returned sat in 9.146900 secs.
+[01/09 17:12:08]  sf_get_cex returned in 9.216832 secs.
+[01/09 17:12:08]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -157203.723784      -157203.723784    -157203.723784       0.424561       0.424561    -157203.723784             0.0                     0.0       24.314413           100.0                0.0                1.0                  0.0             3.063776  164057.118408                   0.0            306.377551   0.000000       -0.382573       0.0
+1      -157155.094958      -157203.341131    -157155.094958   48628.826531      48.628827    -157203.341131             0.0                     0.0       24.314413           100.0                0.0                1.0                  0.0             3.063776  164108.680828                   0.0            306.377551  48.246173       -0.191327       0.0
+2      -157106.466131      -157154.903631    -157106.466131   48677.072704      48.628827    -157154.903631             0.0                     0.0       24.314413           100.0                0.0                1.0                  0.0             3.063776  164160.243328                   0.0            306.377551  48.437500        0.000000       0.0
+3      -157057.837305      -157106.466131    -157057.837305   48677.264031      48.628827    -157106.466131             0.0                     0.0       32.291667           100.0                0.0                2.0                  0.0             3.063776  164211.614502                   0.0            306.377551  48.628827        0.000000       1.0
+4      -157032.854577      -157057.837305    -157032.854577   25031.356293      24.982727    -157057.837305             0.0                     0.0       36.375957           100.0                0.0                2.0                  0.0             3.063776  164263.177002                   0.0            306.377551  24.982727      -23.454773       1.0
+5      -157003.787560      -157003.787560    -157003.787560   29092.000159      29.067017    -157003.787560             0.0                     0.0       39.910714           100.0                0.0                1.0                  0.0             3.063776  164309.127197                   0.0            306.377551   0.000000      -48.437560       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=137525/18816, buf_size=200.[0m
+[01/09 17:12:08]  --------------------------------------------------------------------------------
+[01/09 17:12:08]  Iteration: 41 (0 solution, 40 counterexamples)
+[01/09 17:12:59]  Generator returned sat in 48.726942 secs.
+[01/09 17:12:59]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_qdel + -1max_qdel + -1min_buffer + 1max_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_buffer_bytes + 1max_buffer_bytes > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 2min_c)[0m
+[01/09 17:13:06]  Improved gap from 0.0 to 100
+[01/09 17:13:06]  Improved number of small numbers from 126 to 133 out of a max of 134
+[01/09 17:13:06]  Verifer returned sat in 7.454025 secs.
+[01/09 17:13:06]  sf_get_cex returned in 7.524969 secs.
+[01/09 17:13:07]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0      -304637.293457      -304738.566895    -304637.293457       0.424316       0.424561    -304738.566895        0.424561                0.000000        99.78772      196.815918                2.0                4.0                  2.0             4.212158  417130.247559            199.575439            829.019783  100.848877        0.848877       3.0
+1      -304437.718018      -304538.566895    -304437.718018  199676.712891     199.575439    -304538.566895        0.424561                0.424561       100.00000      196.815918                0.0                1.0                  2.0             1.000000  417130.247559            200.000000            196.815918  100.424316      100.424316       0.0
+2      -304237.718018      -304538.566895    -304237.718018  200100.848877     200.000000    -304538.566895        0.848877                0.424561       100.00000      196.815918                0.0                1.0                  2.0             1.000000  417130.247559            200.000000            196.815918  300.000000      200.000000       0.0
+3      -304037.718018      -304338.566895    -304037.718018  200300.848877     200.000000    -304338.566895      100.848877                0.848877       100.00000      196.815918                0.0                2.0                  2.0             1.000000  417130.247559            200.000000            196.815918  200.000000      200.000000       1.0
+4      -303837.718018      -304338.566895    -303837.718018  200300.848877     200.000000    -304338.566895      200.848877              100.848877       100.00000      196.815918                0.0                2.0                  2.0             1.000000  417130.247559            200.000000            196.815918  300.000000      200.000000       1.0
+5      -303637.718018      -304141.114258    -303637.718018  200500.848877     200.000000    -304141.114258      300.848877              200.848877       100.00000      196.815918                1.0                3.0                  2.0             1.000000  417130.247559            200.000000            196.815918  202.547363      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=3, loss_amount=615269/2048, alpha=20045/1024, buf_size=200.[0m
+[01/09 17:13:07]  --------------------------------------------------------------------------------
+[01/09 17:13:07]  Iteration: 42 (0 solution, 41 counterexamples)
+[01/09 17:14:00]  Generator returned sat in 50.870872 secs.
+[01/09 17:14:00]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1min_buffer + 1max_buffer + -2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_qdel + 1max_qdel + -1max_buffer + 1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ -1min_qdel + -1min_buffer + 1max_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 17:14:08]  Improved gap from 0.0 to 48.4375
+[01/09 17:14:08]  Improved number of small numbers from 134 to 134 out of a max of 134
+[01/09 17:14:08]  Verifer returned sat in 7.975562 secs.
+[01/09 17:14:08]  sf_get_cex returned in 8.048125 secs.
+[01/09 17:14:08]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0      -352761.086914      -352764.791016    -352761.086914       0.424316       0.424561    -352764.791016             0.0                     0.0       97.723633           100.0                1.0                3.0                  1.0                  3.0  417027.971191             97.723633                 300.0   3.704102        0.000000       2.0
+1      -352712.225098      -352761.086914    -352712.225098   48865.520508      48.861816    -352761.086914             0.0                     0.0       97.723633           100.0                0.0                2.0                  1.0                  3.0  417078.685059             97.723633                 300.0  48.861816       -0.424316       1.0
+2      -352663.363281      -352711.800781    -352663.363281   48910.678223      48.861816    -352711.800781             0.0                     0.0       97.723633           100.0                0.0                1.0                  1.0                  3.0  417130.247559             97.723633                 300.0  48.437500        0.000000       0.0
+3      -352614.501465      -352663.363281    -352614.501465   48910.253906      48.861816    -352663.363281             0.0                     0.0       97.723633           100.0                0.0                2.0                  1.0                  3.0  417181.385742             97.723633                 300.0  48.861816        0.000000       1.0
+4      -352565.639648      -352614.501465    -352565.639648   48910.678223      48.861816    -352614.501465             0.0                     0.0       97.723633           100.0                0.0                2.0                  1.0                  3.0  417232.523926             97.723633                 300.0  48.861816        0.000000       1.0
+5      -352516.777832      -352565.215332    -352516.777832   48910.678223      48.861816    -352565.215332             0.0                     0.0       97.723633           100.0                0.0                1.0                  1.0                  3.0  417283.237793             97.723633                 300.0  48.437500       -0.424316       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=40091/2048, buf_size=200.[0m
+[01/09 17:14:08]  --------------------------------------------------------------------------------
+[01/09 17:14:08]  Iteration: 43 (0 solution, 42 counterexamples)
+[01/09 17:15:10]  Generator returned sat in 59.910399 secs.
+[01/09 17:15:10]  Candidate solution: 
+[1m[94mif (+ 1min_qdel > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1max_qdel + 2 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_c + -1max_c + -1min_buffer_bytes + 1max_buffer_bytes + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 17:15:13]  Improved gap from 0.8486328125 to 100
+[01/09 17:15:14]  Improved number of small numbers from 133 to 133 out of a max of 134
+[01/09 17:15:14]  Verifer returned sat in 3.665641 secs.
+[01/09 17:15:14]  sf_get_cex returned in 3.726377 secs.
+[01/09 17:15:14]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       722771.940186       722471.728027     722771.940186       0.424316       0.424316     722471.728027        0.424316                0.000000       50.318237      102.727051                0.0                1.0                  0.0             2.424316  417181.385742                   0.0            249.042875  299.787842      199.787842       0.0
+1       722872.576660       722669.182129     722872.576660  100936.686768     100.636475     722669.182129        0.848633                0.424316       98.727051      102.727051                0.0                2.0                  0.0             2.000000  417181.385742                   0.0            205.454102  202.545898      200.000000       1.0
+2       722972.152344       722771.728027     722972.152344   99779.078125      99.575684     722771.728027        0.848633                0.848633      100.000000      102.727051                0.0                2.0                  0.0             2.000000  417181.385742                   0.0            205.454102  199.575684      199.575684       1.0
+3       723073.000977       722771.728027     723073.000977  101049.057129     100.848633     722771.728027        1.272949                0.848633      100.000000      102.727051                0.0                2.0                  0.0             2.000000  417181.385742                   0.0            205.454102  300.000000      200.000000       1.0
+4       723173.849609       722971.728027     723173.849609  101149.905762     100.848633     722971.728027        2.121582                1.272949      100.000000      102.727051                0.0                2.0                  0.0             2.000000  417181.385742                   0.0            205.454102  200.000000      200.000000       1.0
+5       723274.698242       722972.152344     723274.698242  101050.754395     100.848633     722972.152344        2.970215                2.121582      100.000000      102.727051                1.0                3.0                  1.0             2.000000  417181.385742                 100.0            205.454102  299.575684      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=4345/2048, alpha=869/1024, buf_size=200.[0m
+[01/09 17:15:14]  --------------------------------------------------------------------------------
+[01/09 17:15:14]  Iteration: 44 (0 solution, 43 counterexamples)
+[01/09 17:19:37]  Generator returned sat in 261.061560 secs.
+[01/09 17:19:37]  Candidate solution: 
+[1m[94mif (+ -1min_c + 1max_c + -1min_buffer_bytes + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ 1min_qdel + 1max_qdel + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + -1max_qdel + -1min_buffer + -1max_buffer + 10 > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)[0m
+[01/09 17:19:48]  Improved gap from 0.029556650246305417 to 100
+[01/09 17:19:49]  Improved number of small numbers from 115 to 117 out of a max of 134
+[01/09 17:19:49]  Verifer returned sat in 11.417395 secs.
+[01/09 17:19:49]  sf_get_cex returned in 11.499214 secs.
+[01/09 17:19:49]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       722770.790946       722542.576660     722770.790946       0.424072       0.424316     722542.576660        0.000000                0.000000       82.142857      202.142857                0.0                2.0                  0.0             3.357143  417181.385742              0.000000            678.622449  228.214286      197.857143       1.0
+1       722872.576660       722627.219517     722872.576660  102013.928571     101.785714     722627.219517        0.000000                0.000000       82.142857      202.142857                0.0                2.0                  0.0             3.357143  417181.385742              0.000000            678.622449  245.357143      199.642857       1.0
+2       722974.362374       722771.148089     722974.362374  102031.071429     101.785714     722771.148089        1.428571                0.000000       82.142857      202.142857                0.0                2.0                  0.0             3.357143  417181.385742              0.000000            678.622449  201.785714      200.000000       1.0
+3       723076.148089       722872.576660     723076.148089  101988.928571     101.785714     722872.576660        3.214286                1.428571       82.500000      202.142857                1.0                3.0                  1.0             3.000000  417181.385742             82.500000            606.428571  200.357143      200.000000       2.0
+4       723178.290946       722972.933803     723178.290946  102346.428571     102.142857     722972.933803        5.357143                3.214286       86.428571      201.785714                1.0                3.0                  1.0             3.000000  417181.385742             86.428571            605.357143  200.000000      200.000000       2.0
+5       723284.362374       722973.291016     723284.362374  106276.785714     106.071429     722973.291016       11.428571                5.357143       86.428571      100.714355                1.0                3.0                  1.0             3.000000  417181.385742             86.428571            302.143066  299.642787      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=80/7, alpha=275/14, buf_size=200.[0m
+[01/09 17:19:49]  --------------------------------------------------------------------------------
+[01/09 17:19:49]  Iteration: 45 (0 solution, 44 counterexamples)
+[01/09 17:21:04]  Generator returned sat in 72.412031 secs.
+[01/09 17:21:04]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + -1max_buffer + 5 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_qdel + -1min_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + 1max_qdel + -1max_buffer + -1 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 17:21:05]  Improved number of small numbers from 98 to 98 out of a max of 133
+[01/09 17:21:05]  Verifer returned sat in 1.473827 secs.
+[01/09 17:21:05]  sf_get_cex returned in 1.549711 secs.
+[01/09 17:21:05]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       722779.239764       722479.239764     722779.239764       0.424072       0.424316     722479.239764        0.000000                0.000000       80.848145      133.333333                2.0                4.0                  2.0             3.424072  417181.385742            161.696289            456.542969  300.000000           200.0       3.0
+1       722879.663836       722601.612252     722879.663836  100724.072266     100.424072     722601.612252        0.424072                0.000000       80.848145      133.333333                1.0                3.0                  2.0             3.424072  417181.385742            161.696289            456.542969  277.627511           200.0       2.0
+2       722980.087908       722696.019130     722980.087908  100702.123849     100.424072     722696.019130        0.848145                0.424072       80.848145      133.333333                1.0                3.0                  2.0             3.000000  417181.385742            161.696289            400.000000  283.220633           200.0       2.0
+3       723080.511980       722858.563564     723080.511980  100708.141044     100.424072     722858.563564        1.272217                0.848145       94.830950      133.333333                1.0                3.0                  2.0             3.000000  417181.385742            189.661900            400.000000  220.676200           200.0       2.0
+4       723194.918858       722979.239764     723194.918858  114628.826207     114.406878     722979.239764       15.679095                1.272217      100.000000      133.333333                1.0                3.0                  2.0             3.000000  417181.385742            200.000000            400.000000  200.000000           200.0       2.0
+5       723314.494786       723001.612252     723314.494786  119791.606829     119.575928     723001.612252       35.255022               15.679095      100.000000      130.593122                1.0                3.0                  2.0             3.000000  417181.385742            200.000000            391.779367  277.627511           200.0       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=5, 
+, large_loss_count=0, loss_amount=998673/28672, alpha=80183/4096, buf_size=200.[0m
+[01/09 17:21:05]  --------------------------------------------------------------------------------
+[01/09 17:21:05]  Iteration: 46 (0 solution, 45 counterexamples)
+[01/09 17:22:04]  Generator returned sat in 56.557074 secs.
+[01/09 17:22:04]  Candidate solution: 
+[1m[94mif (+ 1min_qdel + 1max_buffer + -4 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ 1min_qdel + 1max_qdel + 1min_buffer + 1max_buffer + -3 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + -1max_qdel + 1min_buffer + -1max_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)[0m
+[01/09 17:22:07]  Improved gap from 0.423828125 to 100
+[01/09 17:22:07]  Improved number of small numbers from 103 to 134 out of a max of 134
+[01/09 17:22:07]  Verifer returned sat in 2.681761 secs.
+[01/09 17:22:07]  sf_get_cex returned in 2.754052 secs.
+[01/09 17:22:07]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       718457.603271       718257.603271     718457.603271       0.423828       0.424072     718257.603271        0.423584                0.000000       99.576172      199.576172                0.0                1.0                  0.0                  2.0  421503.022217                   0.0            399.152344  199.576416      199.576416       0.0
+1       718558.450928       718257.603271     718558.450928  101047.656250     100.847656     718257.603271        0.847656                0.423584       99.576172      199.576172                0.0                1.0                  0.0                  1.0  421503.022217                   0.0            199.576172  300.000000      200.000000       0.0
+2       718658.027100       718457.603271     718658.027100   99877.019531      99.576172     718457.603271        0.847656                0.847656      100.000000      199.576172                0.0                2.0                  0.0                  1.0  421503.022217                   0.0            199.576172  199.576172      199.576172       1.0
+3       718759.298584       718457.603271     718759.298584  101471.908203     101.271484     718457.603271        1.695312                0.847656      100.000000      199.576172                0.0                2.0                  0.0                  1.0  421503.022217                   0.0            199.576172  300.000000      200.000000       1.0
+4       718860.570068       718657.603271     718860.570068  101573.179688     101.271484     718657.603271        2.966797                1.695312      100.000000      199.576172                0.0                2.0                  0.0                  1.0  421503.022217                   0.0            199.576172  200.000000      200.000000       1.0
+5       718961.841553       718657.603271     718961.841553  101474.451172     101.271484     718657.603271        4.238281                2.966797      100.000000      199.576172                0.0                2.0                  0.0                  1.0  421503.022217                   0.0            199.576172  300.000000      200.000000       1.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=217/64, alpha=651/512, buf_size=200.[0m
+[01/09 17:22:07]  --------------------------------------------------------------------------------
+[01/09 17:22:07]  Iteration: 47 (0 solution, 46 counterexamples)
+[01/09 17:22:28]  Generator returned sat in 17.935893 secs.
+[01/09 17:22:28]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + -1max_qdel + -1min_buffer + -1max_buffer + 6 > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_c + 1max_c + -1min_buffer_bytes + -2 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+elif (+ 1min_qdel + -1max_qdel + -1min_buffer + 3 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)[0m
+[01/09 17:22:31]  Improved gap from 0.0 to 100
+[01/09 17:22:32]  Improved number of small numbers from 126 to 126 out of a max of 134
+[01/09 17:22:32]  Verifer returned sat in 3.953005 secs.
+[01/09 17:22:32]  sf_get_cex returned in 4.023049 secs.
+[01/09 17:22:32]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t     queue_t  bottle_queue_t  qdelay_t
+0       718440.004964       718159.722412     718440.004964       0.423828       0.424072     718159.722412        0.000000                0.000000       98.445964      100.445964                0.0                1.0                  0.0                  4.0  421503.022217                   0.0            401.783854  280.282552      182.401693       0.0
+1       718558.027100       718259.863688     718558.027100  118302.417969     118.022135     718259.863688        0.423828                0.000000       98.445964      100.445964                0.0                2.0                  0.0                  4.0  421503.022217                   0.0            401.783854  297.739583      200.000000       1.0
+2       718656.473063       718457.603271     718656.473063   98744.126953      98.445964     718457.603271        0.423828                0.423828       99.293620      100.445964                0.0                2.0                  0.0                  2.0  421503.022217                   0.0            200.891927  198.445964      198.445964       1.0
+3       718775.342855       718457.603271     718775.342855  119068.661458     118.869792     718457.603271       17.739583                0.423828       99.293620      100.445964                0.0                2.0                  0.0                  2.0  421503.022217                   0.0            200.891927  300.000000      200.000000       1.0
+4       718894.212646       718657.603271     718894.212646  119187.531250     118.869792     718657.603271       36.609375               17.739583      100.000000      100.445964                0.0                2.0                  0.0                  2.0  421503.022217                   0.0            200.891927  200.000000      200.000000       1.0
+5       719013.788818       718658.027100     719013.788818  119812.781250     119.576172     718658.027100       56.185547               36.609375      100.000000      100.445964                1.0                3.0                  1.0                  2.0  421503.022217                 100.0            200.891927  299.576172      200.000000       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=4, 
+, large_loss_count=0, loss_amount=14275/256, alpha=10023/512, buf_size=200.[0m
+[01/09 17:22:32]  --------------------------------------------------------------------------------
+[01/09 17:22:32]  Iteration: 48 (0 solution, 47 counterexamples)
+[01/09 17:24:38]  Generator returned sat in 123.811946 secs.
+[01/09 17:24:38]  Candidate solution: 
+[1m[94mif (+ -1min_qdel + 1min_buffer > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_qdel + -1max_qdel + 1min_buffer + 1max_buffer > 0):
+    r_f[n][t] = max(alpha, 1min_c + 1alpha)
+elif (+ -1min_buffer_bytes + -5 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)[0m
+[01/09 17:25:09]  Improved gap from 14.875 to 48.4375
+[01/09 17:25:09]  Improved number of small numbers from 109 to 134 out of a max of 134
+[01/09 17:25:09]  Verifer returned sat in 30.871600 secs.
+[01/09 17:25:09]  sf_get_cex returned in 30.941912 secs.
+[01/09 17:25:09]  Counter example: 
+[93m   adv__tot_arrival_t  adv__tot_service_t  adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__max_qdel_0,t  adv__min_buffer_0,t  adv__max_buffer_0,t  adv__wasted_t  min_buffer_bytes_0,t  max_buffer_bytes_0,t    queue_t  bottle_queue_t  qdelay_t
+0       720309.352539       720307.657227     720309.352539       0.423584       0.423828     720307.657227             0.0                     0.0       32.856771           100.0                0.0                1.0                  0.0                  2.0  421503.022217                   0.0                 200.0   1.695312        1.695312       0.0
+1       720358.213867       720307.657227     720358.213867   48863.023438      48.861328     720307.657227             0.0                     0.0       32.856771           100.0                0.0                1.0                  0.0                  2.0  421551.617920                   0.0                 200.0  50.556641       -0.847656       0.0
+2       720407.075195       720359.061523     720407.075195   48911.884766      48.861328     720359.061523             0.0                     0.0       32.856771           100.0                0.0                1.0                  0.0                  2.0  421603.180420                   0.0                 200.0  48.013672       -0.423828       0.0
+3       720455.936523       720407.499023     720455.936523   48909.341797      48.861328     720407.499023             0.0                     0.0       33.280599           100.0                0.0                1.0                  0.0                  2.0  421654.742920                   0.0                 200.0  48.437500        0.000000       0.0
+4       720505.221680       720455.936523     720505.221680   49333.593750      49.285156     720455.936523             0.0                     0.0       37.069824           100.0                0.0                2.0                  0.0                  2.0  421705.457764                   0.0                 200.0  49.285156        0.000000       1.0
+5       720542.291504       720505.645508     720542.291504   37119.109375      37.069824     720505.645508             0.0                     0.0       39.597656           100.0                0.0                1.0                  0.0                  2.0  421705.457764                   0.0                 200.0  36.645996      -62.930176       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, alpha=24583/1536, buf_size=200.[0m
+[01/09 17:25:09]  --------------------------------------------------------------------------------
+[01/09 17:25:09]  Iteration: 49 (0 solution, 48 counterexamples)

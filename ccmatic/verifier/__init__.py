@@ -1452,6 +1452,10 @@ def get_cex_df(
         #     'non-wasted-tokens': _get_model_value(
         #         [v.C0 + c.C * t - v.W[t] for t in range(c.T)])})
     df = pd.DataFrame(cex_dict).astype(float)
+    if(c.beliefs and c.buf_min is not None):
+        for n in range(c.N):
+            df[f'min_buffer_bytes_{n},t'] = df[get_name_for_list(vn.min_buffer[n])] * df[get_name_for_list(vn.min_c[n])]
+            df[f'max_buffer_bytes_{n},t'] = df[get_name_for_list(vn.max_buffer[n])] * df[get_name_for_list(vn.max_c[n])]
     # Can remove this by adding queue_t as a definition variable...
     # This would also allow easily quiering this from generator
     queue_t = []
