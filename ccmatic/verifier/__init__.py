@@ -152,6 +152,8 @@ class DesiredContainer:
     fast_decrease: Optional[z3.BoolRef] = None
     fast_increase: Optional[z3.BoolRef] = None
 
+    beliefs_improve: Optional[z3.BoolRef] = None
+
     def rename_vars(self, var_list: List[z3.ExprRef], template: str):
         conds = {
             "fefficient": self.fefficient,
@@ -199,7 +201,9 @@ class DesiredContainer:
             "final_inside": self.final_inside,
 
             "fast_decrease": self.fast_decrease,
-            "fast_increase": self.fast_increase
+            "fast_increase": self.fast_increase,
+
+            "beliefs_improve": self.beliefs_improve
         }
 
         def get_val(cond):
@@ -461,13 +465,16 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
 
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
-    return z3.And(none_degrade, atleast_one_improves)
+    ret = z3.And(none_degrade, atleast_one_improves)
+    assert isinstance(ret, z3.BoolRef)
+    return ret
 
 
 def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
-    d = get_desired_in_ss(cc, c, v)
-    beliefs_improve = get_beliefs_improve(cc, c, v)
-    invariant = z3.Or(d.desired_in_ss, beliefs_improve)
+    # d = get_desired_in_ss(cc, c, v)
+    d = get_desired_necessary(cc, c, v)
+    d.beliefs_improve = get_beliefs_improve(cc, c, v)
+    invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
     assert isinstance(invariant, z3.BoolRef)
     d.desired_belief_invariant = invariant
 
@@ -1072,16 +1079,20 @@ def get_desired_necessary(
 
     # TODO: check if this is the right invariant for rate based CCAs.
     #  For window based CCAs, pacing is const, so this should be fine.
-    d.ramp_up_cwnd = z3.And(
-        total_final_cwnd > total_initial_cwnd,
-        total_final_rate > total_initial_rate)
-    if(cc.template_fi_reset):
-        ru, rd = ramp_up_when_cwnd_reset_fi(cc, c, v)
-        d.ramp_up_cwnd = ru
-        d.ramp_down_cwnd = rd
-    d.ramp_down_cwnd = z3.And(
-        total_final_cwnd < total_initial_cwnd,
-        total_final_rate < total_initial_rate)
+    if(cc.rate_or_window != 'rate'):
+        d.ramp_up_cwnd = z3.And(
+            total_final_cwnd > total_initial_cwnd,
+            total_final_rate > total_initial_rate)
+        if(cc.template_fi_reset):
+            ru, rd = ramp_up_when_cwnd_reset_fi(cc, c, v)
+            d.ramp_up_cwnd = ru
+            d.ramp_down_cwnd = rd
+        d.ramp_down_cwnd = z3.And(
+            total_final_cwnd < total_initial_cwnd,
+            total_final_rate < total_initial_rate)
+    else:
+        d.ramp_up_cwnd = z3.And(total_final_rate > total_initial_rate)
+        d.ramp_down_cwnd = z3.And(total_final_rate < total_initial_rate)
 
     d.ramp_down_queue = (v.A[-1] - v.L[-1] - v.S[-1] <
                          v.A[first] - v.L[first] - v.S[first])
@@ -1473,6 +1484,20 @@ def get_cex_df(
                     v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
                 )))
         df["bottle_queue_t"] = bottle_queue_t
+
+        upper_S = []
+        for t in range(c.T):
+            upper_S.append(
+                get_raw_value(counter_example.eval(
+                    (v.C0 + c.C * t - v.W[t])
+                )))
+            # if(t > c.D):
+            #     lower_S.append(
+            #         get_raw_value(counter_example.eval(
+            #             v.C0 + c.C * (t - c.D) - v.W[t - c.D]
+            #         ))
+            #     )
+        df["upper_S_t"] = upper_S
 
     if(c.calculate_qbound):
         qdelay = []

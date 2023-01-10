@@ -45,6 +45,9 @@ logger.info(args)
 # R = 1
 # D = 1
 # HISTORY = R
+USE_T_LAST_LOSS = False
+USE_MAX_QDEL = False
+USE_BUFFER_BYTES = True
 
 """
 if (cond):
@@ -60,20 +63,23 @@ n_cond = n_expr - 1
 expr_coeffs = [z3.Real(f"Gen__coeff_expr{i}") for i in range(n_expr)]
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
-cond_vars = ['min_c', 'max_c',
-             'min_qdel', 'max_qdel']
-if(not args.infinite_buffer):
-    cond_vars += ['min_buffer', 'max_buffer']
-    cond_vars += ['min_buffer_bytes', 'max_buffer_bytes']
-cv_to_cvi = {x: i for i, x in enumerate(cond_vars)}
 
-# Units of cond vars
-bytes_cvs = ['min_c', 'max_c', 'min_buffer_bytes', 'max_buffer_bytes']
-time_cvs = ['min_qdel', 'max_qdel', 'min_buffer', 'max_buffer']
-if(args.infinite_buffer):
-    time_cvs = ['min_qdel', 'max_qdel']
-if(args.infinite_buffer or 'max_buffer_bytes' not in cond_vars):
-    bytes_cvs = ['min_c', 'max_c']
+# Cond vars with units
+bytes_cvs = ['min_c', 'max_c']
+time_cvs = ['min_qdel']
+if(USE_MAX_QDEL):
+    time_cvs.append('max_qdel')
+if(USE_T_LAST_LOSS):
+    time_cvs.append('t_last_loss')
+
+if(not args.infinite_buffer):
+    time_cvs += ['min_buffer', 'max_buffer']
+if(not args.infinite_buffer and USE_BUFFER_BYTES):
+    bytes_cvs += ['min_buffer_bytes', 'max_buffer_bytes']
+
+cond_vars = bytes_cvs + time_cvs
+cv_to_cvi = {x: i for i, x in enumerate(cond_vars)}
+logger.info(f"Using cond_vars: {cond_vars}")
 
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
@@ -107,6 +113,8 @@ for cond_coeff in flatten(cond_coeffs):
     elif(any(x in cond_coeff.decl().name() for x in time_cvs)):
         domain_clauses.append(
             z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs_time]))
+    else:
+        assert False
 for cond_const in cond_consts:
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
@@ -274,9 +282,63 @@ known_solution_list.extend(
      for cvi in range(len(cond_vars))]
 )
 
-# known_solution = z3.And(*known_solution_list)
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+"""
+if(min_qdel > 0):
+    r = min_c - alpha
+else:
+    r = min_c + alpha
+"""
+known_solution_list = [
+    expr_coeffs[0] == 1,
+    expr_consts[0] == -1,
+    cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
+]
+for cv in cond_vars:
+    if(cv != 'min_qdel'):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1 for i in range(1, n_expr)] +
+    [expr_consts[i] == 1 for i in range(1, n_expr)] +
+    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+
+"""
+if(2 * min_c - max_c > 0):
+    r = min_c
+elif(min_qdel > 0):
+    r = 1/2 * min_c
+else:
+    r = 2 * min_c
+"""
+known_solution_list = [
+    expr_coeffs[0] == 1,
+    expr_coeffs[1] == 1/2,
+    cond_coeffs[0][cv_to_cvi['min_c']] == 2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == -1,
+    # cond_consts[0] == 10,
+    cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_qdel']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 2 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(n_expr)] +
+    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+
+known_solution = z3.And(*known_solution_list)
+search_constraints = z3.And(search_constraints, known_solution)
+assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -295,7 +357,7 @@ cc.T = 6
 cc.history = cc.R
 cc.cca = "none"
 
-# cc.use_belief_invariant = True
+cc.use_belief_invariant = True
 
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4

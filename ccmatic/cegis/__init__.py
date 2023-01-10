@@ -37,6 +37,9 @@ class CegisConfig:
     desired_fast_decrease: bool = False
     desired_fast_increase: bool = False
 
+    rate_or_window: str = 'default'
+    # choices: ['default', 'rate', 'window']
+
     ideal_link: bool = False
 
     # environment
