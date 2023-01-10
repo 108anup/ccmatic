@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument('--infinite-buffer', action='store_true', default=False)
     parser.add_argument('--finite-buffer', action='store_true', default=False)
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
+    parser.add_argument('-T', action='store', type=int, default=6)
     args = parser.parse_args()
     return args
 
@@ -57,7 +58,6 @@ elif (cond):
     rate = ...
 ...
 """
-
 
 n_expr = 3
 n_cond = n_expr - 1
@@ -393,7 +393,7 @@ cc.template_queue_bound = False
 cc.template_fi_reset = False
 cc.template_beliefs = True
 cc.N = 1
-cc.T = 9
+cc.T = args.T
 cc.history = cc.R
 cc.cca = "none"
 

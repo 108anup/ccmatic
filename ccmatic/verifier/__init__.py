@@ -1485,14 +1485,15 @@ def get_cex_df(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
 
-    utilized_t = [-1]
-    for t in range(1, c.T):
-        high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
-                                    for dt in range(c.D+1)]))
-        loss = v.Ld_f[0][t] - v.Ld_f[0][t-1] > 0
-        utilized_t.append(get_raw_value(
-            counter_example.eval(z3.Or(high_delay, loss))))
-    df["utilized_t"] = utilized_t
+    for n in range(c.N):
+        utilized_t = [-1]
+        for t in range(1, c.T):
+            high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
+                                        for dt in range(c.D+1)]))
+            loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+            utilized_t.append(get_raw_value(
+                counter_example.eval(z3.Or(high_delay, loss))))
+        df[f"utilized_{n},t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
         bottle_queue_t = []
