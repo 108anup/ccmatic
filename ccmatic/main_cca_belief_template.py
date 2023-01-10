@@ -28,6 +28,7 @@ def get_args():
 
     parser = argparse.ArgumentParser(description='Belief template')
 
+    parser.add_argument('--optimize', action='store', type=int, default=None)
     parser.add_argument('--infinite-buffer', action='store_true', default=False)
     parser.add_argument('--finite-buffer', action='store_true', default=False)
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
@@ -47,7 +48,7 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
-USE_BUFFER_BYTES = True
+USE_BUFFER_BYTES = False
 
 """
 if (cond):
@@ -58,7 +59,7 @@ elif (cond):
 """
 
 
-n_expr = 4
+n_expr = 3
 n_cond = n_expr - 1
 expr_coeffs = [z3.Real(f"Gen__coeff_expr{i}") for i in range(n_expr)]
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
@@ -281,6 +282,7 @@ known_solution_list.extend(
     [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
      for cvi in range(len(cond_vars))]
 )
+mimd = z3.And(*known_solution_list)
 
 """
 if(min_qdel > 0):
@@ -304,11 +306,12 @@ known_solution_list.extend(
     [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
      for cvi in range(len(cond_vars))]
 )
+aiad = z3.And(*known_solution_list)
 
 """
 if(2 * min_c - max_c > 0):
     r = min_c
-elif(min_qdel > 0):
+elif(min_qdel - 2 > 0):
     r = 1/2 * min_c
 else:
     r = 2 * min_c
@@ -318,7 +321,8 @@ known_solution_list = [
     expr_coeffs[1] == 1/2,
     cond_coeffs[0][cv_to_cvi['min_c']] == 2,
     cond_coeffs[0][cv_to_cvi['max_c']] == -1,
-    # cond_consts[0] == 10,
+    cond_consts[0] == 0,
+    cond_consts[1] == -2,
     cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
 ]
 for cv in cond_vars:
@@ -331,14 +335,50 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs[i] == 2 for i in range(2, n_expr)] +
     [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
      for cvi in range(len(cond_vars))]
 )
+blast_then_minc = z3.And(*known_solution_list)
 
-known_solution = z3.And(*known_solution_list)
-search_constraints = z3.And(search_constraints, known_solution)
-assert isinstance(search_constraints, z3.BoolRef)
+"""
+if(-2 * min_c + max_c > 0):
+    r = 2 * min_c
+elif(min_qdel - 2 > 0):
+    r = 1/2 * min_c
+else:
+    r = min_c
+"""
+known_solution_list = [
+    expr_coeffs[0] == 2,
+    expr_coeffs[1] == 1/2,
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts[0] == 0,
+    cond_consts[1] == -2,
+    cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_qdel']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(n_expr)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+blast_then_minc_qdel = z3.And(*known_solution_list)
+
+solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel]
+
+# known_solution = z3.And(*known_solution_list)
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -353,7 +393,7 @@ cc.template_queue_bound = False
 cc.template_fi_reset = False
 cc.template_beliefs = True
 cc.N = 1
-cc.T = 6
+cc.T = 9
 cc.history = cc.R
 cc.cca = "none"
 
@@ -387,4 +427,62 @@ link.setup_cegis_loop(
     template_definitions, generator_vars, get_solution_str)
 link.critical_generator_vars = critical_generator_vars
 
-link.run_cegis()
+if(args.optimize is None):
+    link.run_cegis()
+
+else:
+    solution = solutions[args.optimize]
+
+    cc.reset_desired_z3(link.v.pre)
+    metric_util = [
+        Metric(cc.desired_util_f, 0.5, 1, 0.001, True)
+    ]
+    metric_queue = [
+        Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+        Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+    ]
+    metric_loss = [
+        Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
+        Metric(cc.desired_large_loss_count_bound, 0, 3, 0.001, False),
+        Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
+        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
+    ]
+    list_metric_lists = [metric_util, metric_queue, metric_loss]
+
+    _, desired = link.get_desired()
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(z3.Not(desired))
+    verifier.add(solution)
+
+    verifier.push()
+    fix_metrics(verifier, flatten(list_metric_lists))
+    sat = verifier.check()
+
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        logger.error("Objective violted. Cex:\n" +
+                     link.get_counter_example_str(model, link.verifier_vars))
+        logger.critical("Note, the desired string in above output is based "
+                        "on cegis metrics instead of optimization metrics.")
+        import ipdb; ipdb.set_trace()
+    else:
+        logger.info(f"Solver gives {str(sat)} with loosest bounds.")
+        verifier.pop()
+        for metric_list in list_metric_lists:
+            verifier.push()
+            other_metrics = list_metric_lists.copy()
+            other_metrics.remove(metric_list)
+            fix_metrics(verifier, flatten(other_metrics))
+            ret = optimize_multi_var(verifier, metric_list)
+            verifier.pop()
+            try:
+                df = pd.DataFrame(ret)
+                sort_columns = [x.name() for x in metric_list]
+                sort_order = [x.maximize for x in metric_list]
+                df = df.sort_values(by=sort_columns, ascending=sort_order)
+                print(df)
+            except:
+                pass

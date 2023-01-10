@@ -313,6 +313,8 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     assert(c.beliefs)
+    # Note beleifs are updated after packets have been recvd at time t.
+    # At time t, the CCA can only look at beliefs for time t-1.
 
     # Qdel
     for n in range(c.N):
@@ -343,7 +345,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # TODO: is this the best way to handle the case when qdel > et?
                 s.add(z3.Implies(
                     z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
-                    v.min_buffer[n][et] == z3_min(
+                    v.min_buffer[n][et] == z3_max(
                         c.T-c.D,
                         v.min_buffer[n][et-1])))
 
@@ -383,8 +385,14 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
                 # Encodes that utilization must have been high if loss happened
                 # or if queing delay was more than D
-                high_delay = z3.Or(*[v.qdel[st+1][dt]
-                                     for dt in range(c.D+1, c.T)])
+
+                # All of qdel might be False. So to check high delay we just
+                # check Not of low delay.
+                high_delay = z3.Not(z3.Or(*[v.qdel[st+1][dt]
+                                            for dt in range(c.D+1)]))
+                # Wrong:
+                # high_delay = z3.Or(*[v.qdel[st+1][dt]
+                #                      for dt in range(c.D+1, c.T)])
                 loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
                 this_utilized = z3.Or(loss, high_delay)
                 if(st + 1 == et):
@@ -447,7 +455,7 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] < v.max_c[n][first],
             v.min_c[n][c.T-1] > v.min_c[n][first],
         ])
-        if(c.buf_min):
+        if(c.buf_min is not None):
             atleast_one_improves_list.extend([
                 v.max_buffer[n][c.T-1] < v.max_buffer[n][first],
                 v.min_buffer[n][c.T-1] > v.min_buffer[n][first]
@@ -457,7 +465,7 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] <= v.max_c[n][first],
             v.min_c[n][c.T-1] >= v.min_c[n][first],
         ])
-        if(c.buf_min):
+        if(c.buf_min is not None):
             none_degrade_list.extend([
                 v.max_buffer[n][c.T-1] <= v.max_buffer[n][first],
                 v.min_buffer[n][c.T-1] >= v.min_buffer[n][first]
@@ -705,7 +713,8 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
             ))
 
     # Queueing delay cannot be more than buffer/C + D.
-    if(c.buf_min is not None):
+    # TODO: Can just put dt > max_delay implies not qdel t dt
+    if(c.buf_min is not None and not isinstance(c.buf_min, z3.ExprRef)):
         max_delay_float = c.buf_min/c.C + c.D
         max_delay_ceil = math.ceil(max_delay_float)
         lowest_unallowed_delay = max_delay_ceil
@@ -1475,6 +1484,15 @@ def get_cex_df(
             get_raw_value(counter_example.eval(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
+
+    utilized_t = [-1]
+    for t in range(1, c.T):
+        high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
+                                    for dt in range(c.D+1)]))
+        loss = v.Ld_f[0][t] - v.Ld_f[0][t-1] > 0
+        utilized_t.append(get_raw_value(
+            counter_example.eval(z3.Or(high_delay, loss))))
+    df["utilized_t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
         bottle_queue_t = []
