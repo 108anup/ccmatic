@@ -713,19 +713,29 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
             ))
 
     # Queueing delay cannot be more than buffer/C + D.
-    # TODO: Can just put dt > max_delay implies not qdel t dt
-    if(c.buf_min is not None and not isinstance(c.buf_min, z3.ExprRef)):
-        max_delay_float = c.buf_min/c.C + c.D
-        max_delay_ceil = math.ceil(max_delay_float)
-        lowest_unallowed_delay = max_delay_ceil
-        if(max_delay_float == max_delay_ceil):
-            lowest_unallowed_delay = max_delay_ceil + 1
+    # # TODO: Can just put dt > max_delay implies not qdel t dt
+    # if(c.buf_min is not None and not isinstance(c.buf_min, z3.ExprRef)):
+    #     max_delay_float = c.buf_min/c.C + c.D
+    #     max_delay_ceil = math.ceil(max_delay_float)
+    #     lowest_unallowed_delay = max_delay_ceil
+    #     if(max_delay_float == max_delay_ceil):
+    #         lowest_unallowed_delay = max_delay_ceil + 1
+    #     for t in range(c.T):
+    #         for dt in range(lowest_unallowed_delay, c.T):
+    #             s.add(z3.Not(v.qdel[t][dt]))
+    #         s.add(1 == z3.Sum(
+    #             *[v.qdel[t][dt]
+    #               for dt in range(min(c.T, lowest_unallowed_delay))]))
+
+    # Delay cannot be more than max_delay. This means that one of
+    # qdel[t][dt<=max_delay] must be true. This also means that all of
+    # qdel[t][dt>max_delay] are false.
+    if(c.buf_min is not None):
+        max_delay = c.buf_min/c.C + c.D
         for t in range(c.T):
-            for dt in range(lowest_unallowed_delay, c.T):
-                s.add(z3.Not(v.qdel[t][dt]))
             s.add(1 == z3.Sum(
-                *[v.qdel[t][dt]
-                  for dt in range(min(c.T, lowest_unallowed_delay))]))
+                *[z3.If(dt <= max_delay, v.qdel[t][dt], False)
+                  for dt in range(c.T)]))
 
 
 def fifo_service(c: ModelConfig, s: MySolver, v: Variables):

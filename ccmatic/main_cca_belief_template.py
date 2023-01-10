@@ -418,7 +418,7 @@ cc.ideal_link = False
 cc.feasible_response = False
 
 link = CCmatic(cc)
-link.setup_config_vars()
+try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
 
