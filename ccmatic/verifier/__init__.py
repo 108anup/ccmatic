@@ -446,7 +446,15 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert(c.beliefs)
 
-    first = cc.history
+    # Since initial beliefs are non adversarial. We can afford to just compare
+    # against the verifier chosen beliefs.
+
+    # Correctness wise, verifier could just
+    # check for init conditions at t = first, so we are not losing traces. The
+    # only benefit is that if no improvement happens after t = first, then we
+    # must deliver on objective or improve within T. Checking from t = 0 allows
+    # us to improve within T + first (basically allowing us to keep a smaller T).
+    first = 0  # cc.history
     none_degrade_list = []
     atleast_one_improves_list = []
 
