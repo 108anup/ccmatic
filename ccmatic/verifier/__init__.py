@@ -379,7 +379,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             """
             overall_lower = v.min_c[n][et-1]
             overall_upper = v.max_c[n][et-1]
-            utilized = [None for _ in range(et)]
+            utilized_t = [None for _ in range(et)]
+            utilized_cummulative = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
                 window = et - st
                 measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
@@ -404,19 +405,33 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 #                      for dt in range(c.D+1, c.T)])
                 loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
                 this_utilized = z3.Or(loss, high_delay)
+                utilized_t[st] = this_utilized
                 if(st + 1 == et):
-                    utilized[st] = this_utilized
+                    utilized_cummulative[st] = this_utilized
                 else:
-                    assert utilized[st+1] is not None
-                    utilized[st] = z3.And(utilized[st+1], this_utilized)
+                    assert utilized_cummulative[st+1] is not None
+                    utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
 
                 if(window - 1 > 0):
-                    this_upper = z3.If(utilized[st], measured_c * window / (window - 1), v.max_c[n][et-1])
+                    this_upper = z3.If(utilized_cummulative[st], measured_c * window / (window - 1), v.max_c[n][et-1])
                     assert isinstance(this_upper, z3.ArithRef)
                     overall_upper = z3_min(overall_upper, this_upper)
 
+            TIME_BETWEEN_PROBES = 5
+            max_c_next = overall_upper
+            if(et-TIME_BETWEEN_PROBES >= 0):
+                t_start = et-TIME_BETWEEN_PROBES
+                # max_c_updated_recently = z3.Or(*[v.max_c[n][t+1] < v.max_c[n][t]
+                #                                  for t in range(t_start, et-1)])
+                utilized_recently = z3.Or(*[utilized_t[st]
+                                            for st in range(t_start, et)])
+                # import ipdb; ipdb.set_trace()
+                # overall_upper >= v.max_c[n][et-1]),
+                max_c_next = z3.If(z3.Not(utilized_recently),
+                                   2 * v.max_c[n][et-1], overall_upper)
+
             s.add(v.min_c[n][et] == overall_lower)
-            s.add(v.max_c[n][et] == overall_upper)
+            s.add(v.max_c[n][et] == max_c_next)
 
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
@@ -426,9 +441,9 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #  network changed.
     for n in range(c.N):
         s.add(v.min_c[n][0] >= 0)
-        s.add(v.min_c[n][0] <= v.max_c[n][0])
-        s.add(v.min_c[n][0] <= c.C)
-        s.add(v.max_c[n][0] >= c.C)
+        s.add(v.min_c[n][0] < v.max_c[n][0])
+        # s.add(v.min_c[n][0] <= c.C)
+        # s.add(v.max_c[n][0] >= c.C)
 
     if(c.buf_min is not None):
         for n in range(c.N):
@@ -450,6 +465,47 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #         assert c.buf_min == c.buf_max
     #         s.add(v.min_qdel[n][0] <= c.buf_min / c.C)
     #         s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
+
+
+def get_beliefs_reset(cc: CegisConfig, c: ModelConfig, v: Variables):
+    assert(c.beliefs)
+
+    # TODO: currently only doing this for link rate. Synthesized CCAs don't seem
+    #  to be using buffer anyway.
+
+    first = cc.history
+    first = 0
+
+    WRONGNESS_FACTOR = 10
+    beliefs_bad_list: List[z3.BoolRef] = []
+    for n in range(c.N):
+        beliefs_bad_list.append(
+            v.min_c[n][0] > WRONGNESS_FACTOR * c.C)
+        beliefs_bad_list.append(
+            v.max_c[n][0] < c.C / WRONGNESS_FACTOR)
+    beliefs_bad = z3.Or(*beliefs_bad_list)
+
+    # TODO: Will eventually reset actually ever cause reset?
+    beliefs_eventually_reset_list: List[z3.BoolRef] = []
+    for n in range(c.N):
+        # beliefs_eventually_reset_list.append(
+        #     v.max_c[n][-1] < v.min_c[n][-1])
+        beliefs_eventually_reset_list.append(
+            z3.And(
+                z3.Implies(v.min_c[n][0] > WRONGNESS_FACTOR * c.C,
+                           v.max_c[n][-1] < v.max_c[n][0]),
+                z3.Implies(v.max_c[n][0] < c.C / WRONGNESS_FACTOR,
+                           z3.Or(v.min_c[n][-1] > v.min_c[n][0],
+                                 v.max_c[n][-1] > v.max_c[n][0])
+                           )
+            ))
+        # beliefs_eventually_reset_list.append(
+        #     v.max_c[n][-1] - v.min_c[n][-1] < v.max_c[n][0] - v.min_c[n][0]
+        # )
+    # TODO: should this be AND or OR? Should all flows reset or any one?
+    beliefs_reset = z3.And(*beliefs_eventually_reset_list)
+
+    return beliefs_bad, beliefs_reset
 
 
 def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
@@ -491,6 +547,7 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
     ret = z3.And(none_degrade, atleast_one_improves)
+    ret = atleast_one_improves
     assert isinstance(ret, z3.BoolRef)
     return ret
 
@@ -501,7 +558,9 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     d.beliefs_improve = get_beliefs_improve(cc, c, v)
     invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
     assert isinstance(invariant, z3.BoolRef)
-    d.desired_belief_invariant = invariant
+
+    beliefs_bad, beliefs_reset = get_beliefs_reset(cc, c, v)
+    d.desired_belief_invariant = z3.If(beliefs_bad, beliefs_reset, invariant)
 
     return d
 
