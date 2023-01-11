@@ -35,6 +35,7 @@ def get_args():
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
     parser.add_argument('-T', action='store', type=int, default=6)
     parser.add_argument('--ideal', action='store_true', default=False)
+    parser.add_argument('--app-limited', action='store_true', default=False)
     args = parser.parse_args()
     return args
 
@@ -51,6 +52,7 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
+USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 
@@ -70,13 +72,14 @@ expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
 # Cond vars with units
 bytes_cvs = ['min_c', 'max_c']
+bytes_cvs.extend(['A_f', 'app_limits'])
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
 if(USE_T_LAST_LOSS):
     time_cvs.append('t_last_loss')
 
-if(not args.infinite_buffer):
+if(not args.infinite_buffer and USE_BUFFER):
     time_cvs += ['min_buffer', 'max_buffer']
 if(not args.infinite_buffer and USE_BUFFER_BYTES):
     bytes_cvs += ['min_buffer_bytes', 'max_buffer_bytes']
@@ -165,6 +168,8 @@ def get_template_definitions(
                 for cvi, cond_var_str in enumerate(cond_vars):
                     if(cond_var_str.endswith('_c')):
                         cond_var = v.__getattribute__(cond_var_str)[n][t-1] * c.R
+                    elif(cond_var_str == 'app_limits'):
+                        cond_var = v.app_limits[n][t]
                     elif(cond_var_str.endswith('_buffer_bytes')):
                         if(cond_var_str == 'min_buffer_bytes'):
                             cond_var = v.min_buffer[n][t-1] * v.min_c[n][t-1]
@@ -416,43 +421,45 @@ known_solution_list.extend(
 )
 blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
 
-"""
-[01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
-    r_f[n][t] = max(alpha, 2min_c)
-elif (+ -1min_qdel + -1min_buffer + 9 > 0):
-    r_f[n][t] = max(alpha, 1min_c)
-else:
-    r_f[n][t] = max(alpha, 1/2min_c)
-"""
-known_solution_list = [
-    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
-    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts[0] == 0,
-    expr_coeffs[0] == 2,
+# """
+# [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
+#     r_f[n][t] = max(alpha, 2min_c)
+# elif (+ -1min_qdel + -1min_buffer + 9 > 0):
+#     r_f[n][t] = max(alpha, 1min_c)
+# else:
+#     r_f[n][t] = max(alpha, 1/2min_c)
+# """
+# known_solution_list = [
+#     cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+#     cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+#     cond_consts[0] == 0,
+#     expr_coeffs[0] == 2,
 
-    cond_consts[1] == 9,
-    cond_coeffs[1][cv_to_cvi['min_qdel']] == -1,
-    cond_coeffs[1][cv_to_cvi['min_buffer']] == -1,
-    expr_coeffs[1] == 1,
-]
-for cv in cond_vars:
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-    if(cv not in ['min_qdel', 'min_buffer']):
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs[i] == 1/2 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
-synth_min_buffer = z3.And(*known_solution_list)
+#     cond_consts[1] == 9,
+#     cond_coeffs[1][cv_to_cvi['min_qdel']] == -1,
+#     cond_coeffs[1][cv_to_cvi['min_buffer']] == -1,
+#     expr_coeffs[1] == 1,
+# ]
+# for cv in cond_vars:
+#     if(cv not in ['min_c', 'max_c']):
+#         known_solution_list.append(
+#             cond_coeffs[0][cv_to_cvi[cv]] == 0)
+#     if(cv not in ['min_qdel', 'min_buffer']):
+#         known_solution_list.append(
+#             cond_coeffs[1][cv_to_cvi[cv]] == 0)
+# known_solution_list.extend(
+#     [expr_coeffs[i] == 1/2 for i in range(2, n_expr)] +
+#     [expr_consts[i] == 0 for i in range(n_expr)] +
+#     [cond_consts[i] == 0 for i in range(2, n_cond)] +
+#     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+#      for cvi in range(len(cond_vars))]
+# )
+# synth_min_buffer = z3.And(*known_solution_list)
 
 solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
-             blast_then_medblast_then_minc_negalpha, synth_min_buffer]
+             blast_then_medblast_then_minc_negalpha,
+             # synth_min_buffer
+             ]
 
 # known_solution = z3.And(*known_solution_list)
 # search_constraints = z3.And(search_constraints, known_solution)
@@ -465,6 +472,7 @@ cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
+cc.app_limited = args.app_limited
 cc.buffer_size_multiplier = 1
 cc.template_qdel = True
 cc.template_queue_bound = False
@@ -558,7 +566,7 @@ else:
         Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
         Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
     ]
-    list_metric_lists = [metric_util, metric_queue, metric_loss]
+    list_metric_lists = [metric_util, metric_queue]
 
     _, desired = link.get_desired()
     verifier = MySolver()
@@ -568,10 +576,13 @@ else:
     verifier.add(z3.Not(desired))
     verifier.add(solution)
 
+    # For belief based CCAs, skip optimizing loss.
+    fix_metrics(verifier, flatten(metric_loss))
+
     verifier.push()
     fix_metrics(verifier, flatten(list_metric_lists))
-    sat = verifier.check()
 
+    sat = verifier.check()
     if(str(sat) == "sat"):
         model = verifier.model()
         logger.error("Objective violted. Cex:\n" +

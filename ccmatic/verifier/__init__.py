@@ -311,6 +311,15 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
         s.add(z3.Implies(z3.Not(feasible_choice), v.S[t] == S_lower))
 
 
+def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
+    assert c.app_limited
+
+    for n in range(c.N):
+        s.add(v.A_f[n][0] <= v.app_limits[n][0])
+        for t in range(1, c.T):
+            s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
+
+
 def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     assert(c.beliefs)
     # Note beleifs are updated after packets have been recvd at time t.
@@ -858,6 +867,9 @@ def get_cegis_vars(
             verifier_vars.extend(flatten(
                 [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
 
+    if(c.app_limited):
+        verifier_vars.extend(flatten(v.app_limits))
+
     return verifier_vars, definition_vars
 
 
@@ -929,6 +941,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
     c.beliefs = cc.template_beliefs
+    c.app_limited = cc.app_limited
 
     return c
 
@@ -1008,6 +1021,9 @@ def setup_ccac_environment(c, v):
 
     if(c.beliefs):
         initial_beliefs(c, s, v)
+    if(c.app_limited):
+        app_limits_env(c, s, v)
+
     return s
 
 
@@ -1171,7 +1187,14 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
 
     assert first >= 1
     d.fefficient = (
-        v.S[-1] - v.S[first-1] >= cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
+        v.S[-1] - v.S[first-1] >=
+        cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
+
+    if(c.app_limited):
+        all_app_limited = z3.And(*[
+            v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
+            for n in range(c.N)])
+        d.fefficient = z3.Or(d.fefficient, all_app_limited)
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
@@ -1479,7 +1502,8 @@ def get_cex_df(
                 get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
                 get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
-                get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])})
+                # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
+                })
         if(c.buf_min is not None):
             for n in range(c.N):
                 cex_dict.update({
@@ -1491,11 +1515,22 @@ def get_cex_df(
         # cex_dict.update({
         #     'non-wasted-tokens': _get_model_value(
         #         [v.C0 + c.C * t - v.W[t] for t in range(c.T)])})
-    df = pd.DataFrame(cex_dict).astype(float)
-    if(c.beliefs and c.buf_min is not None):
+    if(c.app_limited):
         for n in range(c.N):
-            df[f'min_buffer_bytes_{n},t'] = df[get_name_for_list(vn.min_buffer[n])] * df[get_name_for_list(vn.min_c[n])]
-            df[f'max_buffer_bytes_{n},t'] = df[get_name_for_list(vn.max_buffer[n])] * df[get_name_for_list(vn.max_c[n])]
+            cex_dict.update({
+                get_name_for_list(vn.app_limits[n]): _get_model_value(v.app_limits[n])
+            })
+
+    # ----------------------------------------------------------------
+    # BUILD DF
+    # ----------------------------------------------------------------
+    df = pd.DataFrame(cex_dict).astype(float)
+
+    # if(c.beliefs and c.buf_min is not None):
+    #     for n in range(c.N):
+    #         df[f'min_buffer_bytes_{n},t'] = df[get_name_for_list(vn.min_buffer[n])] * df[get_name_for_list(vn.min_c[n])]
+    #         df[f'max_buffer_bytes_{n},t'] = df[get_name_for_list(vn.max_buffer[n])] * df[get_name_for_list(vn.max_c[n])]
+
     # Can remove this by adding queue_t as a definition variable...
     # This would also allow easily quiering this from generator
     queue_t = []
