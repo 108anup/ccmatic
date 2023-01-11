@@ -72,7 +72,8 @@ expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 
 # Cond vars with units
 bytes_cvs = ['min_c', 'max_c']
-bytes_cvs.extend(['A_f', 'app_limits'])
+if(args.app_limited):
+    bytes_cvs.extend(['A_f', 'app_limits'])
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
