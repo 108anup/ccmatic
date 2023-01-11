@@ -741,9 +741,11 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
     if(c.buf_min is not None):
         max_delay = c.buf_min/c.C + c.D
         for t in range(c.T):
-            s.add(1 == z3.Sum(
+            some_qdel_is_true = (1 == z3.Sum(
                 *[z3.If(dt <= max_delay, v.qdel[t][dt], False)
                   for dt in range(c.T)]))
+            # if max_delay is very high, then all qdel can be false.
+            s.add(z3.Implies(max_delay < c.T, some_qdel_is_true))
 
 
 def fifo_service(c: ModelConfig, s: MySolver, v: Variables):

@@ -379,41 +379,6 @@ known_solution_list.extend(
 blast_then_minc_qdel = z3.And(*known_solution_list)
 
 """
-[01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
-    r_f[n][t] = max(alpha, 2min_c)
-elif (+ -1min_qdel + -1min_buffer + 9 > 0):
-    r_f[n][t] = max(alpha, 1min_c)
-else:
-    r_f[n][t] = max(alpha, 1/2min_c)
-"""
-known_solution_list = [
-    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
-    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts[0] == 0,
-    expr_coeffs[0] == 2,
-
-    cond_consts[1] == 9,
-    cond_coeffs[1][cv_to_cvi['min_qdel']] == -1,
-    cond_coeffs[1][cv_to_cvi['min_buffer']] == -1,
-    expr_coeffs[1] == 1,
-]
-for cv in cond_vars:
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-    if(cv not in ['min_qdel', 'min_buffer']):
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs[i] == 1/2 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
-synth_min_buffer = z3.And(*known_solution_list)
-
-"""
 [01/11 02:56:44]  40: if (+ -1min_c + 1/2max_c > 0):
     r_f[n][t] = max(alpha, 2min_c)
 elif (+ 1/2min_c + -1/2max_c + 10 > 0):
@@ -449,6 +414,40 @@ known_solution_list.extend(
 )
 blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
 
+"""
+[01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_qdel + -1min_buffer + 9 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts[0] == 0,
+    expr_coeffs[0] == 2,
+
+    cond_consts[1] == 9,
+    cond_coeffs[1][cv_to_cvi['min_qdel']] == -1,
+    cond_coeffs[1][cv_to_cvi['min_buffer']] == -1,
+    expr_coeffs[1] == 1,
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_qdel', 'min_buffer']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1/2 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(n_expr)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+synth_min_buffer = z3.And(*known_solution_list)
 
 solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              blast_then_medblast_then_minc_negalpha, synth_min_buffer]
