@@ -46,6 +46,7 @@ class CegisConfig:
     infinite_buffer: bool = False
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
     dynamic_buffer: bool = False
+    app_limited: bool = False
 
     deterministic_loss: bool = True
     N: int = 1

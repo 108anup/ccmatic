@@ -857,6 +857,7 @@ template_definitions_ideal = get_template_definitions(cc_ideal, c, v)
 ideal.setup_cegis_loop(
     search_constraints,
     template_definitions_ideal, generator_vars, get_solution_str)
+ideal.critical_generator_vars = critical_generator_vars
 ideal.get_counter_example_str = get_cex_function(ideal)
 
 # ----------------------------------------------------------------
@@ -883,6 +884,7 @@ template_definitions_adv = get_template_definitions(cc_adv, c, v)
 adv.setup_cegis_loop(
     search_constraints,
     template_definitions_adv, generator_vars, get_solution_str)
+adv.critical_generator_vars = critical_generator_vars
 adv.get_counter_example_str = get_cex_function(adv)
 
 logger.info("Ideal: " + cc_ideal.desire_tag())

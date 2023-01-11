@@ -34,6 +34,7 @@ def get_args():
     parser.add_argument('--finite-buffer', action='store_true', default=False)
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
     parser.add_argument('-T', action='store', type=int, default=6)
+    parser.add_argument('--ideal', action='store_true', default=False)
     args = parser.parse_args()
     return args
 
@@ -51,6 +52,7 @@ logger.info(args)
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
 USE_BUFFER_BYTES = False
+ADD_IDEAL_LINK = args.ideal
 
 """
 if (cond):
@@ -502,9 +504,42 @@ link.setup_cegis_loop(
     search_constraints,
     template_definitions, generator_vars, get_solution_str)
 link.critical_generator_vars = critical_generator_vars
+logger.info("Adver: " + cc.desire_tag())
+
+cc_ideal = None
+ideal_link = None
+if(ADD_IDEAL_LINK):
+    cc_ideal = copy.copy(cc)
+    cc_ideal.name = "ideal"
+
+    cc_ideal.ideal_link = True
+
+    ideal_link = CCmatic(cc_ideal)
+    try_except(ideal_link.setup_config_vars)
+
+    c, _, v = ideal_link.c, ideal_link.s, ideal_link.v
+    template_definitions = get_template_definitions(cc_ideal, c, v)
+
+    ideal_link.setup_cegis_loop(
+        search_constraints,
+        template_definitions, generator_vars, get_solution_str)
+    ideal_link.critical_generator_vars = critical_generator_vars
+    logger.info("Ideal: " + cc_ideal.desire_tag())
 
 if(args.optimize is None):
-    link.run_cegis()
+    if(ADD_IDEAL_LINK):
+        assert isinstance(ideal_link, CCmatic)
+        links = [ideal_link, link]
+        verifier_structs = [x.get_verifier_struct() for x in links]
+
+        multicegis = MultiCegis(
+            generator_vars, search_constraints, critical_generator_vars,
+            verifier_structs, link.ctx, None, None)
+        multicegis.get_solution_str = get_solution_str
+
+        try_except(multicegis.run)
+    else:
+        link.run_cegis()
 
 else:
     solution = solutions[args.optimize]
