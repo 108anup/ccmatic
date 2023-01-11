@@ -10,9 +10,9 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
 from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate_qbound_env,
                               calculate_qdel_defs, calculate_qdel_env, check_config,
-                              exceed_queue_defs, fifo_service, get_desired_in_ss,
+                              exceed_queue_defs, fifo_service, get_desired_in_ss, initial_beliefs,
                               last_decrease_defs, monotone_defs, monotone_env,
-                              setup_ccac_for_cegis)
+                              setup_ccac_for_cegis, update_beliefs)
 from pyz3_utils.my_solver import MySolver
 
 
@@ -126,6 +126,18 @@ class IdealLink:
             definition_vars.extend(flatten(v.mode_f[:, 1:]))
             verifier_vars.extend(flatten(v.mode_f[:, :1]))
 
+        if(c.beliefs):
+            definition_vars.extend(flatten(
+                [v.min_c[:, 1:], v.max_c[:, 1:],
+                 v.min_qdel, v.max_qdel]))
+            verifier_vars.extend(flatten(
+                [v.min_c[:, :1], v.max_c[:, :1]]))
+            if(c.buf_min is not None):
+                definition_vars.extend(flatten(
+                    [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+                verifier_vars.extend(flatten(
+                    [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+
         return verifier_vars, definition_vars
 
     @staticmethod
@@ -151,6 +163,8 @@ class IdealLink:
         cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
         if(c.cca == "paced"):
             cca_paced(c, s, v)  # Defs to compute rate.
+        if(c.beliefs):
+            update_beliefs(c, s, v)
         IdealLink.service_defs(c, s, v)
         return s
 
@@ -191,6 +205,8 @@ class IdealLink:
             # Buffer taken from discrete choices
             # s.add(z3.Or(c.buf_min == c.C * (c.R + c.D),
             #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
+        if(c.beliefs):
+            initial_beliefs(c, s, v)
         return s
 
     @staticmethod

@@ -15,6 +15,7 @@ from ccmatic import CCmatic, OptimizationStruct
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from ccmatic.verifier import get_cex_df
+from cegis import get_unsat_core
 from cegis.multi_cegis import MultiCegis
 from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_max, z3_min
 from pyz3_utils.common import GlobalConfig
@@ -169,6 +170,9 @@ def get_template_definitions(
                             cond_var = v.max_buffer[n][t-1] * v.max_c[n][t-1]
                         else:
                             assert False
+                    # elif(cond_var_str == 't_last_loss'):
+                    #     for dt in range(0, t-1):
+                    #         st = t-dt-1
                     else:
                         cond_var = v.__getattribute__(cond_var_str)[n][t-1]
 
@@ -374,7 +378,80 @@ known_solution_list.extend(
 )
 blast_then_minc_qdel = z3.And(*known_solution_list)
 
-solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel]
+"""
+[01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ -1min_qdel + -1min_buffer + 9 > 0):
+    r_f[n][t] = max(alpha, 1min_c)
+else:
+    r_f[n][t] = max(alpha, 1/2min_c)
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts[0] == 0,
+    expr_coeffs[0] == 2,
+
+    cond_consts[1] == 9,
+    cond_coeffs[1][cv_to_cvi['min_qdel']] == -1,
+    cond_coeffs[1][cv_to_cvi['min_buffer']] == -1,
+    expr_coeffs[1] == 1,
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_qdel', 'min_buffer']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1/2 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(n_expr)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+synth_min_buffer = z3.And(*known_solution_list)
+
+"""
+[01/11 02:56:44]  40: if (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+elif (+ 1/2min_c + -1/2max_c + 10 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha, 1min_c)
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts[0] == 0,
+    expr_coeffs[0] == 2,
+    expr_consts[0] == 0,
+
+    cond_coeffs[1][cv_to_cvi['min_c']] == 1/2,
+    cond_coeffs[1][cv_to_cvi['max_c']] == -1/2,
+    cond_consts[1] == 10,
+    expr_coeffs[1] == 1,
+    expr_consts[1] == -1
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(2, n_expr)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
+
+
+solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
+             blast_then_medblast_then_minc_negalpha, synth_min_buffer]
 
 # known_solution = z3.And(*known_solution_list)
 # search_constraints = z3.And(search_constraints, known_solution)
@@ -469,6 +546,9 @@ else:
                         "on cegis metrics instead of optimization metrics.")
         import ipdb; ipdb.set_trace()
     else:
+        # uc = get_unsat_core(verifier)
+        # import ipdb; ipdb.set_trace()
+
         logger.info(f"Solver gives {str(sat)} with loosest bounds.")
         verifier.pop()
         for metric_list in list_metric_lists:
