@@ -47,7 +47,8 @@ class CegisConfig:
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
     dynamic_buffer: bool = False
     app_limited: bool = False
-    fix_stale_beliefs: bool = False
+    fix_stale__max_c: bool = False
+    fix_stale__min_c: bool = False
 
     deterministic_loss: bool = True
     N: int = 1
