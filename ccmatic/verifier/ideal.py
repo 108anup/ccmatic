@@ -225,7 +225,6 @@ class IdealLink:
         ccac_definitions = z3.And(*sd.assertion_list)
         environment = z3.And(*se.assertion_list)
 
-
         return (c, s, v,
                 ccac_domain, ccac_definitions, environment,
                 verifier_vars, definition_vars)

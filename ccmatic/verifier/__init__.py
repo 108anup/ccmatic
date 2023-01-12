@@ -417,18 +417,19 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     assert isinstance(this_upper, z3.ArithRef)
                     overall_upper = z3_min(overall_upper, this_upper)
 
-            TIME_BETWEEN_PROBES = 5
             max_c_next = overall_upper
-            if(et-TIME_BETWEEN_PROBES >= 0):
-                t_start = et-TIME_BETWEEN_PROBES
-                # max_c_updated_recently = z3.Or(*[v.max_c[n][t+1] < v.max_c[n][t]
-                #                                  for t in range(t_start, et-1)])
-                utilized_recently = z3.Or(*[utilized_t[st]
-                                            for st in range(t_start, et)])
-                # import ipdb; ipdb.set_trace()
-                # overall_upper >= v.max_c[n][et-1]),
-                max_c_next = z3.If(z3.Not(utilized_recently),
-                                   2 * v.max_c[n][et-1], overall_upper)
+            if(c.fix_stale_beliefs):
+                TIME_BETWEEN_PROBES = 5
+                if(et-TIME_BETWEEN_PROBES >= 0):
+                    t_start = et-TIME_BETWEEN_PROBES
+                    # max_c_updated_recently = z3.Or(*[v.max_c[n][t+1] < v.max_c[n][t]
+                    #                                  for t in range(t_start, et-1)])
+                    utilized_recently = z3.Or(*[utilized_t[st]
+                                                for st in range(t_start, et)])
+                    # import ipdb; ipdb.set_trace()
+                    # overall_upper >= v.max_c[n][et-1]),
+                    max_c_next = z3.If(z3.Not(utilized_recently),
+                                       2 * v.max_c[n][et-1], overall_upper)
 
             s.add(v.min_c[n][et] == overall_lower)
             s.add(v.max_c[n][et] == max_c_next)
@@ -442,8 +443,9 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     for n in range(c.N):
         s.add(v.min_c[n][0] >= 0)
         s.add(v.min_c[n][0] < v.max_c[n][0])
-        # s.add(v.min_c[n][0] <= c.C)
-        # s.add(v.max_c[n][0] >= c.C)
+        if(not c.fix_stale_beliefs):
+            s.add(v.min_c[n][0] <= c.C)
+            s.add(v.max_c[n][0] >= c.C)
 
     if(c.buf_min is not None):
         for n in range(c.N):
@@ -546,27 +548,33 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
 
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
-    ret = z3.And(none_degrade, atleast_one_improves)
 
-    # TODO: Can’t remove non degrade. CCA might improve X and degrade Y, and
-    # then improve Y and degrade X. This loop may keep repeating and desired
-    # properties are violated all the time.
-
-    # ret = atleast_one_improves
-
-    assert isinstance(ret, z3.BoolRef)
-    return ret
+    return atleast_one_improves, none_degrade
 
 
 def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     # d = get_desired_in_ss(cc, c, v)
     d = get_desired_necessary(cc, c, v)
-    d.beliefs_improve = get_beliefs_improve(cc, c, v)
-    invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
-    assert isinstance(invariant, z3.BoolRef)
+    atleast_one_improves, none_degrade = get_beliefs_improve(cc, c, v)
 
-    beliefs_bad, beliefs_reset = get_beliefs_reset(cc, c, v)
-    d.desired_belief_invariant = z3.If(beliefs_bad, beliefs_reset, invariant)
+    if(c.fix_stale_beliefs):
+        # TODO: Can’t remove non degrade. CCA might improve X and degrade Y, and
+        # then improve Y and degrade X. This loop may keep repeating and desired
+        # properties are violated all the time.
+        # invariant = atleast_one_improves
+
+        d.beliefs_improve = atleast_one_improves
+        invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
+        assert isinstance(invariant, z3.BoolRef)
+
+        beliefs_bad, beliefs_reset = get_beliefs_reset(cc, c, v)
+        d.desired_belief_invariant = z3.If(beliefs_bad, beliefs_reset, invariant)
+
+    else:
+        d.beliefs_improve = z3.And(none_degrade, atleast_one_improves)
+        invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
+        assert isinstance(invariant, z3.BoolRef)
+        d.desired_belief_invariant = invariant
 
     return d
 
@@ -1006,6 +1014,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
     c.beliefs = cc.template_beliefs
+    c.fix_stale_beliefs = cc.fix_stale_beliefs
     c.app_limited = cc.app_limited
 
     return c
