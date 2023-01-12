@@ -547,7 +547,13 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
     ret = z3.And(none_degrade, atleast_one_improves)
-    ret = atleast_one_improves
+
+    # TODO: Can’t remove non degrade. CCA might improve X and degrade Y, and
+    # then improve Y and degrade X. This loop may keep repeating and desired
+    # properties are violated all the time.
+
+    # ret = atleast_one_improves
+
     assert isinstance(ret, z3.BoolRef)
     return ret
 
