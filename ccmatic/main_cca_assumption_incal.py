@@ -12,13 +12,14 @@ from pyz3_utils.common import GlobalConfig
 import ccmatic.common  # Used for side effects
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisCCAGen, CegisConfig
-from ccmatic.common import flatten, substitute_values_df
-from ccmatic.generator.analyse_assumptions import filter_print_assumptions, sort_print_assumptions
+from ccmatic.common import flatten, substitute_values_df, try_except
+from ccmatic.generator.analyse_assumptions import filter_print_assumptions, get_solution_df_from_known_solution, sort_print_assumptions
 from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
 from cegis import remove_solution, rename_vars, substitute_values
+from pyz3_utils.my_solver import MySolver
 
 logger = logging.getLogger('assumption_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -337,7 +338,7 @@ if(cc.monotonic_inc_assumption):
 generator_vars: List[z3.ExprRef] = \
     flatten(coeffs) + flatten(consts) + flatten(clauses) + flatten(clausenegs)
 critical_generator_vars: List[z3.ExprRef] = \
-    flatten(coeffs) + flatten(consts) + flatten(clauses) + flatten(clausenegs)
+    generator_vars
 
 # Method overrides
 # These use function closures, hence have to be defined here.
@@ -529,6 +530,10 @@ for vname in ineq_var_symbols[:-1]:
         known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
 known_solution_list.append(clauses[0][1])
 known_solution_list.append(z3.Not(clausenegs[0][1]))
+ccac_paper_assumption = z3.And(*known_solution_list)
+assert isinstance(ccac_paper_assumption, z3.BoolRef)
+ccac_paper_assumption_record = get_solution_df_from_known_solution(
+    z3.And(ccac_paper_assumption, search_constraints), critical_generator_vars)
 
 # # Waste never happens
 # known_solution_list = []
@@ -588,9 +593,15 @@ if (__name__ == "__main__"):
             sort_print_assumptions(assumption_records, assumption, lemmas,
                                    get_solution_str, args.outdir, args.suffix)
         elif(args.filter_assumptions):
-            filter_print_assumptions(assumption_records, assumption, lemmas,
-                                     get_solution_str, args.outdir,
-                                     args.suffix)
+            known_assumption_record = None
+            if(args.dut == "copa"):
+                known_assumption_record = ccac_paper_assumption_record
+
+            def wrap():
+                filter_print_assumptions(assumption_records, assumption, lemmas,
+                                         get_solution_str, args.outdir,
+                                         args.suffix, known_assumption_record)
+            try_except(wrap)
         else:
             assert False
 

@@ -7,7 +7,7 @@ import time
 from concurrent import futures
 from concurrent.futures import Future, ThreadPoolExecutor
 from enum import unique
-from typing import Callable, Dict, List, Set, Tuple, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -16,7 +16,7 @@ import numpy.typing as npt
 import pandas as pd
 import z3
 from ccmatic.common import substitute_values_df
-from cegis import rename_vars
+from cegis import get_solution_df, rename_vars
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -410,21 +410,58 @@ def sort_print_assumptions(
     logger.info("Sorted solutions: \n"+"\n".join(solution_strs))
 
 
+def get_solution_df_from_known_solution(known_solution: z3.BoolRef,
+                                        generator_vars: List[z3.ExprRef]):
+    dummy_solver = MySolver()
+    dummy_solver.warn_undeclared = False
+    dummy_solver.add(known_solution)
+    dummy_solver.check()
+    return get_solution_df(dummy_solver.model(), generator_vars)
+
+
 def filter_print_assumptions(
         assumption_records: pd.DataFrame,
         assumption_template: z3.ExprRef, lemmas: z3.ExprRef,
         get_solution_str: Callable,
-        outdir: str = "tmp", suffix: str = ""):
+        outdir: str = "tmp", suffix: str = "",
+        known_assumption_record: Optional[pd.DataFrame] = None):
     assumption_assignments, assumption_expressions = \
         parse_and_create_assumptions(assumption_records,
                                      assumption_template)
     filtered_list = get_weakest_assumptions(
         assumption_assignments, assumption_expressions, lemmas)
 
+    set_filtered_list_with_known_uid = None
+    if(known_assumption_record is not None):
+        filtered_df = assumption_records.iloc[filtered_list].copy()
+        filtered_assumption_records_with_known = filtered_df.append(
+            known_assumption_record, ignore_index=True)
+        assumption_assignments, assumption_expressions = \
+            parse_and_create_assumptions(
+                filtered_assumption_records_with_known,
+                assumption_template)
+
+        # Rename to uid
+        new_to_old = {i: x for i, x in enumerate(filtered_list)}
+        new_to_old[len(filtered_list)] = len(assumption_records)
+
+        filtered_list_with_known = get_weakest_assumptions(
+            assumption_assignments, assumption_expressions, lemmas)
+        set_filtered_list_with_known_uid = set([
+            new_to_old[x] for x in filtered_list_with_known])
+
     solution_strs = []
     for i, uid in enumerate(filtered_list):
+
+        stronger = ""
+        if(known_assumption_record is not None):
+            stronger = "[S] "
+            assert set_filtered_list_with_known_uid is not None
+            if(uid in set_filtered_list_with_known_uid):
+                stronger = "[not S] "
+
         solution_strs.append(
-            f"{uid}, {i} -- \n" +
+            f"{uid}, {i} {stronger}-- \n" +
             get_solution_str(assumption_records.iloc[uid],
                              None, None))
     logger.info("Filtered solutions: \n"+"\n".join(solution_strs))
