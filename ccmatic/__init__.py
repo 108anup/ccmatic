@@ -155,8 +155,16 @@ class CCmatic():
             buf_size = c.buf_min
             if(cc.dynamic_buffer):
                 buf_size = counter_example.eval(c.buf_min)
-            ret = "{}\n{}, alpha={}, buf_size={}.".format(
-                df, desired_string, counter_example.eval(v.alpha), buf_size)
+
+            start_state_str = ""
+            if(c.beliefs):
+                start_state_str = ", start_state={}".format(
+                    [counter_example.eval(v.start_state_f[n])
+                     for n in range(c.N)])
+
+            ret = "{}\n{}, alpha={}, buf_size={}{}.".format(
+                df, desired_string, counter_example.eval(v.alpha),
+                buf_size, start_state_str)
             return ret
 
         def get_verifier_view(

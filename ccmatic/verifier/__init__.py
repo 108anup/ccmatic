@@ -371,6 +371,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     v.max_buffer[n][et-1]))
 
     # Bandwidth beliefs (C)
+    cycle = c.T-1  # as first time is chosen by verifier.
+    reset_minc_time = int((cycle-1)/2)
     for n in range(c.N):
         for et in range(1, c.T):
             """
@@ -379,6 +381,13 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             """
             overall_lower = v.min_c[n][et-1]
             overall_upper = v.max_c[n][et-1]
+
+            if(c.fix_stale__min_c):
+                overall_lower = z3.If(
+                    z3.Or(v.start_state_f[n] + et == reset_minc_time,
+                          v.start_state_f[n] + et == reset_minc_time + cycle),
+                    0, overall_lower)
+
             utilized_t = [None for _ in range(et)]
             utilized_cummulative = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
@@ -430,10 +439,6 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     # overall_upper >= v.max_c[n][et-1]),
                     max_c_next = z3.If(z3.Not(utilized_recently),
                                        2 * v.max_c[n][et-1], overall_upper)
-
-            if(c.fix_stale__min_c):
-                # TODO:
-                pass
 
             s.add(v.min_c[n][et] == overall_lower)
             s.add(v.max_c[n][et] == max_c_next)
@@ -515,6 +520,24 @@ def get_beliefs_reset(cc: CegisConfig, c: ModelConfig, v: Variables):
     return beliefs_bad, beliefs_reset
 
 
+def get_stale_minc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
+    beliefs_bad_list: List[z3.BoolRef] = []
+    for n in range(c.N):
+        beliefs_bad_list.append(
+            v.min_c[n][0] > c.C)
+    beliefs_bad = z3.Or(*beliefs_bad_list)
+
+    beliefs_eventually_reset_list: List[z3.BoolRef] = []
+    for n in range(c.N):
+        beliefs_eventually_reset_list.append(
+            v.min_c[n][-1] < v.min_c[n][0])
+
+    # TODO: should this be AND or OR? Should all flows reset or any one?
+    beliefs_eventually_reset = z3.And(beliefs_eventually_reset_list)
+    # stale_minc_improves = z3.Implies(beliefs_bad, beliefs_eventually_reset)
+    return beliefs_bad, beliefs_eventually_reset
+
+
 def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert(c.beliefs)
 
@@ -583,7 +606,11 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     if(c.fix_stale__min_c):
         # TODO: Do this in a way that works when both minc and maxc can become
         # stale.
-        pass
+        minc_is_stale, stale_minc_improves = get_stale_minc_improves(cc, c, v)
+        invariant = z3.If(minc_is_stale, stale_minc_improves, invariant)
+        # invariant = z3.Or(invariant, stale_minc_improves)
+        assert isinstance(invariant, z3.BoolRef)
+        d.desired_belief_invariant = invariant
 
     return d
 
@@ -948,6 +975,7 @@ def get_cegis_vars(
                 [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
             verifier_vars.extend(flatten(
                 [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+        verifier_vars.append(v.start_state_f)
 
     if(c.app_limited):
         verifier_vars.extend(flatten(v.app_limits))

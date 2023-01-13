@@ -36,6 +36,8 @@ def get_args():
     parser.add_argument('-T', action='store', type=int, default=6)
     parser.add_argument('--ideal', action='store_true', default=False)
     parser.add_argument('--app-limited', action='store_true', default=False)
+    parser.add_argument('--fix-minc', action='store_true', default=False)
+    parser.add_argument('--fix-maxc', action='store_true', default=False)
     args = parser.parse_args()
     return args
 
@@ -485,6 +487,8 @@ cc.history = cc.R
 cc.cca = "none"
 
 cc.use_belief_invariant = True
+cc.fix_stale__max_c = args.fix_maxc
+cc.fix_stale__min_c = args.fix_minc
 
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
@@ -575,6 +579,9 @@ else:
     verifier.add(link.definitions)
     verifier.add(link.environment)
     verifier.add(z3.Not(desired))
+    # verifier.add(v.min_c[0][0] <= c.C)
+    # d = link.d
+    # verifier.add(z3.Not(z3.Or(d.desired_necessary, d.beliefs_improve)))
     verifier.add(solution)
 
     # For belief based CCAs, skip optimizing loss.
