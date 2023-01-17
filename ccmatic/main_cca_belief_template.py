@@ -487,8 +487,8 @@ cc.history = cc.R
 cc.cca = "none"
 
 cc.use_belief_invariant = True
-cc.fix_stale__max_c = args.fix_maxc
 cc.fix_stale__min_c = args.fix_minc
+cc.fix_stale__max_c = args.fix_maxc
 
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
