@@ -152,6 +152,7 @@ class DesiredContainer:
     fast_decrease: Optional[z3.BoolRef] = None
     fast_increase: Optional[z3.BoolRef] = None
 
+    beliefs_remain_consistent: Optional[z3.BoolRef] = None
     beliefs_improve: Optional[z3.BoolRef] = None
 
     def rename_vars(self, var_list: List[z3.ExprRef], template: str):
@@ -203,6 +204,7 @@ class DesiredContainer:
             "fast_decrease": self.fast_decrease,
             "fast_increase": self.fast_increase,
 
+            "beliefs_remain_consistent": self.beliefs_remain_consistent,
             "beliefs_improve": self.beliefs_improve
         }
 
@@ -491,6 +493,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #         s.add(v.max_qdel[n][0] >= c.buf_min / c.C)
 
 
+# Deprecated
 def get_beliefs_reset(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert(c.beliefs)
 
@@ -568,7 +571,8 @@ def get_stale_maxc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
     return beliefs_bad, beliefs_eventually_reset
 
 
-def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
+# Deprecated
+def get_beliefs_improve_old(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert(c.beliefs)
 
     # Since initial beliefs are non adversarial. We can afford to just compare
@@ -610,13 +614,85 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
     return atleast_one_improves, none_degrade
 
 
+def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables):
+    assert(c.beliefs)
+
+    final_consistent_list = []
+
+    for n in range(c.N):
+        final_consistent_list.extend([
+            v.max_c[n][c.T-1] >= c.C,
+            v.min_c[n][c.T-1] <= c.C
+        ])
+        if(c.buf_min is not None):
+            final_consistent_list.extend([
+                v.max_buffer[n][c.T-1] >= c.buf_min / c.C,
+                v.min_buffer[n][c.T-1] <= c.buf_min / c.C
+            ])
+
+    final_consistent = z3.And(*final_consistent_list)
+    assert(isinstance(final_consistent, z3.BoolRef))
+    return final_consistent
+
+
+def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
+    assert(c.beliefs)
+
+    # This constraint is only used when beliefs are consistent to begin with.
+    # Since initial beliefs are non adversarial. We can afford to just compare
+    # against the verifier chosen beliefs.
+
+    # Correctness wise, verifier could just
+    # check for init conditions at t = first, so we are not losing traces. The
+    # only benefit is that if no improvement happens after t = first, then we
+    # must deliver on objective or improve within T. Checking from t = 0 allows
+    # us to improve within T + first (basically allowing us to keep a smaller T).
+
+    # An individual beleif might degrade but the range can still shrink, and
+    # this is fine for overall proof to work.
+    first = 0  # cc.history
+    none_expand_list = []
+    atleast_one_shrinks_list = []
+
+    for n in range(c.N):
+        atleast_one_shrinks_list.extend([
+            v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <
+            v.max_c[n][first] - v.min_c[n][first],
+        ])
+        if(c.buf_min is not None):
+            atleast_one_shrinks_list.extend([
+                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
+                v.max_buffer[n][first] - v.min_buffer[n][first]
+            ])
+
+        none_expand_list.extend([
+            v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <=
+            v.max_c[n][first] - v.min_c[n][first]
+        ])
+        if(c.buf_min is not None):
+            none_expand_list.extend([
+                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
+                v.max_buffer[n][first] - v.min_buffer[n][first]
+            ])
+
+    none_expand = z3.And(*none_expand_list)
+    atleast_one_shrinks = z3.Or(*atleast_one_shrinks_list)
+
+    return none_expand, atleast_one_shrinks
+
+
 def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     # d = get_desired_in_ss(cc, c, v)
     d = get_desired_necessary(cc, c, v)
-    atleast_one_improves, none_degrade = get_beliefs_improve(cc, c, v)
+    final_consistent = get_beliefs_remain_consistent(cc, c, v)
+    none_expand, atleast_one_shrinks = \
+        get_beliefs_improve(cc, c, v)
 
-    d.beliefs_improve = z3.And(none_degrade, atleast_one_improves)
-    invariant = z3.Or(d.desired_necessary, d.beliefs_improve)
+    d.beliefs_remain_consistent = final_consistent
+    d.beliefs_improve = z3.And(
+        none_expand, atleast_one_shrinks)
+    invariant = z3.And(d.beliefs_remain_consistent,
+                       z3.Or(d.beliefs_improve, d.desired_necessary))
     assert isinstance(invariant, z3.BoolRef)
     d.desired_belief_invariant = invariant
 

@@ -481,6 +481,7 @@ cc.template_qdel = True
 cc.template_queue_bound = False
 cc.template_fi_reset = False
 cc.template_beliefs = True
+cc.template_beliefs_use_buffer = USE_BUFFER
 cc.N = 1
 cc.T = args.T
 cc.history = cc.R
