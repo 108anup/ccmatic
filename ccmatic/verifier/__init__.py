@@ -345,7 +345,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 v.max_qdel[n][et] == 1000 * c.T))
 
     # Buffer
-    if(c.buf_min is not None):
+    if(c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             for et in range(1, c.T):
                 for dt in range(c.T):
@@ -471,7 +471,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         if(not c.fix_stale__max_c):
             s.add(v.max_c[n][0] >= c.C)
 
-    if(c.buf_min is not None):
+    if(c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             s.add(v.min_buffer[n][0] >= 0)
             s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
@@ -494,45 +494,45 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 # Deprecated
-def get_beliefs_reset(cc: CegisConfig, c: ModelConfig, v: Variables):
-    assert(c.beliefs)
+# def get_beliefs_reset(cc: CegisConfig, c: ModelConfig, v: Variables):
+#     assert(c.beliefs)
 
-    # TODO: currently only doing this for link rate. Synthesized CCAs don't seem
-    #  to be using buffer anyway.
+#     # TODO: currently only doing this for link rate. Synthesized CCAs don't seem
+#     #  to be using buffer anyway.
 
-    first = cc.history
-    first = 0
+#     first = cc.history
+#     first = 0
 
-    WRONGNESS_FACTOR = 10
-    beliefs_bad_list: List[z3.BoolRef] = []
-    for n in range(c.N):
-        beliefs_bad_list.append(
-            v.min_c[n][0] > WRONGNESS_FACTOR * c.C)
-        beliefs_bad_list.append(
-            v.max_c[n][0] < c.C / WRONGNESS_FACTOR)
-    beliefs_bad = z3.Or(*beliefs_bad_list)
+#     WRONGNESS_FACTOR = 10
+#     beliefs_bad_list: List[z3.BoolRef] = []
+#     for n in range(c.N):
+#         beliefs_bad_list.append(
+#             v.min_c[n][0] > WRONGNESS_FACTOR * c.C)
+#         beliefs_bad_list.append(
+#             v.max_c[n][0] < c.C / WRONGNESS_FACTOR)
+#     beliefs_bad = z3.Or(*beliefs_bad_list)
 
-    # TODO: Will eventually reset actually ever cause reset?
-    beliefs_eventually_reset_list: List[z3.BoolRef] = []
-    for n in range(c.N):
-        # beliefs_eventually_reset_list.append(
-        #     v.max_c[n][-1] < v.min_c[n][-1])
-        beliefs_eventually_reset_list.append(
-            z3.And(
-                z3.Implies(v.min_c[n][0] > WRONGNESS_FACTOR * c.C,
-                           v.max_c[n][-1] < v.max_c[n][0]),
-                z3.Implies(v.max_c[n][0] < c.C / WRONGNESS_FACTOR,
-                           z3.Or(v.min_c[n][-1] > v.min_c[n][0],
-                                 v.max_c[n][-1] > v.max_c[n][0])
-                           )
-            ))
-        # beliefs_eventually_reset_list.append(
-        #     v.max_c[n][-1] - v.min_c[n][-1] < v.max_c[n][0] - v.min_c[n][0]
-        # )
-    # TODO: should this be AND or OR? Should all flows reset or any one?
-    beliefs_reset = z3.And(*beliefs_eventually_reset_list)
+#     # TODO: Will eventually reset actually ever cause reset?
+#     beliefs_eventually_reset_list: List[z3.BoolRef] = []
+#     for n in range(c.N):
+#         # beliefs_eventually_reset_list.append(
+#         #     v.max_c[n][-1] < v.min_c[n][-1])
+#         beliefs_eventually_reset_list.append(
+#             z3.And(
+#                 z3.Implies(v.min_c[n][0] > WRONGNESS_FACTOR * c.C,
+#                            v.max_c[n][-1] < v.max_c[n][0]),
+#                 z3.Implies(v.max_c[n][0] < c.C / WRONGNESS_FACTOR,
+#                            z3.Or(v.min_c[n][-1] > v.min_c[n][0],
+#                                  v.max_c[n][-1] > v.max_c[n][0])
+#                            )
+#             ))
+#         # beliefs_eventually_reset_list.append(
+#         #     v.max_c[n][-1] - v.min_c[n][-1] < v.max_c[n][0] - v.min_c[n][0]
+#         # )
+#     # TODO: should this be AND or OR? Should all flows reset or any one?
+#     beliefs_reset = z3.And(*beliefs_eventually_reset_list)
 
-    return beliefs_bad, beliefs_reset
+#     return beliefs_bad, beliefs_reset
 
 
 def get_stale_minc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
@@ -592,7 +592,7 @@ def get_beliefs_improve_old(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] < v.max_c[n][first],
             v.min_c[n][c.T-1] > v.min_c[n][first],
         ])
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             atleast_one_improves_list.extend([
                 v.max_buffer[n][c.T-1] < v.max_buffer[n][first],
                 v.min_buffer[n][c.T-1] > v.min_buffer[n][first]
@@ -602,7 +602,7 @@ def get_beliefs_improve_old(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] <= v.max_c[n][first],
             v.min_c[n][c.T-1] >= v.min_c[n][first],
         ])
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             none_degrade_list.extend([
                 v.max_buffer[n][c.T-1] <= v.max_buffer[n][first],
                 v.min_buffer[n][c.T-1] >= v.min_buffer[n][first]
@@ -624,7 +624,7 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
             v.max_c[n][c.T-1] >= c.C,
             v.min_c[n][c.T-1] <= c.C
         ])
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             final_consistent_list.extend([
                 v.max_buffer[n][c.T-1] >= c.buf_min / c.C,
                 v.min_buffer[n][c.T-1] <= c.buf_min / c.C
@@ -659,7 +659,7 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <
             v.max_c[n][first] - v.min_c[n][first],
         ])
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             atleast_one_shrinks_list.extend([
                 v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
                 v.max_buffer[n][first] - v.min_buffer[n][first]
@@ -669,7 +669,7 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <=
             v.max_c[n][first] - v.min_c[n][first]
         ])
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             none_expand_list.extend([
                 v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
                 v.max_buffer[n][first] - v.min_buffer[n][first]
@@ -1080,7 +1080,7 @@ def get_cegis_vars(
              v.min_qdel, v.max_qdel]))
         verifier_vars.extend(flatten(
             [v.min_c[:, :1], v.max_c[:, :1]]))
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             definition_vars.extend(flatten(
                 [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
             verifier_vars.extend(flatten(
@@ -1163,6 +1163,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.app_limited = cc.app_limited
 
     c.beliefs = cc.template_beliefs
+    c.beliefs_use_buffer = cc.template_beliefs_use_buffer
     c.fix_stale__min_c = cc.fix_stale__min_c
     c.fix_stale__max_c = cc.fix_stale__max_c
 
@@ -1727,7 +1728,7 @@ def get_cex_df(
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
                 # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
                 })
-        if(c.buf_min is not None):
+        if(c.buf_min is not None and c.beliefs_use_buffer):
             for n in range(c.N):
                 cex_dict.update({
                     get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
