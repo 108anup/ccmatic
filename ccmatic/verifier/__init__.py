@@ -382,6 +382,33 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     reset_maxc_time = int((cycle-1))
     for n in range(c.N):
         for et in range(1, c.T):
+            # Compute utilization stats. Useful for updating {min, max}_c
+
+            # TODO: qdelay high or loss signals tell about network conditions at
+            # earlier time than when the CCA observed them. This lag perhaps
+            # needs to be incorporated.
+            utilized_t = [None for _ in range(et)]
+            utilized_cummulative = [None for _ in range(et)]
+            for st in range(et-1, -1, -1):
+                # Encodes that utilization must have been high if loss happened
+                # or if queing delay was more than D
+
+                # All of qdel might be False. So to check high delay we just
+                # check Not of low delay.
+                high_delay = z3.Not(z3.Or(*[v.qdel[st+1][dt]
+                                            for dt in range(c.D+1)]))
+                # Wrong:
+                # high_delay = z3.Or(*[v.qdel[st+1][dt]
+                #                      for dt in range(c.D+1, c.T)])
+                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                this_utilized = z3.Or(loss, high_delay)
+                utilized_t[st] = this_utilized
+                if(st + 1 == et):
+                    utilized_cummulative[st] = this_utilized
+                else:
+                    assert utilized_cummulative[st+1] is not None
+                    utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
+
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
 
@@ -408,8 +435,6 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             """
             overall_lower = base_lower
             overall_upper = base_upper
-            utilized_t = [None for _ in range(et)]
-            utilized_cummulative = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
                 window = et - st
                 measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
@@ -419,28 +444,6 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 overall_lower = z3_max(overall_lower, this_lower)
 
                 # UPPER
-                # TODO: Check if qdel high for packet recvd means that
-                #  utilization was there or not.
-
-                # Encodes that utilization must have been high if loss happened
-                # or if queing delay was more than D
-
-                # All of qdel might be False. So to check high delay we just
-                # check Not of low delay.
-                high_delay = z3.Not(z3.Or(*[v.qdel[st+1][dt]
-                                            for dt in range(c.D+1)]))
-                # Wrong:
-                # high_delay = z3.Or(*[v.qdel[st+1][dt]
-                #                      for dt in range(c.D+1, c.T)])
-                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
-                this_utilized = z3.Or(loss, high_delay)
-                utilized_t[st] = this_utilized
-                if(st + 1 == et):
-                    utilized_cummulative[st] = this_utilized
-                else:
-                    assert utilized_cummulative[st+1] is not None
-                    utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
-
                 if(window - 1 > 0):
                     this_upper = z3.If(utilized_cummulative[st], measured_c * window / (window - 1), base_upper)
                     assert isinstance(this_upper, z3.ArithRef)
