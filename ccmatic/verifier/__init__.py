@@ -154,6 +154,8 @@ class DesiredContainer:
 
     beliefs_remain_consistent: Optional[z3.BoolRef] = None
     beliefs_improve: Optional[z3.BoolRef] = None
+    stale_minc_improves: Optional[z3.BoolRef] = None
+    stale_maxc_improves: Optional[z3.BoolRef] = None
 
     def rename_vars(self, var_list: List[z3.ExprRef], template: str):
         conds = {
@@ -205,7 +207,9 @@ class DesiredContainer:
             "fast_increase": self.fast_increase,
 
             "beliefs_remain_consistent": self.beliefs_remain_consistent,
-            "beliefs_improve": self.beliefs_improve
+            "beliefs_improve": self.beliefs_improve,
+            "stale_minc_improves": self.stale_minc_improves,
+            "stale_maxc_improves": self.stale_maxc_improves
         }
 
         def get_val(cond):
@@ -378,8 +382,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     reset_maxc_time = int((cycle-1))
     for n in range(c.N):
         for et in range(1, c.T):
-            overall_lower = v.min_c[n][et-1]
-            overall_upper = v.max_c[n][et-1]
+            base_lower = v.min_c[n][et-1]
+            base_upper = v.max_c[n][et-1]
 
             """
             Time out the beliefs every cycle time.
@@ -387,21 +391,23 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             TODO: We can avoid timing out max_c if we have utilized the link.
             """
             if(c.fix_stale__min_c):
-                overall_lower = z3.If(
+                base_lower = z3.If(
                     z3.Or(v.start_state_f[n] + et == reset_minc_time,
                           v.start_state_f[n] + et == reset_minc_time + cycle),
-                    2/3 * v.min_c[n][et-1], overall_lower)
+                    0, base_lower)
 
             if(c.fix_stale__max_c):
-                overall_upper = z3.If(
+                base_upper = z3.If(
                     z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                           v.start_state_f[n] + et == reset_maxc_time + cycle),
-                    3/2 * v.max_c[n][et-1], overall_upper)
+                    2 * base_upper, base_upper)
 
             """
             In summary C >= r * n/(n+1) always, if we additionally know that
             sending rate is higher than C then, C <= r * n/(n-1).
             """
+            overall_lower = base_lower
+            overall_upper = base_upper
             utilized_t = [None for _ in range(et)]
             utilized_cummulative = [None for _ in range(et)]
             for st in range(et-1, -1, -1):
@@ -436,7 +442,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
 
                 if(window - 1 > 0):
-                    this_upper = z3.If(utilized_cummulative[st], measured_c * window / (window - 1), v.max_c[n][et-1])
+                    this_upper = z3.If(utilized_cummulative[st], measured_c * window / (window - 1), base_upper)
                     assert isinstance(this_upper, z3.ArithRef)
                     overall_upper = z3_min(overall_upper, this_upper)
 
@@ -711,6 +717,7 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
 
     if(c.fix_stale__min_c):
         minc_is_stale, stale_minc_improves = get_stale_minc_improves(cc, c, v)
+        d.stale_minc_improves = stale_minc_improves
         invariant = z3.If(minc_is_stale, stale_minc_improves, invariant)
         # invariant = z3.Or(invariant, stale_minc_improves)
         assert isinstance(invariant, z3.BoolRef)
@@ -718,6 +725,7 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
 
     if(c.fix_stale__max_c):
         maxc_is_stale, stale_maxc_improves = get_stale_maxc_improves(cc, c, v)
+        d.stale_maxc_improves = stale_maxc_improves
         invariant = z3.If(maxc_is_stale, stale_maxc_improves, invariant)
         assert isinstance(invariant, z3.BoolRef)
         d.desired_belief_invariant = invariant
