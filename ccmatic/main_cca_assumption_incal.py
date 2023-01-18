@@ -45,8 +45,7 @@ def get_args():
         type=str, choices=["copa", "bbr"],
         action='store')
     parser.add_argument(
-        '--ref', required=True,
-        type=str, action='store',
+        '--ref', type=str, action='store',
         choices=["paced", "bbr", "copa"])
     parser.add_argument(
         '--util', required=True,
@@ -63,17 +62,18 @@ def get_args():
     parser.add_argument('--suffix', type=str,
                         action='store', default="")
     # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
+    parser.add_argument('--use-assumption-verifier',
+                        action='store_true', default=False)
 
     args = parser.parse_args()
     return args
 
 
 args = get_args()
+logger.info(args)
+assert not (args.ref is not None and args.use_assumption_verifier)
+
 DEBUG = False
-dummy_cca = args.ref
-# dummy_cca = "paced"
-# dummy_cca = "bbr"
-# dummy_cca = "copa"
 cc = CegisConfig()
 cc.name = "sufficient"
 cc.T = 10
@@ -84,9 +84,8 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
-cc.use_ref_cca = False
+cc.use_ref_cca = True if args.ref is not None else False
 cc.monotonic_inc_assumption = True
-USE_ASSUMPTION_VERIFIER = True
 
 cc.compose = True
 cc.cca = args.dut
@@ -100,7 +99,7 @@ elif(cc.cca == "bbr"):
 cc.feasible_response = False
 util_frac = args.util
 
-logger.info(f"Testing {cc.cca} comparing with {dummy_cca}, for utilization {util_frac}.")
+logger.info(f"Testing {cc.cca} comparing with {args.ref}, for utilization {util_frac}.")
 
 # CCA under test
 (c, s, v,
@@ -126,7 +125,7 @@ if(cc.use_ref_cca):
      ccac_domain_alt, ccac_definitions_alt, environment_alt,
      verifier_vars_alt, definition_vars_alt) = setup_cegis_basic(
         cc, prefix_alt)
-    c_alt.cca = dummy_cca
+    c_alt.cca = args.ref
     vn_alt = VariableNames(v_alt)
 
     # periodic_constriants_alt = get_periodic_constraints_ccac(cc, c_alt, v_alt)
@@ -681,7 +680,7 @@ if (__name__ == "__main__"):
     #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
     cg.run_verifier = run_verifier
 
-    if(not USE_ASSUMPTION_VERIFIER):
+    if(not args.use_assumption_verifier):
         try_except(cg.run)
     else:
         # Verifier struct for assumption is sufficient
@@ -723,6 +722,7 @@ if (__name__ == "__main__"):
             generator_vars, search_constraints, critical_generator_vars,
             verifier_structs, ctx, None, args.solution_log_path)
         multicegis.get_solution_str = get_solution_str
+        multicegis.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
 
         # import ipdb; ipdb.set_trace()
         try_except(multicegis.run)
