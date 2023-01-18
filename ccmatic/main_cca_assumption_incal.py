@@ -1,5 +1,7 @@
+import numpy as np
 import copy
 from cegis.multi_cegis import MultiCegis, VerifierStruct
+from cegis.util import get_raw_value
 import sys
 import argparse
 import functools
@@ -20,7 +22,7 @@ from ccmatic.verifier import (get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import (get_cca_definition, get_cca_vvars,
                                           get_periodic_constraints_ccac)
-from cegis import remove_solution, rename_vars, substitute_values
+from cegis import Cegis, remove_solution, rename_vars, substitute_values
 from pyz3_utils.my_solver import MySolver
 
 logger = logging.getLogger('assumption_gen')
@@ -458,15 +460,19 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
     return ret
 
 
-def override_remove_solution(self: CegisCCAGen, solution: z3.ModelRef):
+def override_remove_solution(self: Cegis, solution: z3.ModelRef):
     this_critical_generator_vars: List[z3.ExprRef] = \
         flatten(clauses) + flatten(clausenegs)
 
     for ineqnum in range(nineq):
         ineq_appears = False
         for clausenum in range(nclause):
-            if(bool(solution.eval(clauses[clausenum][ineqnum])) or
-               bool(solution.eval(clausenegs[clausenum][ineqnum]))):
+            pos_appears = get_raw_value(solution.eval(clauses[clausenum][ineqnum]))
+            neg_appears = get_raw_value(solution.eval(clausenegs[clausenum][ineqnum]))
+            # Assume don't cares are false.
+            pos_appears = pos_appears if isinstance(pos_appears, bool) else False
+            neg_appears = neg_appears if isinstance(neg_appears, bool) else False
+            if(pos_appears or neg_appears):
                 ineq_appears = True
                 break
         if(ineq_appears):
@@ -722,7 +728,8 @@ if (__name__ == "__main__"):
             generator_vars, search_constraints, critical_generator_vars,
             verifier_structs, ctx, None, args.solution_log_path)
         multicegis.get_solution_str = get_solution_str
-        multicegis.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
+        multicegis.remove_solution = override_remove_solution.__get__(
+            multicegis, MultiCegis)
 
         # import ipdb; ipdb.set_trace()
         try_except(multicegis.run)
