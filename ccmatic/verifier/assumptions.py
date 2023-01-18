@@ -178,15 +178,22 @@ class AssumptionVerifier(IdealLink):
         (c, s, v, ccac_domain, ccac_definitions, environment,
          verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
 
-        new_environment = z3.And(ccac_domain, ccac_definitions, environment)
-        assert isinstance(new_environment, z3.ExprRef)
-
-        # TODO: Since the assumption depends on waste. Need to specify
+        # Since the assumption depends on waste. Need to specify
         # deterministic choice of waste that the assumption must allow.
+        waste_defs_list = []
+        for t in range(c.T):
+            waste_defs_list.append(v.W[t] == (v.C0 + c.C*t) - v.S[t])
+        waste_defs = z3.And(*waste_defs_list)
+        environment = z3.And(environment, waste_defs)
 
         # TODO: see if the process actually needs to say that there exists some
         # way to waste, instead of allowing a prespecified waste.
 
+        new_environment = z3.And(ccac_domain, ccac_definitions, environment)
+        assert isinstance(new_environment, z3.ExprRef)
+
+        new_verifier_vars = verifier_vars + definition_vars + flatten([v.W, v.C0])
+
         return (c, s, v,
                 True, True, z3.And(ccac_domain, ccac_definitions, environment),
-                verifier_vars + definition_vars, [])
+                new_verifier_vars, [])

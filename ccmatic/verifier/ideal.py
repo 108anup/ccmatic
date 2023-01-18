@@ -1,4 +1,3 @@
-
 from typing import List, Tuple
 
 import z3
@@ -79,8 +78,9 @@ class IdealLink:
              v.alpha, v.S_f[:, :history]])
 
         # No need for tokens and waste
-        del v.C0
-        del v.W
+        if(not cc.assumption_verifier):
+            del v.C0
+            del v.W
 
         assert c.loss_oracle
 

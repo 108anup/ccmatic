@@ -85,7 +85,7 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.use_ref_cca = False
-cc.monotonic_inc_assumption = False
+cc.monotonic_inc_assumption = True
 USE_ASSUMPTION_VERIFIER = True
 
 cc.compose = True
@@ -171,7 +171,7 @@ if(cc.monotonic_inc_assumption):
 domain_clauses = []
 
 vn = VariableNames(v)
-ineq_var_symbols = ['S', 'A', 'W', 'C', 'mmBDP']
+ineq_var_symbols = ['S', 'A', 'L', 'W', 'C', 'mmBDP']
 vname2vnum = {}
 for vnum, vname in enumerate(ineq_var_symbols):
     vname2vnum[vname] = vnum
@@ -530,10 +530,11 @@ known_solution_list.append(z3.Not(clausenegs[0][0]))
 
 # Ineq 1: Q >= 0 <=> A-L-S <= 0. Note lossless, so no mention of L
 known_solution_list.append(coeffs[1][vname2vnum['A']][0] == 1)
+known_solution_list.append(coeffs[1][vname2vnum['L']][0] == -1)
 known_solution_list.append(coeffs[1][vname2vnum['S']][0] == -1)
 for vname in ineq_var_symbols[:-1]:
     known_solution_list.append(coeffs[1][vname2vnum[vname]][1] == 0)
-    if(vname not in ['A', 'S']):
+    if(vname not in ['A', 'S', 'L']):
         known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
 known_solution_list.append(clauses[0][1])
 known_solution_list.append(z3.Not(clausenegs[0][1]))
@@ -713,15 +714,15 @@ if (__name__ == "__main__"):
             search_constraints,
             [], generator_vars, get_solution_str)
         av_link.critical_generator_vars = critical_generator_vars
-        c, _, v, = av_link.c, av_link.s, av_link.v
-        assumption = get_assumption(c, v)
+        assumption = get_assumption(av_link.c, av_link.v)
         av_link.specification = z3.Implies(av_link.environment, assumption)
 
         # Multi-cegis
-        verifier_structs = [av_link.get_verifier_struct()]
+        verifier_structs = [vs, av_link.get_verifier_struct()]
         multicegis = MultiCegis(
             generator_vars, search_constraints, critical_generator_vars,
-            verifier_structs, ctx, None, None)
+            verifier_structs, ctx, None, args.solution_log_path)
         multicegis.get_solution_str = get_solution_str
 
+        # import ipdb; ipdb.set_trace()
         try_except(multicegis.run)
