@@ -324,16 +324,18 @@ assert isinstance(definitions, z3.ExprRef)
 # cca_definitions are verifier only. does not matter if they are here...
 
 if(cc.use_ref_cca):
-    assumption_alt = rename_vars(
-        assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
+    assumption_alt = get_assumption(c_alt, v_alt)
+    # assumption_alt = rename_vars(
+    #     assumption, verifier_vars + definition_vars, v_alt.pre + "{}")
     specification_alt = z3.And(
         environment_alt, assumption_alt, poor_utilization_alt)
     definitions_alt = z3.And(
         ccac_domain_alt, ccac_definitions_alt, cca_definitions_alt)
 
 if(cc.monotonic_inc_assumption):
-    assumption_novel = rename_vars(
-        assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
+    assumption_novel = get_assumption(c_novel, v_novel)
+    # assumption_novel = rename_vars(
+    #     assumption, verifier_vars + definition_vars, v_novel.pre + "{}")
     specification_novel = z3.And(
         environment_novel, assumption_novel, z3.Not(poor_utilization_novel))
     # # Try synth assumption that breaks CCA.
@@ -483,6 +485,7 @@ def override_remove_solution(self: Cegis, solution: z3.ModelRef):
                     this_critical_generator_vars, self.ctx,
                     self._n_proved_solutions)
 
+    # import ipdb; ipdb.set_trace()
     # Monotonically increasing assumption set.
     if(cc.monotonic_inc_assumption):
         name_template = f"Assumption{self._n_proved_solutions}___"+"{}"
