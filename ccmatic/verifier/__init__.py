@@ -331,6 +331,11 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # Note beleifs are updated after packets have been recvd at time t.
     # At time t, the CCA can only look at beliefs for time t-1.
 
+    # For a timeout, we need enough history. So we can't trigger timeouts at
+    # t=1.
+    for n in range(c.N):
+        s.add(v.start_state_f[n] == 0)
+
     # Qdel
     for n in range(c.N):
         for et in range(c.T):
@@ -380,6 +385,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     cycle = c.T-1  # as first time is chosen by verifier.
     reset_minc_time = int((cycle-1)/2)
     reset_maxc_time = int((cycle-1))
+    reset_minc_time = c.T-3
+    reset_maxc_time = c.T-3
     for n in range(c.N):
         for et in range(1, c.T):
             # Compute utilization stats. Useful for updating {min, max}_c
