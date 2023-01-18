@@ -409,25 +409,47 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                     assert utilized_cummulative[st+1] is not None
                     utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
 
+            # If the belief recently changed then it must be consistent** This
+            # is not true when maxc is small and we still see qdel measurements
+            # due to initial conditions. But in this case beliefs become invalid
+            # quickly.
+            minc_changed_list = []
+            maxc_changed_list = []
+            for st in range(1, et):
+                minc_changed_list.append(v.min_c[n][st] > v.min_c[n][st-1])
+                maxc_changed_list.append(v.max_c[n][st] < v.max_c[n][st-1])
+            minc_changed = z3.Or(*minc_changed_list)
+            maxc_changed = z3.Or(*maxc_changed_list)
+
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
 
             """
             Time out the beliefs every cycle time.
-
-            TODO: We can avoid timing out max_c if we have utilized the link.
             """
             if(c.fix_stale__min_c):
+                # Timeout lower bound if we are in the appropriate cycle in the
+                # state machine and we have seen utilization recently.
+                # TODO: only need to look at utilized happening if we were sending at or below minc.
+                # This again requires more nuanced book keeping of the sequence of events.
+                timeout_lower = z3.And(z3.Or(v.start_state_f[n] + et == reset_minc_time,
+                                             v.start_state_f[n] + et == reset_minc_time + cycle),
+                                       z3.Or(utilized_t),
+                                       z3.Not(minc_changed))
+
                 base_lower = z3.If(
                     z3.Or(v.start_state_f[n] + et == reset_minc_time,
                           v.start_state_f[n] + et == reset_minc_time + cycle),
                     0, base_lower)
 
             if(c.fix_stale__max_c):
-                base_upper = z3.If(
-                    z3.Or(v.start_state_f[n] + et == reset_maxc_time,
-                          v.start_state_f[n] + et == reset_maxc_time + cycle),
-                    2 * base_upper, base_upper)
+                # Timeout upper bound if we are in the appropraite cycle in the
+                # state machine and we haven't recently utilized the link.
+                timeout_upper = z3.And(z3.Or(v.start_state_f[n] + et == reset_maxc_time,
+                                             v.start_state_f[n] + et == reset_maxc_time + cycle),
+                                       z3.Not(z3.Or(utilized_t)),
+                                       z3.Not(maxc_changed))
+                base_upper = z3.If(timeout_upper, 2 * base_upper, base_upper)
 
             """
             In summary C >= r * n/(n+1) always, if we additionally know that
@@ -545,39 +567,47 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def get_stale_minc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
+    """
+    TODO: currently we are assumignt hat when beleifs become invalid,
+    we correct them outside CCAC. We can encode this within CCAC.
+    """
     beliefs_bad_list: List[z3.BoolRef] = []
+    beliefs_eventually_reset_list: List[z3.BoolRef] = []
+    beliefs_become_invalid_list: List[z3.BoolRef] = []
     for n in range(c.N):
         beliefs_bad_list.append(
             v.min_c[n][0] > c.C)
-    beliefs_bad = z3.Or(*beliefs_bad_list)
-
-    beliefs_eventually_reset_list: List[z3.BoolRef] = []
-    for n in range(c.N):
         beliefs_eventually_reset_list.append(
             v.min_c[n][-1] < v.min_c[n][0])
+        beliefs_become_invalid_list.append(
+            v.min_c[n][-1] > v.max_c[n][-1])
 
+    beliefs_bad = z3.Or(*beliefs_bad_list)
     # TODO: should this be AND or OR? Should all flows reset or any one?
-    beliefs_eventually_reset = z3.And(beliefs_eventually_reset_list)
+    beliefs_eventually_reset = z3.And(*beliefs_eventually_reset_list)
+    beliefs_become_invalid = z3.And(*beliefs_become_invalid_list)
     # stale_minc_improves = z3.Implies(beliefs_bad, beliefs_eventually_reset)
-    return beliefs_bad, beliefs_eventually_reset
+    return beliefs_bad, z3.Or(beliefs_eventually_reset, beliefs_become_invalid)
 
 
 def get_stale_maxc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
     beliefs_bad_list: List[z3.BoolRef] = []
+    beliefs_eventually_reset_list: List[z3.BoolRef] = []
+    beliefs_become_invalid_list: List[z3.BoolRef] = []
     for n in range(c.N):
         beliefs_bad_list.append(
             v.max_c[n][0] < c.C)
-    beliefs_bad = z3.Or(*beliefs_bad_list)
-
-    beliefs_eventually_reset_list: List[z3.BoolRef] = []
-    for n in range(c.N):
         beliefs_eventually_reset_list.append(
             v.max_c[n][-1] > v.max_c[n][0])
+        beliefs_become_invalid_list.append(
+            v.min_c[n][-1] > v.max_c[n][-1])
 
+    beliefs_bad = z3.Or(*beliefs_bad_list)
     # TODO: should this be AND or OR? Should all flows reset or any one?
-    beliefs_eventually_reset = z3.And(beliefs_eventually_reset_list)
+    beliefs_eventually_reset = z3.And(*beliefs_eventually_reset_list)
+    beliefs_become_invalid = z3.And(*beliefs_become_invalid_list)
     # stale_maxc_improves = z3.Implies(beliefs_bad, beliefs_eventually_reset)
-    return beliefs_bad, beliefs_eventually_reset
+    return beliefs_bad, z3.Or(beliefs_eventually_reset, beliefs_become_invalid)
 
 
 # Deprecated
