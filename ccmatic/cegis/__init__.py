@@ -67,6 +67,7 @@ class CegisConfig:
     # For assumption synthesis
     use_ref_cca: bool = False
     monotonic_inc_assumption: bool = False
+    assumption_verifier: bool = False
 
     DEBUG: bool = False
 

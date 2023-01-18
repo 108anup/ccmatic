@@ -1,3 +1,5 @@
+import copy
+from cegis.multi_cegis import MultiCegis, VerifierStruct
 import sys
 import argparse
 import functools
@@ -73,6 +75,7 @@ dummy_cca = args.ref
 # dummy_cca = "bbr"
 # dummy_cca = "copa"
 cc = CegisConfig()
+cc.name = "sufficient"
 cc.T = 10
 cc.infinite_buffer = True  # No loss for simplicity
 cc.dynamic_buffer = False
@@ -81,8 +84,9 @@ cc.template_queue_bound = False
 cc.template_mode_switching = False
 cc.template_qdel = True
 
-cc.use_ref_cca = True
-cc.monotonic_inc_assumption = True
+cc.use_ref_cca = False
+cc.monotonic_inc_assumption = False
+USE_ASSUMPTION_VERIFIER = True
 
 cc.compose = True
 cc.cca = args.dut
@@ -256,56 +260,59 @@ for clausenum in range(nclause):
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
 
-# Generator definitions
-assumption_constraints = []
 
+def get_assumption(c, v):
+    # Generator definitions
+    assumption_constraints = []
 
-def get_pdt_from_sym(ineqnum: int, vnum: int, shift: int, vname: str, t: int):
-    if(vname == 'mmBDP'):
-        if(shift == 0):
-            return consts[ineqnum] * c.C * (c.R + c.D)
+    def get_pdt_from_sym(ineqnum: int, vnum: int, shift: int, vname: str, t: int):
+        if(vname == 'mmBDP'):
+            if(shift == 0):
+                return consts[ineqnum] * c.C * (c.R + c.D)
+            else:
+                return 0
+        elif(vname == 'C'):
+            return coeffs[ineqnum][vnum][shift] * (c.C * (t-shift) + v.C0)
         else:
-            return 0
-    elif(vname == 'C'):
-        return coeffs[ineqnum][vnum][shift] * (c.C * (t-shift) + v.C0)
-    else:
-        return coeffs[ineqnum][vnum][shift] * eval(f'v.{vname}[t-shift]')
+            return coeffs[ineqnum][vnum][shift] * eval(f'v.{vname}[t-shift]')
 
+    for t in range(nshift-1, c.T):
+        # Truth value of ineq at time t
+        evaluation_ineq: List[z3.ExprRef] = []
+        for ineqnum in range(nineq):
+            lhs = z3.Sum(*[
+                get_pdt_from_sym(ineqnum, vnum, shift, vname, t)
+                for vnum, vname in enumerate(ineq_var_symbols)
+                for shift in range(nshift)])
+            evaluation = lhs <= 0
+            assert isinstance(evaluation, z3.ExprRef)
+            evaluation_ineq.append(evaluation)
 
-for t in range(nshift-1, c.T):
-    # Truth value of ineq at time t
-    evaluation_ineq: List[z3.ExprRef] = []
-    for ineqnum in range(nineq):
-        lhs = z3.Sum(*[
-            get_pdt_from_sym(ineqnum, vnum, shift, vname, t)
-            for vnum, vname in enumerate(ineq_var_symbols)
-            for shift in range(nshift)])
-        evaluation = lhs <= 0
-        assert isinstance(evaluation, z3.ExprRef)
-        evaluation_ineq.append(evaluation)
+        # Truth value of clause at time t
+        evaluation_clause: List[z3.ExprRef] = []
+        for clausenum in range(nclause):
+            evaluation = z3.Or(
+                z3.Or(*[
+                    z3.And(clauses[clausenum][ineqnum],
+                           evaluation_ineq[ineqnum])
+                    for ineqnum in range(nineq)]),
+                z3.Or(*[
+                    z3.And(clausenegs[clausenum][ineqnum],
+                           z3.Not(evaluation_ineq[ineqnum]))
+                    for ineqnum in range(nineq)]))
+            assert isinstance(evaluation, z3.ExprRef)
+            evaluation_clause.append(evaluation)
 
-    # Truth value of clause at time t
-    evaluation_clause: List[z3.ExprRef] = []
-    for clausenum in range(nclause):
-        evaluation = z3.Or(
-            z3.Or(*[
-                z3.And(clauses[clausenum][ineqnum],
-                       evaluation_ineq[ineqnum])
-                for ineqnum in range(nineq)]),
-            z3.Or(*[
-                z3.And(clausenegs[clausenum][ineqnum],
-                       z3.Not(evaluation_ineq[ineqnum]))
-                for ineqnum in range(nineq)]))
-        assert isinstance(evaluation, z3.ExprRef)
-        evaluation_clause.append(evaluation)
+        # CNF at time t
+        assumption_constraints.append(z3.And(*evaluation_clause))
+    assumption = z3.And(assumption_constraints)
+    assert isinstance(assumption, z3.ExprRef)
+    return assumption
 
-    # CNF at time t
-    assumption_constraints.append(z3.And(*evaluation_clause))
 
 # CCmatic inputs
 ctx = z3.main_ctx()
-assumption = z3.And(assumption_constraints)
-assert isinstance(assumption, z3.ExprRef)
+assumption = get_assumption(c, v)
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
 # # Try synth assumption that breaks CCA.
@@ -623,63 +630,98 @@ if (__name__ == "__main__"):
             assert(isinstance(definitions, z3.ExprRef))
             f.write(definitions.sexpr())
 
-    try:
-        # md = CegisMetaData(critical_generator_vars)
+    # md = CegisMetaData(critical_generator_vars)
 
-        # Ideally all these are generator vars. But since generator vars are
-        # never substituted, the CEGIS loop really does not need to know all the
-        # generator vars. Generator vars are really only used for identifying
-        # repeat solutions. We are not going to use alt, novel vars for this
-        # anyway.
+    # Ideally all these are generator vars. But since generator vars are
+    # never substituted, the CEGIS loop really does not need to know all the
+    # generator vars. Generator vars are really only used for identifying
+    # repeat solutions. We are not going to use alt, novel vars for this
+    # anyway.
 
-        # Unused because ^^^
-        # all_generator_vars = (generator_vars +
-        #                       verifier_vars_alt + definition_vars_alt +
-        #                       verifier_vars_novel + definition_vars_novel)
-        if(cc.use_ref_cca):
-            search_constraints = z3.And(search_constraints,
-                                        definitions_alt, specification_alt)
-        if(cc.monotonic_inc_assumption):
-            search_constraints = z3.And(search_constraints,
-                                        definitions_novel, specification_novel)
-        assert isinstance(search_constraints, z3.ExprRef)
+    # Unused because ^^^
+    # all_generator_vars = (generator_vars +
+    #                       verifier_vars_alt + definition_vars_alt +
+    #                       verifier_vars_novel + definition_vars_novel)
+    if(cc.use_ref_cca):
+        search_constraints = z3.And(search_constraints,
+                                    definitions_alt, specification_alt)
+    if(cc.monotonic_inc_assumption):
+        search_constraints = z3.And(search_constraints,
+                                    definitions_novel, specification_novel)
+    assert isinstance(search_constraints, z3.ExprRef)
 
-        # import ipbd; ipdb.set_trace()
-        cg = CegisCCAGen(generator_vars, verifier_vars,
-                         definition_vars, search_constraints,
-                         definitions, specification, ctx,
-                         debug_known_solution,
-                         solution_log_path=args.solution_log_path)
-        # verifier_vars_combined = verifier_vars + verifier_vars_alt
-        # definition_vars_combined = definition_vars + definition_vars_alt
-        # specification_combined = z3.And(specification, specification_alt)
-        # definitions_combined = z3.And(definitions, definitions_alt)
-        # assert isinstance(specification_combined, z3.ExprRef)
-        # assert isinstance(definitions_combined, z3.ExprRef)
-        # cg = CegisCCAGen(generator_vars, verifier_vars_combined,
-        #                  definition_vars_combined, search_constraints,
-        #                  definitions_combined, specification_combined, ctx,
-        #                  debug_known_solution, md)
-        cg.get_solution_str = get_solution_str
-        cg.get_counter_example_str = get_counter_example_str
-        cg.get_generator_view = get_generator_view
-        cg.get_verifier_view = get_verifier_view
-        # https://stackoverflow.com/a/46757134/5039326.
-        # Since remove_solution is a bound method of the class,
-        # need to bind the method to instance!
-        cg.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
-        run_verifier = functools.partial(
-            run_verifier_incomplete, c=c, v=v, ctx=ctx)
-        # run_verifier = functools.partial(
-        #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
-        cg.run_verifier = run_verifier
-        cg.run()
+    # import ipbd; ipdb.set_trace()
+    cg = CegisCCAGen(generator_vars, verifier_vars,
+                     definition_vars, search_constraints,
+                     definitions, specification, ctx,
+                     debug_known_solution,
+                     solution_log_path=args.solution_log_path)
+    # verifier_vars_combined = verifier_vars + verifier_vars_alt
+    # definition_vars_combined = definition_vars + definition_vars_alt
+    # specification_combined = z3.And(specification, specification_alt)
+    # definitions_combined = z3.And(definitions, definitions_alt)
+    # assert isinstance(specification_combined, z3.ExprRef)
+    # assert isinstance(definitions_combined, z3.ExprRef)
+    # cg = CegisCCAGen(generator_vars, verifier_vars_combined,
+    #                  definition_vars_combined, search_constraints,
+    #                  definitions_combined, specification_combined, ctx,
+    #                  debug_known_solution, md)
+    cg.get_solution_str = get_solution_str
+    cg.get_counter_example_str = get_counter_example_str
+    cg.get_generator_view = get_generator_view
+    cg.get_verifier_view = get_verifier_view
+    # https://stackoverflow.com/a/46757134/5039326.
+    # Since remove_solution is a bound method of the class,
+    # need to bind the method to instance!
+    cg.remove_solution = override_remove_solution.__get__(cg, CegisCCAGen)
+    run_verifier = functools.partial(
+        run_verifier_incomplete, c=c, v=v, ctx=ctx)
+    # run_verifier = functools.partial(
+    #     run_verifier_incomplete_wce, first=first, c=c, v=v, ctx=ctx)
+    cg.run_verifier = run_verifier
 
-    except Exception:
-        import sys
-        import traceback
+    if(not USE_ASSUMPTION_VERIFIER):
+        try_except(cg.run)
+    else:
+        # Verifier struct for assumption is sufficient
+        vs = VerifierStruct(
+            cc.name, verifier_vars, definition_vars, definitions,
+            specification)
+        vs.run_verifier = run_verifier
+        vs.get_counter_example_str = get_counter_example_str
+        vs.get_verifier_view = get_verifier_view
+        vs.get_generator_view = get_generator_view
 
-        import ipdb
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        ipdb.post_mortem(tb)
+        # Assumption verifier (av)
+        cc_av: CegisConfig = copy.copy(cc)
+        cc_av.name = "av"
+        cc_av.cca = "paced"
+        cc_av.history = 3  # this should ideally not be used by anything.
+        cc_av.assumption_verifier = True
+
+        ## For backwards compatibility. This is unused. Ideally should not be needed.
+        ## TODO: refactor legacy code.
+        cc_av.desired_util_f = 1
+        cc_av.desired_queue_bound_multiplier = 4
+        cc_av.desired_loss_count_bound = 3
+        cc_av.desired_loss_amount_bound_multiplier = 3
+
+        av_link = CCmatic(cc_av)
+        try_except(av_link.setup_config_vars)
+
+        av_link.setup_cegis_loop(
+            search_constraints,
+            [], generator_vars, get_solution_str)
+        av_link.critical_generator_vars = critical_generator_vars
+        c, _, v, = av_link.c, av_link.s, av_link.v
+        assumption = get_assumption(c, v)
+        av_link.specification = z3.Implies(av_link.environment, assumption)
+
+        # Multi-cegis
+        verifier_structs = [av_link.get_verifier_struct()]
+        multicegis = MultiCegis(
+            generator_vars, search_constraints, critical_generator_vars,
+            verifier_structs, ctx, None, None)
+        multicegis.get_solution_str = get_solution_str
+
+        try_except(multicegis.run)

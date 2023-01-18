@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 import z3
 from ccac.cca_aimd import cca_aimd
@@ -9,7 +9,9 @@ from ccac.model import cca_const, cca_paced
 from ccac.utils import make_periodic
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
+from ccmatic.common import flatten
 from ccmatic.verifier import setup_ccac_for_cegis
+from ccmatic.verifier.ideal import IdealLink
 from pyz3_utils.my_solver import MySolver
 
 
@@ -147,3 +149,44 @@ def get_cca_vvars(c: ModelConfig, v: Variables, pre=""):
         return np.array([
             z3.Int(f"{pre}bbr_start_state_{n}") for n in range(c.N)])
     return []
+
+
+class AssumptionVerifier(IdealLink):
+    """
+    For testing for all initial conditions and arrival curves, the ideal
+    response is feasible implies that the synthesized assumption must be
+    feasible.
+
+    This verifier will put constraints on what assumptions to pick assumptions
+    that are meaningful (i.e., includes behaviors that an ideal link could
+    produce.)
+
+    The constraints can simply be picked using IdealLink, we just need to change
+    the verifier and definition vars.
+
+    The synthesized assumption cannot in anyway change the trace. All feasible
+    traces are always feasible irrespective of the synthesized assumption (this
+    is different from the CCA synth case, where the traces may not be feasible
+    for a CCA). So all variables are basically verifier vars. (no variables
+    except the assumption depends on generator vars.)
+
+    Since all vars are verifier vars, all definitions become environment.
+    """
+
+    @staticmethod
+    def setup_cegis_basic(cc: CegisConfig):
+        (c, s, v, ccac_domain, ccac_definitions, environment,
+         verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
+
+        new_environment = z3.And(ccac_domain, ccac_definitions, environment)
+        assert isinstance(new_environment, z3.ExprRef)
+
+        # TODO: Since the assumption depends on waste. Need to specify
+        # deterministic choice of waste that the assumption must allow.
+
+        # TODO: see if the process actually needs to say that there exists some
+        # way to waste, instead of allowing a prespecified waste.
+
+        return (c, s, v,
+                True, True, z3.And(ccac_domain, ccac_definitions, environment),
+                verifier_vars + definition_vars, [])

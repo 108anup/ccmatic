@@ -11,6 +11,7 @@ from ccmatic.common import get_renamed_vars, try_except
 from ccmatic.verifier import (get_belief_invariant, get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
+from ccmatic.verifier.assumptions import AssumptionVerifier
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
@@ -96,7 +97,11 @@ class CCmatic():
 
     def setup_config_vars(self):
         cc = self.cc
-        if(cc.ideal_link):
+        if(cc.assumption_verifier):
+            (c, s, v,
+             ccac_domain, ccac_definitions, environment,
+             verifier_vars, definition_vars) = AssumptionVerifier.setup_cegis_basic(cc)
+        elif(cc.ideal_link):
             (c, s, v,
              ccac_domain, ccac_definitions, environment,
              verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
