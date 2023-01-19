@@ -2,8 +2,8 @@
 
 set -xe
 
-DIR=./logs/assumptions_that_fix_cca_and_include_ideal-non_mono
-OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_ideal-non_mono
+DIR=./logs/assumptions_that_fix_cca_and_include_ideal$SUFFIX
+OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_ideal$SUFFIX
 
 filter() {
     dut=$1
@@ -13,10 +13,14 @@ filter() {
     tmux send-keys "$cmd" Enter
 }
 
+tmux rename-window analyse-ideal
+
 tmux split-window -h
 tmux split-window -v
 tmux select-pane -t 1
 tmux split-window -v
+
+tmux select-layout tiled
 
 tmux select-pane -t 1
 filter copa 0.1

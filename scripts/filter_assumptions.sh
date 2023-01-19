@@ -1,8 +1,9 @@
 #!/bin/bash
 
 set -xe
-DIR=./logs/assumptions_that_fix_cca_and_include_loss-non_mono
-OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_loss-non_mono
+SUFFIX=-non_mono
+DIR=./logs/assumptions_that_fix_cca_and_include_loss$SUFFIX
+OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_loss$SUFFIX
 
 run() {
     dut=$1
@@ -13,12 +14,16 @@ run() {
     tmux send-keys "$cmd" Enter
 }
 
+tmux rename-window analyse-repeat$SUFFIX
+
 tmux split-window -h
 tmux split-window -v
 tmux split-window -v
 tmux select-pane -t 1
 tmux split-window -v
 tmux split-window -v
+
+tmux select-layout tiled
 
 tmux select-pane -t 1
 run copa paced 0.1
