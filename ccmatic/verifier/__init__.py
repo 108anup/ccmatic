@@ -385,8 +385,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     cycle = c.T-1  # as first time is chosen by verifier.
     reset_minc_time = int((cycle-1)/2)
     reset_maxc_time = int((cycle-1))
-    reset_minc_time = c.T-3
-    reset_maxc_time = c.T-3
+    reset_minc_time = c.T-2
+    reset_maxc_time = c.T-2
     for n in range(c.N):
         for et in range(1, c.T):
             # Compute utilization stats. Useful for updating {min, max}_c
@@ -422,11 +422,14 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             # quickly.
             minc_changed_list = []
             maxc_changed_list = []
+            rate_above_minc_list = []
             for st in range(1, et):
                 minc_changed_list.append(v.min_c[n][st] > v.min_c[n][st-1])
                 maxc_changed_list.append(v.max_c[n][st] < v.max_c[n][st-1])
+                rate_above_minc_list.append(v.r_f[n][st] > v.min_c[n][st])
             minc_changed = z3.Or(*minc_changed_list)
             maxc_changed = z3.Or(*maxc_changed_list)
+            rate_above_minc = z3.Or(*rate_above_minc_list)
 
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
@@ -442,20 +445,21 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 timeout_lower = z3.And(z3.Or(v.start_state_f[n] + et == reset_minc_time,
                                              v.start_state_f[n] + et == reset_minc_time + cycle),
                                        z3.Or(utilized_t),
-                                       z3.Not(minc_changed))
-
-                base_lower = z3.If(
-                    z3.Or(v.start_state_f[n] + et == reset_minc_time,
-                          v.start_state_f[n] + et == reset_minc_time + cycle),
-                    0, base_lower)
+                                       z3.Not(maxc_changed),
+                                       z3.Not(minc_changed),
+                                       z3.Not(rate_above_minc)
+                                       )
+                base_lower = z3.If(timeout_lower, 0, base_lower)
 
             if(c.fix_stale__max_c):
                 # Timeout upper bound if we are in the appropraite cycle in the
                 # state machine and we haven't recently utilized the link.
                 timeout_upper = z3.And(z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                                              v.start_state_f[n] + et == reset_maxc_time + cycle),
-                                       z3.Not(z3.Or(utilized_t)),
-                                       z3.Not(maxc_changed))
+                                       # z3.Not(z3.Or(utilized_t)),
+                                       z3.Not(minc_changed),
+                                       z3.Not(maxc_changed)
+                                       )
                 base_upper = z3.If(timeout_upper, 2 * base_upper, base_upper)
 
             """
@@ -758,7 +762,10 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     if(c.fix_stale__min_c):
         minc_is_stale, stale_minc_improves = get_stale_minc_improves(cc, c, v)
         d.stale_minc_improves = stale_minc_improves
-        invariant = z3.If(minc_is_stale, stale_minc_improves, invariant)
+        invariant = z3.If(minc_is_stale,
+                          z3.Or(stale_minc_improves,
+                                d.desired_in_ss, d.beliefs_improve),
+                          invariant)
         # invariant = z3.Or(invariant, stale_minc_improves)
         assert isinstance(invariant, z3.BoolRef)
         d.desired_belief_invariant = invariant
@@ -766,7 +773,10 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     if(c.fix_stale__max_c):
         maxc_is_stale, stale_maxc_improves = get_stale_maxc_improves(cc, c, v)
         d.stale_maxc_improves = stale_maxc_improves
-        invariant = z3.If(maxc_is_stale, stale_maxc_improves, invariant)
+        invariant = z3.If(maxc_is_stale,
+                          z3.Or(stale_maxc_improves,
+                                d.desired_in_ss, d.beliefs_improve),
+                          invariant)
         assert isinstance(invariant, z3.BoolRef)
         d.desired_belief_invariant = invariant
 

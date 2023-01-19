@@ -500,8 +500,8 @@ if(cc.infinite_buffer):
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
 else:
-    cc.desired_loss_count_bound = 3
-    cc.desired_large_loss_count_bound = 3
+    cc.desired_loss_count_bound = 4
+    cc.desired_large_loss_count_bound = 4
     cc.desired_loss_amount_bound_multiplier = 3
     cc.desired_loss_amount_bound_alpha = 3
 
@@ -567,8 +567,8 @@ else:
         Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
     ]
     metric_loss = [
-        Metric(cc.desired_loss_count_bound, 0, 3, 0.001, False),
-        Metric(cc.desired_large_loss_count_bound, 0, 3, 0.001, False),
+        Metric(cc.desired_loss_count_bound, 0, 4, 0.001, False),
+        Metric(cc.desired_large_loss_count_bound, 0, 4, 0.001, False),
         Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
         Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
     ]
