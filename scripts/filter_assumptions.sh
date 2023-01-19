@@ -1,13 +1,15 @@
 #!/bin/bash
 
 set -xe
+DIR=./logs/assumptions_that_fix_cca_and_include_loss-non_mono
+OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_loss-non_mono
 
 run() {
     dut=$1
     ref=$2
     util=$3
-    logpath=./logs/assumptions_that_fix_cca_and_include_loss/$dut-ref_$ref-util$util.csv
-    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref --filter-assumptions -o ./outputs/assumptions/assumptions_that_fix_cca_and_include_loss/$dut-ref_$ref-util$util"
+    logpath=$DIR/$dut-ref_$ref-util$util.csv
+    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref --filter-assumptions -o $OUTDIR/$dut-ref_$ref-util$util"
     tmux send-keys "$cmd" Enter
 }
 
