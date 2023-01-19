@@ -342,3 +342,66 @@ def find_optimum_bounds(
                     logger.info("-"*80)
 
             logger.info("="*80)
+
+
+def long_term_proof_belief_template():
+    """
+    Each lemma has two types of constraints:
+    (1) Recursivity (if you are in a good state, you don't become bad)
+    (2) Performant (if you are in good state, you get to narrower good state) OR
+                   (if you are in good state, you get performance objectives)
+
+    The good state might have a range (this needs to be computed),
+    getting to a narrower good state may take time (this needs to be a bounded using a finite time)
+    """
+
+    # Lemma 1
+    """
+    If inconsistent then beliefs
+        eventually shrink to small range or
+        eventually become consistent
+
+    In this function:
+    * Eventually needs to be finite time.
+    * Small range needs to be computed
+    """
+
+    # Lemma 1.1
+    """
+    If inconsistent in small range (computed above) then beliefs
+        don't increase beyond small range and
+        evetually become consistent
+
+    * Eventually needs to be finite time.
+    """
+
+    # Lemma 2
+    """
+    If beliefs are consistent then
+        they don't become inconsistent and
+        they eventually converge to small range
+
+    * The small range needs to be computed (this may be exact same as above range)
+    * Eventually needs to be finite time.
+    """
+
+    # Lemma 3
+    """
+    If the beliefs are consistent and in small range (computed above) then
+        the beliefs don't become inconsistent and
+        remain in small range and
+        the performance metrics eventually stabilize into a small steady range
+
+    * The small steady range needs to be computed
+    * Eventually needs to be finite
+    """
+
+    # Lemma 4
+    """
+    If the beliefs are consistent, in small range (computed above)
+    and performance metrics are in steady range, then
+        the beliefs don't become inconsistent and
+        remain in small range and
+        performance metrics remain in steady range
+        the performance metrics satisfy desired objectives.
+    """
