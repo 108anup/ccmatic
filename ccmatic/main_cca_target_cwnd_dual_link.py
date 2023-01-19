@@ -11,7 +11,7 @@ import z3
 import ccmatic.common  # Used for side effects
 from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
-from ccmatic import CCmatic, OptimizationStruct
+from ccmatic import CCmatic, OptimizationStruct, find_optimum_bounds
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from ccmatic.verifier import get_cex_df
@@ -993,7 +993,7 @@ else:
     ]
 
     ideal_os = OptimizationStruct(
-        ideal, verifier_structs[0], ideal_metrics_fixed, ideal_metrics_optimize)
+        ideal, verifier_structs[0], ideal_metrics_fixed, [ideal_metrics_optimize])
 
     # Adv
     cc_adv.reset_desired_z3(adv.v.pre)
@@ -1011,7 +1011,7 @@ else:
     ]
 
     adv_os = OptimizationStruct(
-        adv, verifier_structs[1], adv_metrics_fixed, adv_metrics_optimize)
+        adv, verifier_structs[1], adv_metrics_fixed, [adv_metrics_optimize])
 
     optimization_structs = [ideal_os, adv_os]
 
@@ -1024,66 +1024,20 @@ else:
         z3.And(*flatten([fixed_cond, ai, td, comb_ad, *fi_ti])),
     ]
     solution = solutions[args.optimize]
+    assert isinstance(solution, z3.BoolRef)
 
     # ----------------------------------------------------------------
     # Check
     logger.info(f"Testing solution: {args.optimize}")
-    for ops in optimization_structs:
-        link = ops.ccmatic
-        vs = ops.vs
-        cc = link.cc
-        _, desired = link.get_desired()
-        logger.info(f"Testing link: {cc.name}")
 
-        # v = link.v
-        # c = link.c
-        # first = cc.history
-        # mmBDP = c.C * (c.R + c.D)
+    extra_constraints = []
+    # extra_constraints.append(c.buf_max == c.C * c.R / 10)
+    # for n in range(c.N):
+    #     for t in range(HISTORY):
+    #         extra_constraints.append(v.c_f[n][t] == c.C * c.R * 0.99)
+    #         extra_constraints.append(v.Ld_f[n][t+1] == v.L[t])
+    # extra_constraints.append(v.c_f[0][first] >= 20 * mmBDP)
+    # extra_constraints.append(z3.Not(v.c_f[0][c.T-1] <= v.c_f[0][first]/2))
+    # extra_constraints.append(c.buf_min <= 0.1 * mmBDP)
 
-        verifier = MySolver()
-        verifier.warn_undeclared = False
-        verifier.add(link.definitions)
-        verifier.add(link.environment)
-        verifier.add(z3.Not(desired))
-        # verifier.add(c.buf_max == c.C * c.R / 10)
-        # for n in range(c.N):
-        #     for t in range(HISTORY):
-        #         verifier.add(v.c_f[n][t] == c.C * c.R * 0.99)
-        #         verifier.add(v.Ld_f[n][t+1] == v.L[t])
-        # import ipdb; ipdb.set_trace()
-        # verifier.add(v.c_f[0][first] >= 20 * mmBDP)
-        # verifier.add(z3.Not(v.c_f[0][c.T-1] <= v.c_f[0][first]/2))
-        # verifier.add(c.buf_min <= 0.1 * mmBDP)
-        fix_metrics(verifier, ops.fixed_metrics)
-        verifier.add(solution)
-
-        verifier.push()
-        fix_metrics(verifier, ops.optimize_metrics)
-        sat = verifier.check()
-
-        if(str(sat) == "sat"):
-            model = verifier.model()
-            logger.error("Objective violted. Cex:\n" +
-                vs.get_counter_example_str(model, link.verifier_vars))
-            logger.critical("Note, the desired string in above output is based "
-                            "on cegis metrics instead of optimization metrics.")
-            import ipdb; ipdb.set_trace()
-
-        else:
-            logger.info(f"Solver gives {str(sat)} with loosest bounds.")
-            verifier.pop()
-            GlobalConfig().logging_levels['cegis'] = logging.INFO
-            logger = logging.getLogger('cegis')
-            GlobalConfig().default_logger_setup(logger)
-
-            def try_fun():
-                ret = optimize_multi_var(verifier, ops.optimize_metrics)
-                assert len(ret) > 0
-                df = pd.DataFrame(ret)
-                sort_columns = [x.name() for x in ops.optimize_metrics]
-                sort_order = [x.maximize for x in ops.optimize_metrics]
-                df = df.sort_values(by=sort_columns, ascending=sort_order)
-                logger.info(df)
-
-            try_except(try_fun)
-            logger.info("-"*80)
+    find_optimum_bounds(solution, optimization_structs, extra_constraints)

@@ -87,7 +87,7 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.use_ref_cca = True if args.ref is not None else False
-cc.monotonic_inc_assumption = True
+cc.monotonic_inc_assumption = False
 
 cc.compose = True
 cc.cca = args.dut

@@ -1,13 +1,15 @@
+import pandas as pd
 import copy
 from dataclasses import dataclass
 import functools
+import logging
 from typing import Callable, List, Optional
 
 import z3
 from ccac.variables import VariableNames
 
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
-from ccmatic.common import get_renamed_vars, try_except
+from ccmatic.common import flatten, get_renamed_vars, try_except
 from ccmatic.verifier import (get_belief_invariant, get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
@@ -15,7 +17,13 @@ from ccmatic.verifier.assumptions import AssumptionVerifier
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import Metric, z3_min
+from cegis.util import Metric, fix_metrics, optimize_multi_var, z3_min
+from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
+
+
+logger = logging.getLogger('ccmatic')
+GlobalConfig().default_logger_setup(logger)
 
 
 class CCmatic():
@@ -274,4 +282,63 @@ class OptimizationStruct:
     vs: VerifierStruct
 
     fixed_metrics: List[Metric]
-    optimize_metrics: List[Metric]
+    optimize_metrics_list: List[List[Metric]]
+
+
+def find_optimum_bounds(
+        solution: z3.BoolRef, optimization_structs: List[OptimizationStruct],
+        extra_constraints: List[z3.BoolRef] = []):
+
+    for ops in optimization_structs:
+        link = ops.ccmatic
+        vs = ops.vs
+        cc = link.cc
+        _, desired = link.get_desired()
+        logger.info(f"Testing link: {cc.name}")
+
+        verifier = MySolver()
+        verifier.warn_undeclared = False
+        verifier.add(link.definitions)
+        verifier.add(link.environment)
+        verifier.add(solution)
+        verifier.add(z3.Not(desired))
+        verifier.add(z3.And(*extra_constraints))
+        fix_metrics(verifier, ops.fixed_metrics)
+
+        verifier.push()
+        fix_metrics(verifier, flatten(ops.optimize_metrics_list))
+        sat = verifier.check()
+
+        if(str(sat) == "sat"):
+            model = verifier.model()
+            logger.error("Objective violted. Cex:\n" +
+                         vs.get_counter_example_str(model, link.verifier_vars))
+            logger.critical("Note, the desired string in above output is based "
+                            "on cegis metrics instead of optimization metrics.")
+            import ipdb; ipdb.set_trace()
+
+        else:
+            logger.info(f"Solver gives {str(sat)} with loosest bounds.")
+            verifier.pop()
+
+            # Change logging levels used by optimize_multi_var
+            GlobalConfig().logging_levels['cegis'] = logging.INFO
+            cegis_logger = logging.getLogger('cegis')
+            GlobalConfig().default_logger_setup(cegis_logger)
+
+            for metric_list in ops.optimize_metrics_list:
+                verifier.push()
+                other_metrics = ops.optimize_metrics_list.copy()
+                other_metrics.remove(metric_list)
+                fix_metrics(verifier, flatten(other_metrics))
+                ret = optimize_multi_var(verifier, metric_list)
+                verifier.pop()
+                if(len(ret) > 0):
+                    df = pd.DataFrame(ret)
+                    sort_columns = [x.name() for x in metric_list]
+                    sort_order = [x.maximize for x in metric_list]
+                    df = df.sort_values(by=sort_columns, ascending=sort_order)
+                    logger.info(df)
+                    logger.info("-"*80)
+
+            logger.info("="*80)

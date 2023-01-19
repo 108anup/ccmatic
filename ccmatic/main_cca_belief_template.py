@@ -11,7 +11,7 @@ import z3
 import ccmatic.common  # Used for side effects
 from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
-from ccmatic import CCmatic, OptimizationStruct
+from ccmatic import CCmatic, OptimizationStruct, find_optimum_bounds
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from ccmatic.verifier import get_cex_df
@@ -557,66 +557,60 @@ if(args.optimize is None):
 
 else:
     solution = solutions[args.optimize]
+    assert isinstance(solution, z3.BoolRef)
 
+    # Adversarial link
     cc.reset_desired_z3(link.v.pre)
-    metric_util = [
-        Metric(cc.desired_util_f, 0.5, 1, 0.001, True)
-    ]
-    metric_queue = [
-        Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+    # metric_util = [
+    #     Metric(cc.desired_util_f, 0.4, 1, 0.001, True)
+    # ]
+    # metric_queue = [
+    #     Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+    #     Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+    # ]
+    # metric_loss = [
+    #     Metric(cc.desired_loss_count_bound, 0, 4, 0.001, False),
+    #     Metric(cc.desired_large_loss_count_bound, 0, 4, 0.001, False),
+    #     Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
+    #     Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
+    # ]
+    # optimize_metrics_list = [metric_util, metric_queue]
+    # os = OptimizationStruct(link, link.get_verifier_struct(),
+    #                         metric_loss, optimize_metrics_list)
+
+    metric_alpha = [
+        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
         Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
     ]
-    metric_loss = [
+    metric_non_alpha = [
+        Metric(cc.desired_util_f, 0.4, 1, 0.001, True),
+        Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
         Metric(cc.desired_loss_count_bound, 0, 4, 0.001, False),
         Metric(cc.desired_large_loss_count_bound, 0, 4, 0.001, False),
         Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
-        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
     ]
-    list_metric_lists = [metric_util, metric_queue]
+    optimize_metrics_list = [[x] for x in metric_non_alpha]
+    os = OptimizationStruct(link, link.get_verifier_struct(),
+                            metric_alpha, optimize_metrics_list)
+    oss = [os]
 
-    _, desired = link.get_desired()
-    verifier = MySolver()
-    verifier.warn_undeclared = False
-    verifier.add(link.definitions)
-    verifier.add(link.environment)
-    verifier.add(z3.Not(desired))
-    # verifier.add(v.min_c[0][0] <= c.C)
-    # d = link.d
-    # verifier.add(z3.Not(z3.Or(d.desired_necessary, d.beliefs_improve)))
-    verifier.add(solution)
+    if(ADD_IDEAL_LINK):
+        assert isinstance(ideal_link, CCmatic)
+        cc_ideal.reset_desired_z3(ideal_link.v.pre)
+        metric_alpha = [
+            Metric(cc_ideal.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
+            Metric(cc_ideal.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        ]
+        metric_non_alpha = [
+            Metric(cc_ideal.desired_util_f, 0.4, 1, 0.001, True),
+            Metric(cc_ideal.desired_queue_bound_multiplier, 0, 4, 0.001, False),
+            Metric(cc_ideal.desired_loss_count_bound, 0, 4, 0.001, False),
+            Metric(cc_ideal.desired_large_loss_count_bound, 0, 4, 0.001, False),
+            Metric(cc_ideal.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
+        ]
+        optimize_metrics_list = [[x] for x in metric_non_alpha]
+        os = OptimizationStruct(ideal_link, ideal_link.get_verifier_struct(),
+                                metric_alpha, optimize_metrics_list)
+        oss = [os] + oss
 
-    # For belief based CCAs, skip optimizing loss.
-    fix_metrics(verifier, flatten(metric_loss))
-
-    verifier.push()
-    fix_metrics(verifier, flatten(list_metric_lists))
-
-    sat = verifier.check()
-    if(str(sat) == "sat"):
-        model = verifier.model()
-        logger.error("Objective violted. Cex:\n" +
-                     link.get_counter_example_str(model, link.verifier_vars))
-        logger.critical("Note, the desired string in above output is based "
-                        "on cegis metrics instead of optimization metrics.")
-        import ipdb; ipdb.set_trace()
-    else:
-        # uc = get_unsat_core(verifier)
-        # import ipdb; ipdb.set_trace()
-
-        logger.info(f"Solver gives {str(sat)} with loosest bounds.")
-        verifier.pop()
-        for metric_list in list_metric_lists:
-            verifier.push()
-            other_metrics = list_metric_lists.copy()
-            other_metrics.remove(metric_list)
-            fix_metrics(verifier, flatten(other_metrics))
-            ret = optimize_multi_var(verifier, metric_list)
-            verifier.pop()
-            try:
-                df = pd.DataFrame(ret)
-                sort_columns = [x.name() for x in metric_list]
-                sort_order = [x.maximize for x in metric_list]
-                df = df.sort_values(by=sort_columns, ascending=sort_order)
-                print(df)
-            except:
-                pass
+    find_optimum_bounds(solution, oss)
