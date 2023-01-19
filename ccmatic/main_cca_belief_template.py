@@ -11,7 +11,7 @@ import z3
 import ccmatic.common  # Used for side effects
 from ccac.config import ModelConfig
 from ccac.variables import VariableNames, Variables
-from ccmatic import CCmatic, OptimizationStruct, find_optimum_bounds
+from ccmatic import CCmatic, OptimizationStruct, find_optimum_bounds, long_term_proof_belief_template
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
 from ccmatic.verifier import get_cex_df
@@ -29,7 +29,6 @@ def get_args():
 
     parser = argparse.ArgumentParser(description='Belief template')
 
-    parser.add_argument('--optimize', action='store', type=int, default=None)
     parser.add_argument('--infinite-buffer', action='store_true', default=False)
     parser.add_argument('--finite-buffer', action='store_true', default=False)
     parser.add_argument('--dynamic-buffer', action='store_true', default=False)
@@ -38,6 +37,9 @@ def get_args():
     parser.add_argument('--app-limited', action='store_true', default=False)
     parser.add_argument('--fix-minc', action='store_true', default=False)
     parser.add_argument('--fix-maxc', action='store_true', default=False)
+    parser.add_argument('--optimize', action='store_true', default=False)
+    parser.add_argument('--proofs', action='store_true', default=False)
+    parser.add_argument('--solution', action='store', type=int, default=None)
     args = parser.parse_args()
     return args
 
@@ -540,23 +542,10 @@ if(ADD_IDEAL_LINK):
     ideal_link.critical_generator_vars = critical_generator_vars
     logger.info("Ideal: " + cc_ideal.desire_tag())
 
-if(args.optimize is None):
-    if(ADD_IDEAL_LINK):
-        assert isinstance(ideal_link, CCmatic)
-        links = [ideal_link, link]
-        verifier_structs = [x.get_verifier_struct() for x in links]
 
-        multicegis = MultiCegis(
-            generator_vars, search_constraints, critical_generator_vars,
-            verifier_structs, link.ctx, None, None)
-        multicegis.get_solution_str = get_solution_str
-
-        try_except(multicegis.run)
-    else:
-        link.run_cegis()
-
-else:
-    solution = solutions[args.optimize]
+if(args.optimize):
+    assert args.solution is not None
+    solution = solutions[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
     # Adversarial link
@@ -614,3 +603,24 @@ else:
         oss = [os] + oss
 
     find_optimum_bounds(solution, oss)
+
+elif(args.proofs):
+    assert args.solution is not None
+    solution = solutions[args.solution]
+    assert isinstance(solution, z3.BoolRef)
+
+    long_term_proof_belief_template(link, solution)
+else:
+    if(ADD_IDEAL_LINK):
+        assert isinstance(ideal_link, CCmatic)
+        links = [ideal_link, link]
+        verifier_structs = [x.get_verifier_struct() for x in links]
+
+        multicegis = MultiCegis(
+            generator_vars, search_constraints, critical_generator_vars,
+            verifier_structs, link.ctx, None, None)
+        multicegis.get_solution_str = get_solution_str
+
+        try_except(multicegis.run)
+    else:
+        link.run_cegis()

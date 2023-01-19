@@ -10,14 +10,14 @@ from ccac.variables import VariableNames
 
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import flatten, get_renamed_vars, try_except
-from ccmatic.verifier import (get_belief_invariant, get_cex_df, get_desired_necessary,
+from ccmatic.verifier import (SteadyStateVariable, get_belief_invariant, get_cex_df, get_desired_necessary,
                               get_desired_ss_invariant, get_gen_cex_df,
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import AssumptionVerifier
 from ccmatic.verifier.ideal import IdealLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import Metric, fix_metrics, optimize_multi_var, z3_min
+from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -25,6 +25,8 @@ from pyz3_utils.my_solver import MySolver
 logger = logging.getLogger('ccmatic')
 GlobalConfig().default_logger_setup(logger)
 
+
+EPS = 1e-3
 
 class CCmatic():
     # Boilerplate for common steps
@@ -344,7 +346,8 @@ def find_optimum_bounds(
             logger.info("="*80)
 
 
-def long_term_proof_belief_template():
+def long_term_proof_belief_template(
+        link: CCmatic, solution: z3.BoolRef):
     """
     Each lemma has two types of constraints:
     (1) Recursivity (if you are in a good state, you don't become bad)
@@ -355,9 +358,43 @@ def long_term_proof_belief_template():
     getting to a narrower good state may take time (this needs to be a bounded using a finite time)
     """
 
+    # Setup verifier
+    vs = link.get_verifier_struct()
+    c, v = link.c, link.v
+    # For now only looking at link rate in belief state.
+    assert c.beliefs_use_buffer is False
+    assert c.N == 1
+    # I have only thought about single flow case for these proofs.
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(solution)
+
+    steady__min_c = SteadyStateVariable(
+        "steady__min_c",
+        z3_min_list(list(v.min_c[:, 0])),
+        z3_min_list(list(v.min_c[:, -1])),
+        z3.Real("steady__min_c__lo"),
+        z3.Real("steady__min_c__hi"))
+    steady__max_c = SteadyStateVariable(
+        "steady__min_c",
+        z3_max_list(list(v.max_c[:, 0])),
+        z3_max_list(list(v.max_c[:, -1])),
+        z3.Real("steady__max_c__lo"),
+        z3.Real("steady__max_c__hi"))
+    steady__minc_maxc_gap = SteadyStateVariable(
+        "steady__minc_maxc_gap",
+        steady__max_c.initial - steady__min_c.initial,
+        steady__max_c.final - steady__min_c.final,
+        z3.Real("steady__minc_maxc_gap__lo"),
+        z3.Real("steady__minc_maxc_gap__hi"))
+    svs = [steady__max_c, steady__max_c, steady__minc_maxc_gap]
+
     # Lemma 1
     """
-    If inconsistent then beliefs
+    If inconsistent and outside small range then beliefs
         eventually shrink to small range or
         eventually become consistent
 
@@ -365,6 +402,56 @@ def long_term_proof_belief_template():
     * Eventually needs to be finite time.
     * Small range needs to be computed
     """
+
+    def get_counter_example_str(counter_example: z3.ModelRef,
+                                verifier_vars: List[z3.ExprRef]) -> str:
+        ret = vs.get_counter_example_str(counter_example, verifier_vars)
+        ret += "\n"
+        sv_strs = []
+        for sv in svs:
+            lo = sv.lo
+            hi = sv.hi
+            sv_strs.append(f"{lo.decl().name()}="
+                           f"{get_raw_value(counter_example.eval(lo))}")
+            sv_strs.append(f"{hi.decl().name()}="
+                           f"{get_raw_value(counter_example.eval(hi))}")
+        ret += ", ".join(sv_strs)
+        return ret
+
+    verifier.push()
+    # max_c inconsistent
+    # TODO: Binary search largest movement
+    # TODO: We may have to prove the lemmas bottom up, instead of top down.
+    movement_mult = 1
+    verifier.add(steady__minc_maxc_gap.hi > c.C / 2)
+
+    initial_inconsistent = z3.Or([v.max_c[n][0] < c.C
+                                  for n in range(c.N)])
+    initial_gap_large = steady__minc_maxc_gap.initial > steady__minc_maxc_gap.hi
+
+    final_consistent = z3.And([v.max_c[n][0] >= c.C
+                               for n in range(c.N)])
+    final_moves_consistent = z3.And(
+        [v.max_c[n][-1] > movement_mult * v.max_c[n][0] for n in range(c.N)])
+
+    final_gap_reduces = movement_mult * steady__minc_maxc_gap.final < \
+        steady__minc_maxc_gap.initial
+    final_gap_small = steady__minc_maxc_gap.final < steady__minc_maxc_gap.hi
+
+    desired = z3.Implies(
+        z3.And(initial_inconsistent, initial_gap_large),
+        z3.Or(final_consistent, final_moves_consistent,
+              final_gap_reduces, final_gap_small))
+
+    verifier.add(z3.Not(desired))
+    sat = verifier.check()
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        logger.error("Lemma 1 violated. Cex:\n" +
+                     get_counter_example_str(model, link.verifier_vars))
+        logger.critical("Note, the desired string in above output is based "
+                        "on cegis metrics instead of optimization metrics.")
+        import ipdb; ipdb.set_trace()
 
     # Lemma 1.1
     """
