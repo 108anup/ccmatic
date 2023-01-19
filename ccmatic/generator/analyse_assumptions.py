@@ -20,6 +20,9 @@ from cegis import get_solution_df, rename_vars
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
+
+# Don't see debug outputs
+GlobalConfig().logging_levels['analyse_assumptions'] = logging.INFO
 logger = logging.getLogger('analyse_assumptions')
 GlobalConfig().default_logger_setup(logger)
 
@@ -95,10 +98,10 @@ def threadsafe_compare(a, b, lemmas, ctx: z3.Context):
         solver.push()
         solver.s.add(z3.And(x, z3.Not(y)))
         start = time.time()
-        logger.info("Started cmp")
+        logger.debug("Started cmp")
         ret = str(solver.check())
         end = time.time()
-        logger.info(f"Cmp took {end - start} secs, returned {ret}")
+        logger.debug(f"Cmp took {end - start} secs, returned {ret}")
         # model = solver.model()
         # import ipdb; ipdb.set_trace()
         solver.pop()
@@ -194,15 +197,22 @@ def get_weakest_assumptions(assumption_assignments: List[z3.ExprRef],
                 ret.add(ib)
         return ret
 
+    last_log = time.time()
     for ia in range(n):
-        logger.info(f"Checking {ia}. Current filtered size: {len(filtered)}")
+        current = time.time()
+        if(current - last_log > 5):
+            logger.info(f"Checking {ia}. Current filtered size: {len(filtered)}")
+            last_log = current
+        else:
+            logger.debug(f"Checking {ia}. Current filtered size: {len(filtered)}")
+
         if(ia in filtered):
             nodelist = list(filtered - set([ia]))
             ret = check(ia, nodelist)
             remainder = ret.union(set([ia]))
             filtered = filtered.intersection(remainder)
         else:
-            logger.info(f"{ia} already pruned.")
+            logger.debug(f"{ia} already pruned.")
 
     return list(filtered)
 
@@ -474,3 +484,23 @@ def filter_print_assumptions(
     write_assumptions(
         list(range(len(assumption_records))), assumption_records,
         get_solution_str, outdir, f'_all{suffix}')
+
+
+def read_assumption_records(fpath):
+    f = open(fpath, 'r')
+    df = pd.read_csv(f)
+    ar = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    f.close()
+
+    # There may be don't cares in the solution
+    # Hopefully these are only in choosing boolean values.
+    # We replace all don't cares by 'False'
+    # From https://datatofish.com/check-nan-pandas-dataframe/
+    if(ar.isnull().values.any()):
+        for column in ar.columns:
+            if(ar[column].isnull().any()):
+                logger.warn(
+                    f"Column {column} has null values."
+                    "These will be replaced by False")
+        ar = ar.replace(np.nan, False)
+    return ar
