@@ -458,8 +458,17 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                                              v.start_state_f[n] + et == reset_maxc_time + cycle),
                                        # z3.Not(z3.Or(utilized_t)),
                                        z3.Not(minc_changed),
-                                       z3.Not(maxc_changed)
-                                       )
+                                       z3.Not(maxc_changed))
+
+                # timeout_upper_signal = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
+                #                              v.start_state_f[n] + et == reset_maxc_time + cycle)
+                # beliefs_close = v.max_c[n][et-1] - v.min_c[n][et-1] <= 10
+                # beliefs_did_not_change = z3.Not(
+                #     z3.Or(minc_changed, maxc_changed))
+                # timeout_upper = z3.And(
+                #     timeout_upper_signal,
+                #     z3.Or(z3.And(beliefs_close, z3.Not(z3.Or(utilized_t))),
+                #           beliefs_did_not_change))
                 base_upper = z3.If(timeout_upper, 2 * base_upper, base_upper)
 
             """
@@ -506,7 +515,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # TODO: Use this only if we are requiring CCA to not reset beliefs when it thinks
     #  network changed.
     for n in range(c.N):
-        s.add(v.min_c[n][0] >= 0)
+        s.add(v.min_c[n][0] > 0)
         s.add(v.min_c[n][0] < v.max_c[n][0])
         if(not c.fix_stale__min_c):
             s.add(v.min_c[n][0] <= c.C)

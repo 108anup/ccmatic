@@ -285,6 +285,19 @@ class OptimizationStruct:
 
     fixed_metrics: List[Metric]
     optimize_metrics_list: List[List[Metric]]
+    _desired: Optional[z3.BoolRef] = None
+    _get_counter_example_str_function: Optional[Callable] = None
+
+    def get_desired(self) -> z3.BoolRef:
+        if(self._desired is None):
+            _, desired = self.ccmatic.get_desired()
+            return desired
+        return self._desired
+
+    def get_get_counter_example_str_function(self):
+        if(self._get_counter_example_str_function is None):
+            return self.vs.get_counter_example_str
+        return self._get_counter_example_str_function
 
 
 def find_optimum_bounds(
@@ -293,9 +306,9 @@ def find_optimum_bounds(
 
     for ops in optimization_structs:
         link = ops.ccmatic
-        vs = ops.vs
         cc = link.cc
-        _, desired = link.get_desired()
+        desired = ops.get_desired()
+        get_cex_str_fun = ops.get_get_counter_example_str_function()
         logger.info(f"Testing link: {cc.name}")
 
         verifier = MySolver()
@@ -314,7 +327,7 @@ def find_optimum_bounds(
         if(str(sat) == "sat"):
             model = verifier.model()
             logger.error("Objective violted. Cex:\n" +
-                         vs.get_counter_example_str(model, link.verifier_vars))
+                         get_cex_str_fun(model, link.verifier_vars))
             logger.critical("Note, the desired string in above output is based "
                             "on cegis metrics instead of optimization metrics.")
             import ipdb; ipdb.set_trace()
@@ -358,20 +371,16 @@ def long_term_proof_belief_template(
     getting to a narrower good state may take time (this needs to be a bounded using a finite time)
     """
 
-    # Setup verifier
+    # Setup variables
+    first = link.cc.history
     vs = link.get_verifier_struct()
     c, v = link.c, link.v
-    # For now only looking at link rate in belief state.
+    # For now only looking at link rate in belief state (not buffer size).
     assert c.beliefs_use_buffer is False
-    assert c.N == 1
     # I have only thought about single flow case for these proofs.
+    assert c.N == 1
 
-    verifier = MySolver()
-    verifier.warn_undeclared = False
-    verifier.add(link.definitions)
-    verifier.add(link.environment)
-    verifier.add(solution)
-
+    # Steady states
     steady__min_c = SteadyStateVariable(
         "steady__min_c",
         z3_min_list(list(v.min_c[:, 0])),
@@ -384,13 +393,80 @@ def long_term_proof_belief_template(
         z3_max_list(list(v.max_c[:, -1])),
         z3.Real("steady__max_c__lo"),
         z3.Real("steady__max_c__hi"))
-    steady__minc_maxc_gap = SteadyStateVariable(
-        "steady__minc_maxc_gap",
-        steady__max_c.initial - steady__min_c.initial,
-        steady__max_c.final - steady__min_c.final,
-        z3.Real("steady__minc_maxc_gap__lo"),
-        z3.Real("steady__minc_maxc_gap__hi"))
-    svs = [steady__max_c, steady__max_c, steady__minc_maxc_gap]
+    steady__minc_maxc_mult_gap = SteadyStateVariable(
+        "steady__minc_maxc_mult_gap",
+        steady__max_c.initial/steady__min_c.initial,
+        steady__max_c.final/steady__min_c.final,
+        z3.Real("steady__minc_maxc_mult_gap__lo"),
+        z3.Real("steady__minc_maxc_mult_gap__hi"))
+    steady__minc_maxc_add_gap = SteadyStateVariable(
+        "steady__minc_maxc_add_gap",
+        steady__max_c.initial-steady__min_c.initial,
+        steady__max_c.final-steady__min_c.final,
+        z3.Real("steady__minc_maxc_add_gap__lo"),
+        z3.Real("steady__minc_maxc_add_gap__hi"))
+    steady__rate = SteadyStateVariable(
+        "steady__rate",
+        v.r_f[0][first],
+        v.r_f[0][-1],
+        z3.Real("steady__rate__lo"),
+        z3.Real("steady__rate__hi"))
+    steady__queue = SteadyStateVariable(
+        "steady__queue",
+        v.A[first] - v.L[first] - v.S[first],
+        v.A[-1] - v.L[-1] - v.S[-1],
+        z3.Real("steady__queue__lo"),
+        z3.Real("steady__queue__hi"))
+    svs = [steady__max_c, steady__max_c,
+           steady__minc_maxc_mult_gap, steady__minc_maxc_add_gap,
+           steady__rate, steady__queue]
+
+    # Movements
+    movement_mult__consistent = z3.Real('movement_mult__consistent')
+    movement_mult__minc_maxc_mult_gap = z3.Real('movement_mult__minc_maxc_mult_gap')
+    movements = [
+        movement_mult__consistent, movement_mult__minc_maxc_mult_gap
+    ]
+
+    def get_counter_example_str(counter_example: z3.ModelRef,
+                                verifier_vars: List[z3.ExprRef]) -> str:
+        ret = vs.get_counter_example_str(counter_example, verifier_vars)
+        sv_strs = []
+        for sv in svs:
+            lo = sv.lo
+            hi = sv.hi
+            sv_strs.append(f"{lo.decl().name()}="
+                           f"{get_raw_value(counter_example.eval(lo))}")
+            sv_strs.append(f"{hi.decl().name()}="
+                           f"{get_raw_value(counter_example.eval(hi))}")
+        ret += "\n"
+        ret += ", ".join(sv_strs)
+        movement_strs = []
+        for movement in movements:
+            movement_strs.append(f"{movement.decl().name()}="
+                                 f"{get_raw_value(counter_example.eval(movement))}")
+        ret += "\n"
+        ret += ", ".join(movement_strs)
+        return ret
+
+    def debug_verifier(lemma: z3.BoolRef, extra_constraints):
+        verifier = MySolver()
+        verifier.warn_undeclared = False
+        verifier.add(link.definitions)
+        verifier.add(link.environment)
+        verifier.add(solution)
+        verifier.add(z3.Not(lemma))
+        verifier.add(z3.And(extra_constraints))
+        sat = verifier.check()
+        if(str(sat) == "sat"):
+            model = verifier.model()
+            logger.error("Lemma violated. Cex:\n" +
+                         get_counter_example_str(model, link.verifier_vars))
+            logger.critical("Note, the desired string in above output is based "
+                            "on cegis metrics instead of optimization metrics.")
+            import ipdb; ipdb.set_trace()
+        else:
+            logger.info("Lemma passes")
 
     # Lemma 1
     """
@@ -403,55 +479,38 @@ def long_term_proof_belief_template(
     * Small range needs to be computed
     """
 
-    def get_counter_example_str(counter_example: z3.ModelRef,
-                                verifier_vars: List[z3.ExprRef]) -> str:
-        ret = vs.get_counter_example_str(counter_example, verifier_vars)
-        ret += "\n"
-        sv_strs = []
-        for sv in svs:
-            lo = sv.lo
-            hi = sv.hi
-            sv_strs.append(f"{lo.decl().name()}="
-                           f"{get_raw_value(counter_example.eval(lo))}")
-            sv_strs.append(f"{hi.decl().name()}="
-                           f"{get_raw_value(counter_example.eval(hi))}")
-        ret += ", ".join(sv_strs)
-        return ret
-
-    verifier.push()
+    # verifier.push()
     # max_c inconsistent
     # TODO: Binary search largest movement
     # TODO: We may have to prove the lemmas bottom up, instead of top down.
-    movement_mult = 1
-    verifier.add(steady__minc_maxc_gap.hi > c.C / 2)
-
     initial_inconsistent = z3.Or([v.max_c[n][0] < c.C
                                   for n in range(c.N)])
-    initial_gap_large = steady__minc_maxc_gap.initial > steady__minc_maxc_gap.hi
+    initial_gap_large = steady__minc_maxc_mult_gap.initial > steady__minc_maxc_mult_gap.hi
 
     final_consistent = z3.And([v.max_c[n][0] >= c.C
                                for n in range(c.N)])
     final_moves_consistent = z3.And(
-        [v.max_c[n][-1] > movement_mult * v.max_c[n][0] for n in range(c.N)])
+        [v.max_c[n][-1] > movement_mult__consistent * v.max_c[n][0] for n in range(c.N)])
+    final_invalid = z3.And([v.max_c[n][-1] <= v.min_c[n][-1] for n in range(c.N)])
 
-    final_gap_reduces = movement_mult * steady__minc_maxc_gap.final < \
-        steady__minc_maxc_gap.initial
-    final_gap_small = steady__minc_maxc_gap.final < steady__minc_maxc_gap.hi
+    final_gap_reduces = movement_mult__minc_maxc_mult_gap * steady__minc_maxc_mult_gap.final < \
+        steady__minc_maxc_mult_gap.initial
+    final_gap_small = steady__minc_maxc_mult_gap.final < steady__minc_maxc_mult_gap.hi
 
-    desired = z3.Implies(
+    lemma1 = z3.Implies(
         z3.And(initial_inconsistent, initial_gap_large),
-        z3.Or(final_consistent, final_moves_consistent,
+        z3.Or(final_consistent, final_moves_consistent, final_invalid,
               final_gap_reduces, final_gap_small))
 
-    verifier.add(z3.Not(desired))
-    sat = verifier.check()
-    if(str(sat) == "sat"):
-        model = verifier.model()
-        logger.error("Lemma 1 violated. Cex:\n" +
-                     get_counter_example_str(model, link.verifier_vars))
-        logger.critical("Note, the desired string in above output is based "
-                        "on cegis metrics instead of optimization metrics.")
-        import ipdb; ipdb.set_trace()
+    metrics_lists = [
+        [Metric(movement_mult__consistent, 1, 10, EPS, True)],
+        [Metric(movement_mult__minc_maxc_mult_gap, 1, 10, EPS, True)],
+        [Metric(steady__minc_maxc_mult_gap.hi, c.C/2, 10*c.C, EPS, True)]
+    ]
+    os = OptimizationStruct(
+        link, vs, [], metrics_lists, lemma1, get_counter_example_str)
+    # logger.info("Lemma 1")
+    # find_optimum_bounds(solution, [os])
 
     # Lemma 1.1
     """
@@ -461,6 +520,18 @@ def long_term_proof_belief_template(
 
     * Eventually needs to be finite time.
     """
+    lemma1_1 = z3.Implies(
+            z3.And(initial_inconsistent, z3.Not(initial_gap_large)),
+            z3.Or(final_moves_consistent, final_consistent, final_invalid))
+    metrics_lists = [
+        [Metric(movement_mult__consistent, 1, 10, EPS, True)],
+        [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 10, EPS, True)]
+    ]
+    os = OptimizationStruct(
+        link, vs, [], metrics_lists, lemma1_1, get_counter_example_str)
+    # logger.info("Lemma 1.1")
+    # find_optimum_bounds(solution, [os])
+
 
     # Lemma 2
     """
@@ -482,6 +553,42 @@ def long_term_proof_belief_template(
     * The small steady range needs to be computed
     * Eventually needs to be finite
     """
+    initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
+                                      for n in range(c.N)])
+    initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
+                                      for n in range(c.N)])
+    initial_consistent = z3.And(
+            initial_minc_consistent, initial_maxc_consistent)
+    # initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= 2)
+    initial_beliefs_close = z3.And(steady__minc_maxc_add_gap.initial <= 10)
+
+    # Step 1: find smallest rate/queue state that is recurisive
+    initial_inside = z3.And(
+        steady__rate.init_inside(),
+        steady__queue.init_inside()
+    )
+    final_inside = z3.And(
+        steady__rate.final_inside(),
+        steady__queue.final_inside()
+    )
+    desired = z3.Implies(
+        z3.And(initial_consistent, initial_inside, initial_beliefs_close),
+        final_inside)
+    fixed_metrics = [
+        Metric(steady__queue.lo, 0, 0, EPS, False)
+    ]
+    metric_lists = [
+        [Metric(steady__rate.lo, 0, c.C, EPS, True),
+         Metric(steady__rate.hi, c.C, 10 * c.C, EPS, False)],
+        [Metric(steady__queue.hi, 0, 4 * c.C * (c.R + c.D), EPS, False)]
+    ]
+    os = OptimizationStruct(link, vs, fixed_metrics,
+                            metric_lists, desired, get_counter_example_str)
+    logger.info("Lemma 3 - Recursive state for rate, queue")
+    find_optimum_bounds(solution, [os])
+    # The steady range of queue is always within 0 and 4.
+    # Then find performant state
+
 
     # Lemma 4
     """
