@@ -64,51 +64,87 @@ class SteadyStateVariable:
     name: str
     initial: z3.ArithRef
     final: z3.ArithRef
-    lo: z3.ArithRef
-    hi: z3.ArithRef
+    lo: Optional[z3.ArithRef]
+    hi: Optional[z3.ArithRef]
 
     def init_outside(self) -> z3.BoolRef:
-        ret = z3.Or(self.initial < self.lo, self.initial > self.hi)
+        ret = z3.Not(self.init_inside())
         assert isinstance(ret, z3.BoolRef)
         return ret
 
     def final_outside(self) -> z3.BoolRef:
-        ret = z3.Or(self.final < self.lo, self.final > self.hi)
+        ret = z3.Not(self.final_inside())
         assert isinstance(ret, z3.BoolRef)
         return ret
 
     def init_inside(self) -> z3.BoolRef:
-        ret = z3.Not(self.init_outside())
+        assert self.lo is not None or self.hi is not None
+        init_inside_list = []
+        if(self.lo is not None):
+            init_inside_list.append(self.lo <= self.initial)
+        if(self.hi is not None):
+            init_inside_list.append(self.initial <= self.hi)
+        ret = z3.And(init_inside_list)
         assert isinstance(ret, z3.BoolRef)
         return ret
 
     def final_inside(self) -> z3.BoolRef:
-        ret = z3.Not(self.final_outside())
+        assert self.lo is not None or self.hi is not None
+        final_inside_list = []
+        if(self.lo is not None):
+            final_inside_list.append(self.lo <= self.final)
+        if(self.hi is not None):
+            final_inside_list.append(self.final <= self.hi)
+        ret = z3.And(final_inside_list)
         assert isinstance(ret, z3.BoolRef)
         return ret
 
     def does_not_degrage(self) -> z3.BoolRef:
-        ret = z3.And(
-            z3.Implies(self.initial < self.lo,
-                       z3.And(self.final >= self.initial,
-                              self.final <= self.hi)),
-            z3.Implies(self.initial > self.hi,
-                       z3.And(self.final <= self.initial,
-                              self.final >= self.lo)),
-            z3.Implies(self.init_inside(), self.final_inside())
-        )
+        assert self.lo is not None or self.hi is not None
+        does_not_degrade_list = [
+            z3.Implies(self.init_inside(), self.final_inside())]
+        if(self.hi is None):
+            does_not_degrade_list.append(
+                z3.Implies(self.initial < self.lo,
+                           self.final >= self.initial))
+        elif(self.lo is None):
+            does_not_degrade_list.append(
+                z3.Implies(self.initial > self.hi,
+                           self.final <= self.initial))
+        else:
+            does_not_degrade_list.append(
+                z3.Implies(self.initial < self.lo,
+                           z3.And(self.final >= self.initial,
+                                  self.final <= self.hi)))
+            does_not_degrade_list.append(
+                z3.Implies(self.initial > self.hi,
+                           z3.And(self.final <= self.initial,
+                                  self.final >= self.lo)))
+        ret = z3.And(does_not_degrade_list)
         assert isinstance(ret, z3.BoolRef)
         return ret
 
     def strictly_improves(self) -> z3.BoolRef:
-        ret = z3.And(
-            z3.Implies(self.initial < self.lo,
-                       z3.And(self.final > self.initial,
-                              self.final <= self.hi)),
-            z3.Implies(self.initial > self.hi,
-                       z3.And(self.final < self.initial,
-                              self.final >= self.lo))
-        )
+        assert self.lo is not None or self.hi is not None
+        strictly_improves_list = []
+        if(self.hi is None):
+            strictly_improves_list.append(
+                z3.Implies(self.initial < self.lo,
+                           self.final > self.initial))
+        elif(self.lo is None):
+            strictly_improves_list.append(
+                z3.Implies(self.initial > self.hi,
+                           self.final < self.initial))
+        else:
+            strictly_improves_list.append(
+                z3.Implies(self.initial < self.lo,
+                           z3.And(self.final > self.initial,
+                                  self.final <= self.hi)))
+            strictly_improves_list.append(
+                z3.Implies(self.initial > self.hi,
+                           z3.And(self.final < self.initial,
+                                  self.final >= self.lo)))
+        ret = z3.And(strictly_improves_list)
         assert isinstance(ret, z3.BoolRef)
         return ret
 

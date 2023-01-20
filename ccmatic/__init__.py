@@ -375,6 +375,7 @@ def long_term_proof_belief_template(
     first = link.cc.history
     vs = link.get_verifier_struct()
     c, v = link.c, link.v
+    d, full_invariant = link.get_desired()
     # For now only looking at link rate in belief state (not buffer size).
     assert c.beliefs_use_buffer is False
     # I have only thought about single flow case for these proofs.
@@ -386,24 +387,24 @@ def long_term_proof_belief_template(
         z3_min_list(list(v.min_c[:, 0])),
         z3_min_list(list(v.min_c[:, -1])),
         z3.Real("steady__min_c__lo"),
-        z3.Real("steady__min_c__hi"))
+        None)
     steady__max_c = SteadyStateVariable(
         "steady__min_c",
         z3_max_list(list(v.max_c[:, 0])),
         z3_max_list(list(v.max_c[:, -1])),
-        z3.Real("steady__max_c__lo"),
+        None,
         z3.Real("steady__max_c__hi"))
     steady__minc_maxc_mult_gap = SteadyStateVariable(
         "steady__minc_maxc_mult_gap",
         steady__max_c.initial/steady__min_c.initial,
         steady__max_c.final/steady__min_c.final,
-        z3.Real("steady__minc_maxc_mult_gap__lo"),
+        None,
         z3.Real("steady__minc_maxc_mult_gap__hi"))
     steady__minc_maxc_add_gap = SteadyStateVariable(
         "steady__minc_maxc_add_gap",
         steady__max_c.initial-steady__min_c.initial,
         steady__max_c.final-steady__min_c.final,
-        z3.Real("steady__minc_maxc_add_gap__lo"),
+        None,
         z3.Real("steady__minc_maxc_add_gap__hi"))
     steady__rate = SteadyStateVariable(
         "steady__rate",
@@ -411,15 +412,15 @@ def long_term_proof_belief_template(
         v.r_f[0][-1],
         z3.Real("steady__rate__lo"),
         z3.Real("steady__rate__hi"))
-    steady__queue = SteadyStateVariable(
-        "steady__queue",
-        v.A[first] - v.L[first] - v.S[first],
-        v.A[-1] - v.L[-1] - v.S[-1],
-        z3.Real("steady__queue__lo"),
-        z3.Real("steady__queue__hi"))
+    steady__bottle_queue = SteadyStateVariable(
+        "steady__bottle_queue",
+        (v.A[first] - v.L[first]) - (v.C0 + c.C * (first) - v.W[first]),
+        (v.A[c.T-1] - v.L[c.T-1]) - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]),
+        None,
+        z3.Real("steady__bottle_queue__hi"))
     svs = [steady__max_c, steady__max_c,
            steady__minc_maxc_mult_gap, steady__minc_maxc_add_gap,
-           steady__rate, steady__queue]
+           steady__rate, steady__bottle_queue]
 
     # Movements
     movement_mult__consistent = z3.Real('movement_mult__consistent')
@@ -559,36 +560,65 @@ def long_term_proof_belief_template(
                                       for n in range(c.N)])
     initial_consistent = z3.And(
             initial_minc_consistent, initial_maxc_consistent)
-    # initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= 2)
+    initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= 2)
     initial_beliefs_close = z3.And(steady__minc_maxc_add_gap.initial <= 10)
 
     # Step 1: find smallest rate/queue state that is recurisive
     initial_inside = z3.And(
         steady__rate.init_inside(),
-        steady__queue.init_inside()
+        steady__bottle_queue.initial <= steady__bottle_queue.hi
     )
     final_inside = z3.And(
         steady__rate.final_inside(),
-        steady__queue.final_inside()
+        steady__bottle_queue.final <= steady__bottle_queue.hi
     )
     desired = z3.Implies(
         z3.And(initial_consistent, initial_inside, initial_beliefs_close),
         final_inside)
-    fixed_metrics = [
-        Metric(steady__queue.lo, 0, 0, EPS, False)
-    ]
+    fixed_metrics = []
     metric_lists = [
-        [Metric(steady__rate.lo, 0, c.C, EPS, True),
-         Metric(steady__rate.hi, c.C, 10 * c.C, EPS, False)],
-        [Metric(steady__queue.hi, 0, 4 * c.C * (c.R + c.D), EPS, False)]
+        [Metric(steady__rate.lo, 0, c.C, EPS, True)],
+        [Metric(steady__rate.hi, c.C, 10 * c.C, EPS, False)],
+        [Metric(steady__bottle_queue.hi, 0, 10 * c.C * (c.R + c.D), EPS, False)]
     ]
     os = OptimizationStruct(link, vs, fixed_metrics,
                             metric_lists, desired, get_counter_example_str)
     logger.info("Lemma 3 - Recursive state for rate, queue")
     find_optimum_bounds(solution, [os])
-    # The steady range of queue is always within 0 and 4.
-    # Then find performant state
 
+    """
+    If we keep minc_maxc_mult_gap to 2:
+        Smallest recursive state is rate in [60, 200],
+        bottle_queue in 300.
+    i.e., anything larger should still be recursive.
+
+    If we keep minc_maxc_add_gap to 10:
+        Smallest recursive state is rate in [100, 200],
+        bottle_queue is recursive in 300.
+    """
+
+    # Step 2 find largest performant state
+    desired = z3.Implies(
+        z3.And(initial_consistent, initial_beliefs_close, initial_inside),
+        d.desired_in_ss)
+    fixed_metrics = [
+        # Metric(steady__bottle_queue.lo, 0, 0, EPS, False)
+    ]
+    metric_lists = [
+        [Metric(steady__rate.lo, 0, c.C, EPS, False)],
+        [Metric(steady__rate.hi, c.C, 10 * c.C, EPS, True)],
+        [Metric(steady__bottle_queue.hi, 0, 10 * c.C * (c.R + c.D), EPS, True)]
+    ]
+    os = OptimizationStruct(link, vs, fixed_metrics,
+                            metric_lists, desired, get_counter_example_str)
+    logger.info("Lemma 3 - Performant state for rate, queue")
+    find_optimum_bounds(solution, [os])
+
+    """
+    If we keep minc_maxc_mult_gap to 2
+        performant state does not require bounds on rate. (i.e., beliefs close is sufficient.)
+        bottle_queue needs to be within 700.
+    """
 
     # Lemma 4
     """
