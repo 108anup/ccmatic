@@ -15,7 +15,7 @@ from ccmatic.verifier import (SteadyStateVariable, get_belief_invariant, get_cex
                               run_verifier_incomplete, setup_cegis_basic)
 from ccmatic.verifier.assumptions import AssumptionVerifier
 from ccmatic.verifier.ideal import IdealLink
-from cegis import NAME_TEMPLATE
+from cegis import NAME_TEMPLATE, get_unsat_core
 from cegis.multi_cegis import VerifierStruct
 from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.common import GlobalConfig
@@ -333,6 +333,9 @@ def find_optimum_bounds(
             import ipdb; ipdb.set_trace()
 
         else:
+            # uc = get_unsat_core(verifier)
+            # import ipdb; ipdb.set_trace()
+
             logger.info(f"Solver gives {str(sat)} with loosest bounds.")
             verifier.pop()
 
@@ -436,10 +439,12 @@ def long_term_proof_belief_template(
         for sv in svs:
             lo = sv.lo
             hi = sv.hi
-            sv_strs.append(f"{lo.decl().name()}="
-                           f"{get_raw_value(counter_example.eval(lo))}")
-            sv_strs.append(f"{hi.decl().name()}="
-                           f"{get_raw_value(counter_example.eval(hi))}")
+            if(lo is not None):
+                sv_strs.append(f"{lo.decl().name()}="
+                               f"{get_raw_value(counter_example.eval(lo))}")
+            if(hi is not None):
+                sv_strs.append(f"{hi.decl().name()}="
+                               f"{get_raw_value(counter_example.eval(hi))}")
         ret += "\n"
         ret += ", ".join(sv_strs)
         movement_strs = []
@@ -577,9 +582,9 @@ def long_term_proof_belief_template(
         final_inside)
     fixed_metrics = []
     metric_lists = [
-        [Metric(steady__rate.lo, 0, c.C, EPS, True)],
-        [Metric(steady__rate.hi, c.C, 10 * c.C, EPS, False)],
-        [Metric(steady__bottle_queue.hi, 0, 10 * c.C * (c.R + c.D), EPS, False)]
+        [Metric(steady__rate.lo, EPS, c.C-EPS, EPS, True)],
+        [Metric(steady__rate.hi, c.C+EPS, 10 * c.C, EPS, False)],
+        [Metric(steady__bottle_queue.hi, c.C * c.R, 10 * c.C * (c.R + c.D), EPS, False)]
     ]
     os = OptimizationStruct(link, vs, fixed_metrics,
                             metric_lists, desired, get_counter_example_str)
@@ -601,18 +606,20 @@ def long_term_proof_belief_template(
     desired = z3.Implies(
         z3.And(initial_consistent, initial_beliefs_close, initial_inside),
         d.desired_in_ss)
-    fixed_metrics = [
-        # Metric(steady__bottle_queue.lo, 0, 0, EPS, False)
-    ]
+    fixed_metrics = []
     metric_lists = [
-        [Metric(steady__rate.lo, 0, c.C, EPS, False)],
-        [Metric(steady__rate.hi, c.C, 10 * c.C, EPS, True)],
-        [Metric(steady__bottle_queue.hi, 0, 10 * c.C * (c.R + c.D), EPS, True)]
+        [Metric(steady__rate.lo, EPS, c.C-EPS, EPS, False)],
+        [Metric(steady__rate.hi, c.C+EPS, 10 * c.C, EPS, True)],
+        [Metric(steady__bottle_queue.hi, c.C * c.R, 10 * c.C * (c.R + c.D), EPS, True)]
     ]
     os = OptimizationStruct(link, vs, fixed_metrics,
                             metric_lists, desired, get_counter_example_str)
     logger.info("Lemma 3 - Performant state for rate, queue")
     find_optimum_bounds(solution, [os])
+
+    # debug_verifier(False,
+    #                [initial_consistent, initial_beliefs_close,
+    #                 v.r_f[0][first] == 100-EPS])
 
     """
     If we keep minc_maxc_mult_gap to 2
