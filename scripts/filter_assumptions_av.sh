@@ -2,6 +2,7 @@
 
 set -xe
 
+SUFFIX=-non_mono
 DIR=./logs/assumptions_that_fix_cca_and_include_ideal$SUFFIX
 OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_ideal$SUFFIX
 
@@ -13,7 +14,7 @@ filter() {
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window analyse-ideal
+tmux rename-window analyse-ideal$SUFFIX
 
 tmux split-window -h
 tmux split-window -v
