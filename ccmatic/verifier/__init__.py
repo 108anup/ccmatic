@@ -469,6 +469,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
+            # beliefs_close = base_upper <= base_lower * 3/2
 
             """
             Time out the beliefs every cycle time.
@@ -493,6 +494,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 timeout_upper = z3.And(z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                                              v.start_state_f[n] + et == reset_maxc_time + cycle),
                                        # z3.Not(z3.Or(utilized_t)),
+                                       # z3.Not(beliefs_close),
                                        z3.Not(minc_changed),
                                        z3.Not(maxc_changed))
 
@@ -1316,6 +1318,12 @@ def setup_ccac_environment(c, v):
     service_waste(c, s, v)
     if(not c.deterministic_loss):
         loss_non_deterministic(c, s, v)
+    # else:
+    #     if(c.N == 1):
+    #         # If loss happens at t=0, then bottleneck queue must be full at t=0.
+    #         s.add(z3.Implies(
+    #             v.Ld_f[0][0] != v.L_f[0][0],
+    #             v.A[0] - v.L[0] - (v.C0 - v.W[0]) == c.buf_min))
     if(not c.loss_oracle):
         loss_detected(c, s, v)
     if(c.calculate_qdel):

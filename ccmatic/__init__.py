@@ -362,6 +362,17 @@ def find_optimum_bounds(
             logger.info("="*80)
 
 
+def steady_state_variables_improve(svs: List[SteadyStateVariable]):
+    # Improves =
+    #     none should degrade AND
+    #     atleast one that is outside must move towards inside
+    none_degrade = z3.And([x.does_not_degrage() for x in svs])
+    atleast_one_improves = z3.Or(
+        [z3.And(x.init_outside(), x.strictly_improves()) for x in svs])
+    final_improves = z3.And(atleast_one_improves, none_degrade)
+    return final_improves
+
+
 def long_term_proof_belief_template(
         link: CCmatic, solution: z3.BoolRef):
     """
@@ -387,14 +398,14 @@ def long_term_proof_belief_template(
     # Steady states
     steady__min_c = SteadyStateVariable(
         "steady__min_c",
-        z3_min_list(list(v.min_c[:, 0])),
-        z3_min_list(list(v.min_c[:, -1])),
+        v.min_c[0][0],
+        v.min_c[0][-1],
         z3.Real("steady__min_c__lo"),
         None)
     steady__max_c = SteadyStateVariable(
         "steady__min_c",
-        z3_max_list(list(v.max_c[:, 0])),
-        z3_max_list(list(v.max_c[:, -1])),
+        v.max_c[0][0],
+        v.max_c[0][-1],
         None,
         z3.Real("steady__max_c__hi"))
     steady__minc_maxc_mult_gap = SteadyStateVariable(
@@ -493,7 +504,7 @@ def long_term_proof_belief_template(
                                   for n in range(c.N)])
     initial_gap_large = steady__minc_maxc_mult_gap.initial > steady__minc_maxc_mult_gap.hi
 
-    final_consistent = z3.And([v.max_c[n][0] >= c.C
+    final_beliefs_consistent = z3.And([v.max_c[n][0] >= c.C
                                for n in range(c.N)])
     final_moves_consistent = z3.And(
         [v.max_c[n][-1] > movement_mult__consistent * v.max_c[n][0] for n in range(c.N)])
@@ -505,7 +516,7 @@ def long_term_proof_belief_template(
 
     lemma1 = z3.Implies(
         z3.And(initial_inconsistent, initial_gap_large),
-        z3.Or(final_consistent, final_moves_consistent, final_invalid,
+        z3.Or(final_beliefs_consistent, final_moves_consistent, final_invalid,
               final_gap_reduces, final_gap_small))
 
     metrics_lists = [
@@ -528,7 +539,7 @@ def long_term_proof_belief_template(
     """
     lemma1_1 = z3.Implies(
             z3.And(initial_inconsistent, z3.Not(initial_gap_large)),
-            z3.Or(final_moves_consistent, final_consistent, final_invalid))
+            z3.Or(final_moves_consistent, final_beliefs_consistent, final_invalid))
     metrics_lists = [
         [Metric(movement_mult__consistent, 1, 10, EPS, True)],
         [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 10, EPS, True)]
@@ -548,10 +559,54 @@ def long_term_proof_belief_template(
     * The small range needs to be computed (this may be exact same as above range)
     * Eventually needs to be finite time.
     """
+    initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
+                                      for n in range(c.N)])
+    initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
+                                      for n in range(c.N)])
+    initial_beliefs_consistent = z3.And(
+        initial_minc_consistent, initial_maxc_consistent)
+    final_minc_consistent = z3.And([v.min_c[n][-1] <= c.C
+                                    for n in range(c.N)])
+    final_maxc_consistent = z3.And([v.max_c[n][-1] >= c.C
+                                    for n in range(c.N)])
+    final_beliefs_consistent = z3.And(
+        final_minc_consistent, final_maxc_consistent)
+
+    initial_beliefs_inside = z3.And(
+        steady__max_c.init_inside(), steady__min_c.init_inside())
+    final_beliefs_inside = z3.And(
+        steady__max_c.final_inside(), steady__min_c.final_inside())
+
+    # Step 1: Find smallest recursive state for minc and maxc
+    desired = z3.Implies(z3.And(initial_beliefs_consistent, initial_beliefs_inside),
+                         final_beliefs_inside)
+    metric_lists = [
+        [Metric(steady__min_c.lo, EPS, c.C-EPS, EPS, True),
+         Metric(steady__max_c.hi, c.C+EPS, 10 * c.C, EPS, False)]
+    ]
+    os = OptimizationStruct(link, vs, [], metric_lists,
+                            desired, get_counter_example_str)
+    logger.info("Lemma 2: recursive state for minc and maxc")
+    find_optimum_bounds(solution, [os])
+
+    final_beliefs_improve = steady_state_variables_improve([steady__min_c, steady__max_c])
+    # final_beliefs_close = steady__minc_maxc_mult_gap.final <= steady__minc_maxc_mult_gap.hi
+    final_beliefs_close = steady__minc_maxc_add_gap.final <= steady__minc_maxc_add_gap.hi
+    final_beliefs_shrink = steady__minc_maxc_mult_gap.final < steady__minc_maxc_mult_gap.initial
+    lemma2 = z3.Implies(initial_beliefs_consistent,
+                        z3.And(final_beliefs_consistent, z3.Or(final_beliefs_close, final_beliefs_shrink)))
+    metric_lists = [
+        [Metric(steady__minc_maxc_mult_gap.hi, 1, 4, EPS, True)]
+    ]
+    os = OptimizationStruct(link, vs, [], metric_lists, lemma2, get_counter_example_str)
+    # logger.info("Lemma 2")
+    # find_optimum_bounds(solution, [os])
 
     # Lemma 3
     """
-    If the beliefs are consistent and in small range (computed above) then
+    If the beliefs are consistent and
+    in small range (computed above) and
+    performance metrics not in steady range then
         the beliefs don't become inconsistent and
         remain in small range and
         the performance metrics eventually stabilize into a small steady range
@@ -559,26 +614,20 @@ def long_term_proof_belief_template(
     * The small steady range needs to be computed
     * Eventually needs to be finite
     """
-    initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
-                                      for n in range(c.N)])
-    initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
-                                      for n in range(c.N)])
-    initial_consistent = z3.And(
-            initial_minc_consistent, initial_maxc_consistent)
-    initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= 2)
-    initial_beliefs_close = z3.And(steady__minc_maxc_add_gap.initial <= 10)
+    # initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= 2)
+    # initial_beliefs_close = z3.And(steady__minc_maxc_add_gap.initial <= 10)
+    initial_beliefs_close = z3.And(steady__minc_maxc_mult_gap.initial <= steady__minc_maxc_mult_gap.hi)
+    initial_beliefs_close = z3.And(steady__minc_maxc_add_gap.initial <= steady__minc_maxc_add_gap.hi)
 
     # Step 1: find smallest rate/queue state that is recurisive
     initial_inside = z3.And(
         steady__rate.init_inside(),
-        steady__bottle_queue.initial <= steady__bottle_queue.hi
-    )
+        steady__bottle_queue.init_inside())
     final_inside = z3.And(
         steady__rate.final_inside(),
-        steady__bottle_queue.final <= steady__bottle_queue.hi
-    )
+        steady__bottle_queue.final_inside())
     desired = z3.Implies(
-        z3.And(initial_consistent, initial_inside, initial_beliefs_close),
+        z3.And(initial_beliefs_consistent, initial_beliefs_close, initial_inside),
         final_inside)
     fixed_metrics = []
     metric_lists = [
@@ -588,8 +637,8 @@ def long_term_proof_belief_template(
     ]
     os = OptimizationStruct(link, vs, fixed_metrics,
                             metric_lists, desired, get_counter_example_str)
-    logger.info("Lemma 3 - Recursive state for rate, queue")
-    find_optimum_bounds(solution, [os])
+    # logger.info("Lemma 3 - Recursive state for rate, queue")
+    # find_optimum_bounds(solution, [os])
 
     """
     If we keep minc_maxc_mult_gap to 2:
@@ -598,13 +647,13 @@ def long_term_proof_belief_template(
     i.e., anything larger should still be recursive.
 
     If we keep minc_maxc_add_gap to 10:
-        Smallest recursive state is rate in [100, 200],
+        Smallest recursive state is rate in [60, 200],
         bottle_queue is recursive in 300.
     """
 
     # Step 2 find largest performant state
     desired = z3.Implies(
-        z3.And(initial_consistent, initial_beliefs_close, initial_inside),
+        z3.And(initial_beliefs_consistent, initial_beliefs_close, initial_inside),
         d.desired_in_ss)
     fixed_metrics = []
     metric_lists = [
@@ -614,8 +663,8 @@ def long_term_proof_belief_template(
     ]
     os = OptimizationStruct(link, vs, fixed_metrics,
                             metric_lists, desired, get_counter_example_str)
-    logger.info("Lemma 3 - Performant state for rate, queue")
-    find_optimum_bounds(solution, [os])
+    # logger.info("Lemma 3 - Performant state for rate, queue")
+    # find_optimum_bounds(solution, [os])
 
     # debug_verifier(False,
     #                [initial_consistent, initial_beliefs_close,
@@ -625,7 +674,31 @@ def long_term_proof_belief_template(
     If we keep minc_maxc_mult_gap to 2
         performant state does not require bounds on rate. (i.e., beliefs close is sufficient.)
         bottle_queue needs to be within 700.
+
+    If we keep minc_maxc_add_gap to 10
+        performant state does not require bounds on rate. (i.e., beliefs close is sufficient.)
+        bottle_queue needs to be within 700.
     """
+    svs = [steady__rate, steady__bottle_queue]
+    none_degrade = z3.And([x.does_not_degrage() for x in svs])
+    atleast_one_improves = z3.Or(
+        [z3.And(x.init_outside(), x.strictly_improves()) for x in svs])
+    # none should degrade AND
+    # atleast one that is outside must move towards inside
+    final_moves_inside = z3.And(atleast_one_improves, none_degrade)
+
+    ss_assignments = [
+        # steady__minc_maxc_mult_gap.hi == 2,
+        steady__minc_maxc_add_gap.hi == 0.1 * c.C,
+        steady__rate.lo == c.C * 3/5,
+        steady__rate.hi == c.C * 2,
+        steady__bottle_queue.hi == 2 * c.C * (c.R + c.D)
+    ]
+    lemma3 = z3.Implies(z3.And(initial_beliefs_consistent, initial_beliefs_close, z3.Not(initial_inside)),
+                        z3.And(final_beliefs_consistent, final_beliefs_close,
+                               z3.Or(final_inside, final_moves_inside)))
+    # logger.info("Lemma 3")
+    # debug_verifier(lemma3, ss_assignments)
 
     # Lemma 4
     """
@@ -636,3 +709,8 @@ def long_term_proof_belief_template(
         performance metrics remain in steady range
         the performance metrics satisfy desired objectives.
     """
+    lemma4 = z3.Implies(
+        z3.And(initial_beliefs_consistent, initial_beliefs_close, initial_inside),
+               final_beliefs_consistent, final_beliefs_close, final_inside, d.desired_in_ss)
+    logger.info("Lemma 4")
+    debug_verifier(lemma4, ss_assignments)
