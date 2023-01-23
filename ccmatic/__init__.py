@@ -724,7 +724,7 @@ def long_term_proof_belief_template(
         d.desired_in_ss)
     fixed_metrics = []
     metric_lists = [
-        [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 10, EPS, True)]
+        [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 10, EPS, True)],
         [Metric(steady__rate.lo, EPS, c.C-EPS, EPS, False)],
         [Metric(steady__rate.hi, c.C+EPS, 10 * c.C, EPS, True)],
         [Metric(steady__bottle_queue.hi, c.C * c.R, 10 * c.C * (c.R + c.D), EPS, True)]

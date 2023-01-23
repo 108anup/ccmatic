@@ -482,11 +482,11 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # This again requires more nuanced book keeping of the sequence of events.
                 timeout_lower = z3.And(z3.Or(v.start_state_f[n] + et == reset_minc_time,
                                              v.start_state_f[n] + et == reset_minc_time + cycle),
-                                       z3.Or(utilized_t),
+                                       # z3.Or(utilized_t),
                                        # decent_utilization,
                                        z3.Not(maxc_changed),
                                        z3.Not(minc_changed),
-                                       z3.Not(rate_above_minc)
+                                       # z3.Not(rate_above_minc)
                                        )
                 base_lower = z3.If(timeout_lower, 0, base_lower)
 
