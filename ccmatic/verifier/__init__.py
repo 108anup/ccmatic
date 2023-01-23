@@ -470,6 +470,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
             # beliefs_close = base_upper <= base_lower * 3/2
+            # decent_utilization = z3.Sum(utilized_t) >= 2
 
             """
             Time out the beliefs every cycle time.
@@ -482,6 +483,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 timeout_lower = z3.And(z3.Or(v.start_state_f[n] + et == reset_minc_time,
                                              v.start_state_f[n] + et == reset_minc_time + cycle),
                                        z3.Or(utilized_t),
+                                       # decent_utilization,
                                        z3.Not(maxc_changed),
                                        z3.Not(minc_changed),
                                        z3.Not(rate_above_minc)
@@ -493,6 +495,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # state machine and we haven't recently utilized the link.
                 timeout_upper = z3.And(z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                                              v.start_state_f[n] + et == reset_maxc_time + cycle),
+                                       # z3.Not(decent_utilization),
                                        # z3.Not(z3.Or(utilized_t)),
                                        # z3.Not(beliefs_close),
                                        z3.Not(minc_changed),
@@ -507,7 +510,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 #     timeout_upper_signal,
                 #     z3.Or(z3.And(beliefs_close, z3.Not(z3.Or(utilized_t))),
                 #           beliefs_did_not_change))
-                base_upper = z3.If(timeout_upper, 2 * base_upper, base_upper)
+                base_upper = z3.If(timeout_upper, 3/2 * base_upper, base_upper)
 
             """
             In summary C >= r * n/(n+1) always, if we additionally know that

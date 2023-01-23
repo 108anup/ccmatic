@@ -225,8 +225,12 @@ def get_template_definitions(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
+            # template_definitions.append(
+            #     v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+            # template_definitions.append(
+            #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
             template_definitions.append(
-                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+                v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
     return template_definitions
 
 
@@ -426,6 +430,44 @@ known_solution_list.extend(
 )
 blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
 
+"""
+25: if (+ 1min_qdel + -2 > 0):
+    r_f[n][t] = max(alpha, 1min_c + -1alpha)
+elif (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)
+
+If queue large, then drain, elseif beliefs large, then probe, otherwise minc.
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
+    cond_consts[0] == -2,
+    expr_coeffs[0] == 1,
+    expr_consts[0] == -1,
+
+    cond_coeffs[1][cv_to_cvi['min_c']] == -1,
+    cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
+    cond_consts[1] == 0,
+    expr_coeffs[1] == 2,
+    expr_consts[1] == 0
+]
+for cv in cond_vars:
+    if(cv not in ['min_qdel']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+known_solution_list.extend(
+    [expr_coeffs[i] == 1 for i in range(2, n_expr)] +
+    [expr_consts[i] == 0 for i in range(2, n_expr)] +
+    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+     for cvi in range(len(cond_vars))]
+)
+drain_then_blast_then_stable = z3.And(*known_solution_list)
+
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
 #     r_f[n][t] = max(alpha, 2min_c)
@@ -463,6 +505,7 @@ blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
 
 solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              blast_then_medblast_then_minc_negalpha,
+             drain_then_blast_then_stable
              # synth_min_buffer
              ]
 
@@ -602,7 +645,7 @@ if(args.optimize):
                                 metric_alpha, optimize_metrics_list)
         oss = [os] + oss
 
-    find_optimum_bounds(solution, oss)
+    model = find_optimum_bounds(solution, oss)
 
 elif(args.proofs):
     assert args.solution is not None

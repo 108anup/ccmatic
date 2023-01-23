@@ -1,3 +1,4 @@
+import math
 import pandas as pd
 import copy
 from dataclasses import dataclass
@@ -404,7 +405,7 @@ def long_term_proof_belief_template(
         z3.Real("steady__min_c__lo"),
         None)
     steady__max_c = SteadyStateVariable(
-        "steady__min_c",
+        "steady__max_c",
         v.max_c[0][0],
         v.max_c[0][-1],
         None,
@@ -433,13 +434,14 @@ def long_term_proof_belief_template(
         (v.A[c.T-1] - v.L[c.T-1]) - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]),
         None,
         z3.Real("steady__bottle_queue__hi"))
-    svs = [steady__max_c, steady__max_c,
+    svs = [steady__min_c, steady__max_c,
            steady__minc_maxc_mult_gap, steady__minc_maxc_add_gap,
            steady__rate, steady__bottle_queue]
 
     # Movements
     movement_mult__consistent = z3.Real('movement_mult__consistent')
-    movement_mult__minc_maxc_mult_gap = z3.Real('movement_mult__minc_maxc_mult_gap')
+    movement_mult__minc_maxc_mult_gap = z3.Real(
+        'movement_mult__minc_maxc_mult_gap')
     movements = [
         movement_mult__consistent, movement_mult__minc_maxc_mult_gap
     ]
@@ -452,17 +454,23 @@ def long_term_proof_belief_template(
             lo = sv.lo
             hi = sv.hi
             if(lo is not None):
-                sv_strs.append(f"{lo.decl().name()}="
-                               f"{get_raw_value(counter_example.eval(lo))}")
+                val = get_raw_value(counter_example.eval(lo))
+                if(not math.isnan(val)):
+                    sv_strs.append(f"{lo.decl().name()}="
+                                   f"{val}")
             if(hi is not None):
-                sv_strs.append(f"{hi.decl().name()}="
-                               f"{get_raw_value(counter_example.eval(hi))}")
+                val = get_raw_value(counter_example.eval(hi))
+                if(not math.isnan(val)):
+                    sv_strs.append(f"{hi.decl().name()}="
+                                   f"{val}")
         ret += "\n"
         ret += ", ".join(sv_strs)
         movement_strs = []
         for movement in movements:
-            movement_strs.append(f"{movement.decl().name()}="
-                                 f"{get_raw_value(counter_example.eval(movement))}")
+            val = get_raw_value(counter_example.eval(movement))
+            if(not math.isnan(val)):
+                movement_strs.append(f"{movement.decl().name()}="
+                                     f"{val}")
         ret += "\n"
         ret += ", ".join(movement_strs)
         return ret
@@ -578,7 +586,7 @@ def long_term_proof_belief_template(
     final_beliefs_inside = z3.And(
         steady__max_c.final_inside(), steady__min_c.final_inside())
 
-    initial_beliefs_close_mult = z3.And(steady__minc_maxc_mult_gap.initial <= steady__minc_maxc_mult_gap.hi)
+    initial_beliefs_close_mult = steady__max_c.initial <= steady__minc_maxc_mult_gap.hi * steady__min_c.initial
     initial_beliefs_close_add = z3.And(steady__minc_maxc_add_gap.initial <= steady__minc_maxc_add_gap.hi)
 
     # Step 1: Find smallest recursive state for minc and maxc
@@ -590,16 +598,43 @@ def long_term_proof_belief_template(
     ]
     os = OptimizationStruct(link, vs, [], metric_lists,
                             desired, get_counter_example_str)
-    logger.info("Lemma 2: recursive state for minc and maxc")
-    find_optimum_bounds(solution, [os])
+    # logger.info("Lemma 2: recursive state for minc and maxc")
+    # find_optimum_bounds(solution, [os])
 
     """
-    We find 38.8 and 400 as the recursive region for minc and maxc. This seems to large?
+    We find 38.8 and 400 as the recursive region for minc and maxc. This seems too large?
     """
+
+    # Find what performance is possible with above recursive state for minc/maxc
+    cc = link.cc
+    cc.reset_desired_z3(link.v.pre)
+    # Recompute desired after resetting.
+    d, _ = link.get_desired()
+    desired = z3.Implies(
+        z3.And(initial_beliefs_consistent, initial_beliefs_inside),
+        z3.And(final_beliefs_consistent, final_beliefs_inside, d.desired_necessary))
+    fixed_metrics = [
+        Metric(steady__min_c.lo, EPS, 1/3 * c.C, EPS, False),
+        Metric(steady__max_c.hi, 3 * c.C, 10 * c.C, EPS, True),
+        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
+        Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+    ]
+    metric_lists = [
+        [Metric(cc.desired_util_f, 0.01, 1, EPS, True)],
+        [Metric(cc.desired_queue_bound_multiplier, 0, 16, EPS, False)],
+        [Metric(cc.desired_loss_count_bound, 0, c.T, EPS, False)],
+        [Metric(cc.desired_large_loss_count_bound, 0, c.T, EPS, False)],
+        [Metric(cc.desired_loss_amount_bound_multiplier, 0, c.T, EPS, False)],
+    ]
+    os = OptimizationStruct(link, vs, fixed_metrics, metric_lists,
+                            desired, get_counter_example_str)
+    logger.info("What are the best metrics possible for the recursive range of minc and maxc")
+    model = find_optimum_bounds(solution, [os])
+
 
     final_beliefs_improve = steady_state_variables_improve([steady__min_c, steady__max_c])
     final_beliefs_close_add = steady__minc_maxc_add_gap.final <= steady__minc_maxc_add_gap.hi
-    final_beliefs_close_mult = steady__max_c.final <= steady__min_c.final * steady__minc_maxc_mult_gap.hi
+    final_beliefs_close_mult = steady__max_c.final <= steady__minc_maxc_mult_gap.hi * steady__min_c.final
     # final_beliefs_shrink_mult = steady__minc_maxc_mult_gap.final < steady__minc_maxc_mult_gap.initial
     final_beliefs_shrink_add = steady__minc_maxc_add_gap.final < steady__minc_maxc_add_gap.initial
     lemma2 = z3.Implies(initial_beliefs_consistent,
@@ -615,7 +650,7 @@ def long_term_proof_belief_template(
     desired = z3.Implies(z3.And(initial_beliefs_consistent, initial_beliefs_close_mult),
                                 final_beliefs_close_mult)
     metric_lists = [
-        [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 10, EPS, False)]]
+        [Metric(steady__minc_maxc_mult_gap.hi, 1+EPS, 20, EPS, False)]]
     os = OptimizationStruct(link, vs, [], metric_lists, desired, get_counter_example_str)
     # logger.info("Lemma 2: Find recursive state for mult gap")
     # find_optimum_bounds(solution, [os])
