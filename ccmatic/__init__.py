@@ -705,8 +705,7 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, [], metric_lists,
                                 recursive_beliefs, self.get_counter_example_str)
         logger.info("Lemma 2: recursive state for minc and maxc")
-        find_optimum_bounds(self.solution, [os])
-
+        # find_optimum_bounds(self.solution, [os])
         self.recursive[self.steady__min_c.lo] = c.C/3
         self.recursive[self.steady__min_c.hi] = 3 * c.C
 
@@ -824,7 +823,7 @@ class BeliefProofs(Proofs):
         logger.info("Lemma 3")
         self.debug_verifier(lemma3, ss_assignments)
 
-    def lemma3_step1(self):
+    def recursive_rate_queue(self):
         """
         Lemma 3, Step 1: find smallest rate/queue state that is recursive
         """
@@ -835,10 +834,13 @@ class BeliefProofs(Proofs):
                    self.initial_beliefs_inside,
                    self.initial_inside),
             self.final_inside)
-        fixed_metrics = flatten([
-            [Metric(self.steady__min_c.lo, EPS, c.C-EPS, EPS, False),
-             Metric(self.steady__max_c.hi, c.C+EPS, 10*c.C, EPS, True)]
-        ])
+
+        recur_minc = self.recursive[self.steady__min_c.lo]
+        recur_maxc = self.recursive[self.steady__max_c.hi]
+        fixed_metrics = [
+            Metric(self.steady__min_c.lo, EPS, recur_minc, EPS, True),
+            Metric(self.steady__max_c.hi, recur_maxc, 10 * c.C, EPS, False)]
+
         metric_lists = [
             [Metric(self.steady__rate.lo, EPS, c.C-EPS, EPS, True)],
             [Metric(self.steady__rate.hi, c.C+EPS, 10 * c.C, EPS, False)],
@@ -969,5 +971,5 @@ class BeliefProofs(Proofs):
         self.setup_steady_variables_functions()
         self.setup_conditions()
 
-        self.lemma2()
-        self.lemma3_step1()
+        self.lemma2_step1_recursive_minc_maxc()
+        self.recursive_rate_queue()

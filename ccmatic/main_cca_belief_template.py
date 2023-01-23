@@ -1,25 +1,20 @@
 import argparse
 import copy
 import logging
-from fractions import Fraction
-from typing import Dict, List, Union
+from typing import List
 
-import numpy as np
-import pandas as pd
 import z3
 
 import ccmatic.common  # Used for side effects
 from ccac.config import ModelConfig
-from ccac.variables import VariableNames, Variables
-from ccmatic import CCmatic, OptimizationStruct, find_optimum_bounds, long_term_proof_belief_template
+from ccac.variables import Variables
+from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
+                     find_optimum_bounds)
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
-from ccmatic.verifier import get_cex_df
-from cegis import get_unsat_core
+from ccmatic.common import flatten, get_product_ite, try_except
 from cegis.multi_cegis import MultiCegis
-from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_max, z3_min
+from cegis.util import Metric, get_raw_value, z3_max
 from pyz3_utils.common import GlobalConfig
-from pyz3_utils.my_solver import MySolver
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -652,7 +647,8 @@ elif(args.proofs):
     solution = solutions[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
-    long_term_proof_belief_template(link, solution)
+    bp = BeliefProofs(link, solution)
+    bp.proofs()
 else:
     if(ADD_IDEAL_LINK):
         assert isinstance(ideal_link, CCmatic)
