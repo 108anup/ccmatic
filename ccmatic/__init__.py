@@ -379,7 +379,7 @@ def steady_state_variables_improve(svs: List[SteadyStateVariable]):
 class Proofs:
     link: CCmatic
     solution: z3.BoolRef
-    recursive: Dict[z3.ExprRef, float]
+    recursive: Dict[z3.ExprRef, float] = {}
 
     def __init__(self, link: CCmatic, solution: z3.BoolRef):
         self.link = link
@@ -548,7 +548,9 @@ class BeliefProofs(Proofs):
         self.final_beliefs_close_mult = \
             self.steady__max_c.final <= self.steady__minc_maxc_mult_gap.hi * \
             self.steady__min_c.final
-        self.final_beliefs_shrink_mult = self.steady__minc_maxc_mult_gap.final < self.steady__minc_maxc_mult_gap.initial
+        self.final_beliefs_shrink_mult = \
+            self.steady__max_c.final * self.steady__min_c.initial \
+            < self.steady__max_c.initial * self.steady__min_c.final
         self.final_beliefs_shrink_add = self.steady__minc_maxc_add_gap.final < self.steady__minc_maxc_add_gap.initial
 
         # Rate/bottle_queue
@@ -707,7 +709,7 @@ class BeliefProofs(Proofs):
         logger.info("Lemma 2: recursive state for minc and maxc")
         # find_optimum_bounds(self.solution, [os])
         self.recursive[self.steady__min_c.lo] = c.C/3
-        self.recursive[self.steady__min_c.hi] = 3 * c.C
+        self.recursive[self.steady__max_c.hi] = 3 * c.C
 
         """
         We find 38.8 and 300 as the recursive region for minc and maxc.
