@@ -460,21 +460,26 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             # is not true when maxc is small and we still see qdel measurements
             # due to initial conditions. But in this case beliefs become invalid
             # quickly.
-            minc_changed_list = []
-            maxc_changed_list = []
+            # minc_changed_list = []
+            # maxc_changed_list = []
             rate_above_minc_list = []
             for st in range(1, et):
-                minc_changed_list.append(v.min_c[n][st] > v.min_c[n][st-1])
-                maxc_changed_list.append(v.max_c[n][st] < v.max_c[n][st-1])
+                # minc_changed_list.append(v.min_c[n][st] > v.min_c[n][st-1])
+                # maxc_changed_list.append(v.max_c[n][st] < v.max_c[n][st-1])
                 rate_above_minc_list.append(v.r_f[n][st] > v.min_c[n][st])
-            minc_changed = z3.Or(*minc_changed_list)
-            maxc_changed = z3.Or(*maxc_changed_list)
-            none_changed = z3.Not(z3.Or(minc_changed, maxc_changed))
-            rate_above_minc = z3.Or(*rate_above_minc_list)
+            # minc_changed = z3.Or(*minc_changed_list)
+            # maxc_changed = z3.Or(*maxc_changed_list)
+            minc_changed = v.min_c[n][et-1] > v.min_c[n][0]
+            maxc_changed = v.max_c[n][et-1] < v.max_c[n][0]
+
+            # minc_changed_significantly = v.min_c[n][et-1] > c.maxc_minc_change_mult * v.min_c[n][0]
+            # maxc_changed_significantly = v.max_c[n][et-1] * c.maxc_minc_change_mult < v.max_c[n][0]
+            # none_changed_significantly = z3.Not(z3.Or(minc_changed_significantly, maxc_changed_significantly))
+            # rate_above_minc = z3.Or(*rate_above_minc_list)
 
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
-            beliefs_close_mult = base_upper <= base_lower * c.min_maxc_minc_gap_mult
+            # beliefs_close_mult = base_upper <= base_lower * c.min_maxc_minc_gap_mult
             # decent_utilization = z3.Sum(utilized_t) >= 2
 
             """
@@ -491,13 +496,15 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # AND, if either none changed, or other changed and brought beliefs close.
                 timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_minc_time,
                                                  v.start_state_f[n] + et == reset_minc_time + cycle)
-                other_came_close = z3.And(
-                    beliefs_close_mult, maxc_changed, z3.Not(minc_changed))
+                # other_came_close = z3.And(
+                #     beliefs_close_mult, maxc_changed_significantly, z3.Not(minc_changed_significantly))
                 timeout_lower = z3.And(timeout_allowed_by_state,
                                        # z3.Or(utilized_t),
                                        # decent_utilization,
                                        # z3.Not(rate_above_minc)
-                                       z3.Or(none_changed, other_came_close)
+                                       # z3.Or(none_changed_significantly, other_came_close),
+                                       z3.Not(minc_changed),
+                                       z3.Not(maxc_changed),
                                        )
                 base_lower = z3.If(timeout_lower, 0, base_lower)
 
@@ -506,13 +513,15 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # state machine and we haven't recently utilized the link.
                 timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                                                  v.start_state_f[n] + et == reset_maxc_time + cycle)
-                other_came_close = z3.And(
-                    beliefs_close_mult, minc_changed, z3.Not(maxc_changed))
+                # other_came_close = z3.And(
+                #     beliefs_close_mult, minc_changed_significantly, z3.Not(maxc_changed_significantly))
                 timeout_upper = z3.And(timeout_allowed_by_state,
                                        # z3.Not(decent_utilization),
                                        # z3.Not(z3.Or(utilized_t)),
                                        # z3.Not(beliefs_close),
-                                       z3.Or(none_changed, other_came_close)
+                                       # z3.Or(none_changed_significantly, other_came_close),
+                                       z3.Not(minc_changed),
+                                       z3.Not(maxc_changed),
                                        )
 
                 # timeout_upper_signal = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
@@ -570,8 +579,10 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # TODO: Use this only if we are requiring CCA to not reset beliefs when it thinks
     #  network changed.
     for n in range(c.N):
-        s.add(v.min_c[n][0] > 0)
-        s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
+        # s.add(v.min_c[n][0] >= v.alpha)
+        # s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
+        s.add(v.min_c[n][0] >= 0)
+        s.add(v.min_c[n][0] <= v.max_c[n][0])
         if(not c.fix_stale__min_c):
             s.add(v.min_c[n][0] <= c.C)
         if(not c.fix_stale__max_c):
@@ -1289,6 +1300,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.fix_stale__min_c = cc.fix_stale__min_c
     c.fix_stale__max_c = cc.fix_stale__max_c
     c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
+    c.maxc_minc_change_mult = cc.maxc_minc_change_mult
 
     return c
 

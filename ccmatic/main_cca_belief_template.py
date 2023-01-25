@@ -531,6 +531,7 @@ cc.use_belief_invariant = True
 cc.fix_stale__min_c = args.fix_minc
 cc.fix_stale__max_c = args.fix_maxc
 cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
+cc.maxc_minc_change_mult = 1.1
 
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
@@ -607,15 +608,15 @@ if(args.optimize):
     #                         metric_loss, optimize_metrics_list)
 
     metric_alpha = [
-        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
-        Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.1, False),
+        Metric(cc.desired_queue_bound_alpha, 0, 3, 0.1, False),
     ]
     metric_non_alpha = [
-        Metric(cc.desired_util_f, 0.4, 1, 0.001, True),
-        Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
-        Metric(cc.desired_loss_count_bound, 0, 4, 0.001, False),
-        Metric(cc.desired_large_loss_count_bound, 0, 4, 0.001, False),
-        Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
+        Metric(cc.desired_util_f, 0.4, 1, 0.01, True),
+        Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.1, False),
+        Metric(cc.desired_loss_count_bound, 0, 4, 0.1, False),
+        Metric(cc.desired_large_loss_count_bound, 0, 4, 0.1, False),
+        Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.1, False),
     ]
     optimize_metrics_list = [[x] for x in metric_non_alpha]
     os = OptimizationStruct(link, link.get_verifier_struct(),

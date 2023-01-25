@@ -534,11 +534,12 @@ class BeliefProofs(Proofs):
                                         for n in range(c.N)])
         self.final_beliefs_consistent = z3.And(
             _final_minc_consistent, _final_maxc_consistent)
-        first = 0  # cc.history
-        self.final_moves_consistent = z3.Or(
-            z3.And(v.max_c[0][first] < c.C, v.max_c[0][-1] > v.max_c[0][first]),
-            z3.And(v.min_c[0][first] > c.C, v.min_c[0][-1] < v.min_c[0][first]))
-        self.final_beliefs_invalid = v.max_c[0][-1] <= v.min_c[0][-1]
+
+        # first = 0  # cc.history
+        # self.final_moves_consistent = z3.Or(
+        #     z3.And(v.max_c[0][first] < c.C, v.max_c[0][-1] > v.max_c[0][first]),
+        #     z3.And(v.min_c[0][first] > c.C, v.min_c[0][-1] < v.min_c[0][first]))
+        # self.final_beliefs_invalid = v.max_c[0][-1] <= v.min_c[0][-1]
         # ^^^ We assume if min_c and max_c become exactly same, then that is
         # also invalid, and we reset beleifs in this case... I think there was
         # some issue when max_c and min_c become same.
@@ -592,35 +593,94 @@ class BeliefProofs(Proofs):
         * Small range needs to be computed
         """
         link = self.link
-
-        # NOTE: This has a non-linear constraint!!
-        lemma1 = z3.Implies(
-            z3.And(self.initial_beliefs_consistent,
-                   z3.Not(self.initial_beliefs_close_mult)),
-            z3.Or(
-                self.final_beliefs_close_mult, self.final_beliefs_shrink_mult,
-                self.final_beliefs_consistent, self.final_beliefs_invalid,
-                self.final_moves_consistent)
+        c = link.c
+        v = link.v
+        d = link.d
+        first = 0  # cc.history
+        final_moves_consistent = z3.Or(
+            z3.And(
+                v.max_c[0][first] < c.C,
+                z3.Or(v.max_c[0][-1] > self.movement_mult__consistent * v.max_c[0][first],
+                      v.min_c[0][-1] > self.movement_mult__consistent * v.min_c[0][first])),
+            z3.And(
+                v.min_c[0][first] > c.C,
+                z3.Or(v.min_c[0][-1] * self.movement_mult__consistent < v.min_c[0][first],
+                      v.max_c[0][-1] * self.movement_mult__consistent < v.max_c[0][first]))
         )
-        # TODO: How quickly do they shrink.
-        # TODO: How quickly do they move towards consistency.
-        ss_assignments = [
-            self.steady__minc_maxc_mult_gap.hi == \
-                self.cache['inconsistent_but_close__maxc_minc_mult_gap']
-        ]
-        logger.info("Lemma 1")
-        self.debug_verifier(lemma1, ss_assignments)
+        final_invalid = z3.Not(
+            v.min_c[0][-1] * c.min_maxc_minc_gap_mult < v.max_c[0][-1])
 
-        # Compute movements.
-        # fixed_metrics = [
-        #     Metric(self.steady__minc_maxc_mult_gap.hi, 1.1, 2, 1e-2, True)
-        # ]
-        # metric_lists = []
-        # os = OptimizationStruct(
-        #     self.link, self.vs, fixed_metrics, metric_lists,
-        #     lemma1, self.get_counter_example_str)
-        # logger.info("Lemma 1")
-        # find_optimum_bounds(self.solution, [os])
+        # # Alternate for this would have been that you count beliefs as changed
+        # # only if they changed by a sufficient amount.
+        # initial_bottleneck_queue_empty = v.A[first] - \
+        #     v.L[first] - (v.C0 + c.C * first - v.W[first]) <= 0
+        # final_bottleneck_queue_empty = v.A[c.T-1] - \
+        #     v.L[c.T-1] - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]) <= 0
+        # lemma1_a = z3.Implies(
+        #     z3.And(z3.Not(self.initial_beliefs_consistent),
+        #            z3.Not(initial_bottleneck_queue_empty)),
+        #     z3.Or(self.final_beliefs_consistent,
+        #           final_moves_consistent,
+        #           final_invalid,
+        #           final_bottleneck_queue_empty,
+        #           # d.desired_in_ss
+        #           ))
+        # lemma1_b = z3.Implies(
+        #     z3.And(z3.Not(self.initial_beliefs_consistent),
+        #            initial_bottleneck_queue_empty),
+        #     z3.Or(self.final_beliefs_consistent,
+        #           final_moves_consistent,
+        #           final_invalid,
+        #           # d.desired_in_ss
+        #           ))
+        # lemma1 = z3.And(lemma1_a, lemma1_b)
+
+        lemma1 = z3.Implies(
+            z3.Not(self.initial_beliefs_consistent),
+            z3.Or(self.final_beliefs_consistent,
+                  final_moves_consistent,
+                  final_invalid,
+                  # d.desired_in_ss
+                  ))
+        # TODO: With beleifs timing out if they changed only slightly, we
+        # probably don't need the statement about beliefs timing out when they
+        # become too close.
+        metric_lists = [
+            [Metric(self.movement_mult__consistent, c.maxc_minc_change_mult, 2, 1e-3, True)]
+        ]
+        os = OptimizationStruct(
+            self.link, self.vs, [], metric_lists,
+            lemma1, self.get_counter_example_str)
+        logger.info("Lemma 1")
+        model = find_optimum_bounds(self.solution, [os])
+
+        # self.debug_verifier(lemma1, [])
+
+    def deprecated_lemma1_2(self):
+        """
+        Lemma 1.2: If inconsistent in small range (computed here) then
+            beliefs don't increase beyond small range and
+            we get desired properties
+        """
+
+        link = self.link
+        d = link.d
+        lemma1_2 = z3.Implies(
+            z3.And(
+                z3.Not(self.initial_beliefs_consistent),
+                self.initial_beliefs_close_mult
+            ),
+            z3.And(self.final_beliefs_close_mult, d.desired_in_ss)
+        )
+
+        metric_lists = [
+            [Metric(self.movement_mult__minc_maxc_mult_gap, 1.2, 5, 1e-2, True)]
+        ]
+        os = OptimizationStruct(
+            self.link, self.vs, [], metric_lists,
+            lemma1_2, self.get_counter_example_str)
+        logger.info("Lemma 1.2")
+        find_optimum_bounds(self.solution, [os])
 
     def deprecated_lemma1_1(self):
         # If we timeout beliefs when they get too close, init conditions can
@@ -652,7 +712,7 @@ class BeliefProofs(Proofs):
         lemma1_1 = z3.Implies(
             z3.And(z3.Not(self.initial_beliefs_consistent),
                    self.initial_beliefs_close_mult),
-            z3.Or(self.final_beliefs_consistent, self.final_beliefs_invalid,
+            z3.Or(self.final_beliefs_consistent, # self.final_beliefs_invalid,
                   #   z3.And(
                   #       # self.final_moves_consistent,
                   #       final_moves_consistent,
@@ -1183,7 +1243,7 @@ class BeliefProofs(Proofs):
         # range. We should programatically figure these things out.
 
         # self.deprecated_lemma1_1()
-        # self.lemma1()
+        self.lemma1()
         # self.deprecated_recursive_mult_gap()
         self.lemma2_step1_recursive_minc_maxc()
         # self.lemma2_step2_possible_perf_with_recursive_minc_maxc()
