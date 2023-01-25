@@ -1,7 +1,7 @@
 import math
 import logging
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -124,25 +124,29 @@ class SteadyStateVariable:
         assert isinstance(ret, z3.BoolRef)
         return ret
 
-    def strictly_improves(self) -> z3.BoolRef:
+    def strictly_improves(
+        self, movement_mult: Optional[Union[float, z3.ExprRef]] = None
+    ) -> z3.BoolRef:
         assert self.lo is not None or self.hi is not None
+        if(movement_mult is None):
+            movement_mult = 1
         strictly_improves_list = []
         if(self.hi is None):
             strictly_improves_list.append(
                 z3.Implies(self.initial < self.lo,
-                           self.final > self.initial))
+                           self.final > movement_mult * self.initial))
         elif(self.lo is None):
             strictly_improves_list.append(
                 z3.Implies(self.initial > self.hi,
-                           self.final < self.initial))
+                           self.final * movement_mult < self.initial))
         else:
             strictly_improves_list.append(
                 z3.Implies(self.initial < self.lo,
-                           z3.And(self.final > self.initial,
+                           z3.And(self.final > movement_mult * self.initial,
                                   self.final <= self.hi)))
             strictly_improves_list.append(
                 z3.Implies(self.initial > self.hi,
-                           z3.And(self.final < self.initial,
+                           z3.And(self.final * movement_mult < self.initial,
                                   self.final >= self.lo)))
         ret = z3.And(strictly_improves_list)
         assert isinstance(ret, z3.BoolRef)
