@@ -4,7 +4,7 @@ import copy
 from dataclasses import dataclass
 import functools
 import logging
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import z3
 from ccac.variables import VariableNames
@@ -382,6 +382,7 @@ class Proofs:
     link: CCmatic
     solution: z3.BoolRef
     recursive: Dict[z3.ExprRef, float] = {}
+    cache: Dict[str, Any] = {}
 
     def __init__(self, link: CCmatic, solution: z3.BoolRef):
         self.link = link
@@ -533,6 +534,10 @@ class BeliefProofs(Proofs):
                                         for n in range(c.N)])
         self.final_beliefs_consistent = z3.And(
             _final_minc_consistent, _final_maxc_consistent)
+        first = 0  # cc.history
+        self.final_moves_consistent = z3.Or(
+            z3.And(v.max_c[0][first] < c.C, v.max_c[0][-1] > v.max_c[0][first]),
+            z3.And(v.min_c[0][first] > c.C, v.min_c[0][-1] < v.min_c[0][first]))
         self.final_beliefs_invalid = v.max_c[0][-1] <= v.min_c[0][-1]
         # ^^^ We assume if min_c and max_c become exactly same, then that is
         # also invalid, and we reset beleifs in this case... I think there was
@@ -587,43 +592,39 @@ class BeliefProofs(Proofs):
         * Small range needs to be computed
         """
         link = self.link
-        c = link.c
-        v = link.v
 
-        # max_c inconsistent
-        # TODO: Binary search largest movement
-        # TODO: We may have to prove the lemmas bottom up, instead of top down.
-        initial_inconsistent = z3.Or([v.max_c[n][0] < c.C
-                                      for n in range(c.N)])
-        initial_gap_large = steady__minc_maxc_mult_gap.initial > steady__minc_maxc_mult_gap.hi
-
-        final_beliefs_consistent = z3.And([v.max_c[n][0] >= c.C
-                                           for n in range(c.N)])
-        final_moves_consistent = z3.And(
-            [v.max_c[n][-1] > movement_mult__consistent * v.max_c[n][0] for n in range(c.N)])
-        final_invalid = z3.And(
-            [v.max_c[n][-1] <= v.min_c[n][-1] for n in range(c.N)])
-
-        final_gap_reduces = movement_mult__minc_maxc_mult_gap * steady__minc_maxc_mult_gap.final < \
-            steady__minc_maxc_mult_gap.initial
-        final_gap_small = steady__minc_maxc_mult_gap.final < steady__minc_maxc_mult_gap.hi
-
+        # NOTE: This has a non-linear constraint!!
         lemma1 = z3.Implies(
-            z3.And(initial_inconsistent, initial_gap_large),
-            z3.Or(final_beliefs_consistent, final_moves_consistent, final_invalid,
-                  final_gap_reduces, final_gap_small))
-
-        metrics_lists = [
-            [Metric(movement_mult__consistent, 1, 10, EPS, True)],
-            [Metric(movement_mult__minc_maxc_mult_gap, 1, 10, EPS, True)],
-            [Metric(steady__minc_maxc_mult_gap.hi, c.C/2, 10*c.C, EPS, True)]
+            z3.And(self.initial_beliefs_consistent,
+                   z3.Not(self.initial_beliefs_close_mult)),
+            z3.Or(
+                self.final_beliefs_close_mult, self.final_beliefs_shrink_mult,
+                self.final_beliefs_consistent, self.final_beliefs_invalid,
+                self.final_moves_consistent)
+        )
+        # TODO: How quickly do they shrink.
+        # TODO: How quickly do they move towards consistency.
+        ss_assignments = [
+            self.steady__minc_maxc_mult_gap.hi == \
+                self.cache['inconsistent_but_close__maxc_minc_mult_gap']
         ]
-        os = OptimizationStruct(
-            self.link, self.vs, [], metrics_lists, lemma1, self.get_counter_example_str)
-        # logger.info("Lemma 1")
-        # find_optimum_bounds(solution, [os])
+        logger.info("Lemma 1")
+        self.debug_verifier(lemma1, ss_assignments)
 
-    def lemma1_1(self):
+        # Compute movements.
+        # fixed_metrics = [
+        #     Metric(self.steady__minc_maxc_mult_gap.hi, 1.1, 2, 1e-2, True)
+        # ]
+        # metric_lists = []
+        # os = OptimizationStruct(
+        #     self.link, self.vs, fixed_metrics, metric_lists,
+        #     lemma1, self.get_counter_example_str)
+        # logger.info("Lemma 1")
+        # find_optimum_bounds(self.solution, [os])
+
+    def deprecated_lemma1_1(self):
+        # If we timeout beliefs when they get too close, init conditions can
+        # never be beliefs in small range.
         """
         Lemma 1.1: If inconsistent in small range (computed here) then beliefs
             don't increase beyond small range and
@@ -632,31 +633,55 @@ class BeliefProofs(Proofs):
         * Eventually needs to be finite time.
         """
         link = self.link
+        d = link.d
+        # d, _ = link.get_desired()  # this recomputes d.
         c = link.c
         v = link.v
-        first = 0
-
-        final_moves_consistent = z3.Or(
-            z3.And(v.max_c[0][first] < c.C, v.max_c[0][-1] > v.max_c[0][first]),
-            z3.And(v.min_c[0][first] > c.C, v.min_c[0][-1] < v.min_c[0][first]))
+        first = 0  # link.cc.history
 
         # There may be cases when beliefs are inconsistent in small range and remain like that.
         # In these cases, the CCA still delivers on desired properties.
 
         # Since beliefs are inconsistent in this lemma. We use the mult_gap
         # between maxc and minc to gauge the size of the belief state.
+        final_moves_consistent = z3.Or(
+            z3.And(v.max_c[0][first] < c.C, v.max_c[0][-1] >
+                   self.movement_mult__consistent * v.max_c[0][first]),
+            z3.And(v.min_c[0][first] > c.C,
+                   v.min_c[0][-1] * self.movement_mult__consistent < v.min_c[0][first]))
         lemma1_1 = z3.Implies(
             z3.And(z3.Not(self.initial_beliefs_consistent),
                    self.initial_beliefs_close_mult),
             z3.Or(self.final_beliefs_consistent, self.final_beliefs_invalid,
-                  z3.And(final_moves_consistent, self.final_beliefs_close_mult)))
-        metric_lists = [
-            [Metric(self.steady__minc_maxc_mult_gap.hi, 1.1, 2, 1e-2, True)]
+                  #   z3.And(
+                  #       # self.final_moves_consistent,
+                  #       final_moves_consistent,
+                  #       self.final_beliefs_close_mult),
+                  d.desired_in_ss))
+        # fixed_metrics = [
+        #     Metric(self.steady__minc_maxc_mult_gap.hi, 1.2, 2, 1e-2, True)
+        # ]
+        # metric_lists = [
+        #     [Metric(self.movement_mult__consistent, 1.2, 10, 1e-2, True)]
+        # ]
+        # os = OptimizationStruct(
+        #     link, self.vs, fixed_metrics, metric_lists, lemma1_1, self.get_counter_example_str)
+        # logger.info("Lemma 1.1")
+        # find_optimum_bounds(self.solution, [os])
+        # self.cache['inconsistent_but_close__maxc_minc_mult_gap'] = 1.2
+
+        lemma1_1 = z3.Implies(self.initial_beliefs_close_mult, False)
+        ss_assignments = [
+            self.steady__minc_maxc_mult_gap.hi == 1.2,
         ]
-        os = OptimizationStruct(
-            link, self.vs, [], metric_lists, lemma1_1, self.get_counter_example_str)
         logger.info("Lemma 1.1")
-        find_optimum_bounds(self.solution, [os])
+        self.debug_verifier(lemma1_1, ss_assignments)
+        """
+        Gap comes from what we consider invalid.
+
+        movement_mult_consistent is not needed at all...
+        it becomes consistent or invalid immediately.
+        """
 
     def lemma2(self):
         """
@@ -710,7 +735,20 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists, desired, self.get_counter_example_str)
         logger.info("Lemma 2: Find recursive state for mult gap")
-        find_optimum_bounds(self.solution, [os])
+        # find_optimum_bounds(self.solution, [os])
+        """
+        [01/24 23:03:53]  Lemma 2: Find recursive state for mult gap
+        [01/24 23:03:53]  Testing link: adv
+        [01/24 23:09:51]  Solver gives unsat with loosest bounds.
+        [01/24 23:09:51]  --------------------------------------------------------------------------------
+        [01/24 23:09:51]  This Try: {'steady__minc_maxc_mult_gap__hi': 10}
+        [01/24 23:09:51]  Finding bounds for steady__minc_maxc_mult_gap__hi
+        [01/24 23:09:51]  Optimizing steady__minc_maxc_mult_gap__hi.        [01/25 00:27:32]  Found bounds for steady__minc_maxc_mult_gap__hi, 3.9000000000000004, (3.74375, None, 3.8125)
+        [01/25 00:27:32]  {'steady__minc_maxc_mult_gap__hi': {10, 3.9000000000000004}}
+        [01/25 00:27:32]     steady__minc_maxc_mult_gap__hi
+        0                             3.9
+        [01/25 00:27:32]  --------------------------------------------------------------------------------
+        """
 
     def deprecated_recursive_add_gap(self):
         # Lemma 2, Step 1.2: Find smallest recursive state for add gap.
@@ -1144,7 +1182,8 @@ class BeliefProofs(Proofs):
         # TODO: There are many cases where lemmas can be in terms of gaps or
         # range. We should programatically figure these things out.
 
-        self.lemma1_1()
+        # self.deprecated_lemma1_1()
+        # self.lemma1()
         # self.deprecated_recursive_mult_gap()
         self.lemma2_step1_recursive_minc_maxc()
         # self.lemma2_step2_possible_perf_with_recursive_minc_maxc()

@@ -123,8 +123,8 @@ consts = {
 }
 
 # Search constr
-search_range = [Fraction(i, 2) for i in range(-4, 5)]
-# search_range = [-1, 0, 1]
+# search_range = [Fraction(i, 2) for i in range(-4, 5)]
+search_range = [-1, 0, 1]
 for coeff in flatten(list(coeffs.values())) + flatten(list(consts.values())):
     domain_clauses.append(z3.Or(*[coeff == val for val in search_range]))
 search_constraints = z3.And(*domain_clauses)

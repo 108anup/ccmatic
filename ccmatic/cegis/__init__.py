@@ -50,6 +50,7 @@ class CegisConfig:
     app_limited: bool = False
     fix_stale__max_c: bool = False
     fix_stale__min_c: bool = False
+    min_maxc_minc_gap_mult: float = 1
 
     deterministic_loss: bool = True
     N: int = 1

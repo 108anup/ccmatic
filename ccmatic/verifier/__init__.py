@@ -469,11 +469,12 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 rate_above_minc_list.append(v.r_f[n][st] > v.min_c[n][st])
             minc_changed = z3.Or(*minc_changed_list)
             maxc_changed = z3.Or(*maxc_changed_list)
+            none_changed = z3.Not(z3.Or(minc_changed, maxc_changed))
             rate_above_minc = z3.Or(*rate_above_minc_list)
 
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
-            # beliefs_close = base_upper <= base_lower * 3/2
+            beliefs_close_mult = base_upper <= base_lower * c.min_maxc_minc_gap_mult
             # decent_utilization = z3.Sum(utilized_t) >= 2
 
             """
@@ -484,26 +485,35 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 # state machine and we have seen utilization recently.
                 # TODO: only need to look at utilized happening if we were sending at or below minc.
                 # This again requires more nuanced book keeping of the sequence of events.
-                timeout_lower = z3.And(z3.Or(v.start_state_f[n] + et == reset_minc_time,
-                                             v.start_state_f[n] + et == reset_minc_time + cycle),
+
+                # Do timeout if:
+                # It is allowed by state
+                # AND, if either none changed, or other changed and brought beliefs close.
+                timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_minc_time,
+                                                 v.start_state_f[n] + et == reset_minc_time + cycle)
+                other_came_close = z3.And(
+                    beliefs_close_mult, maxc_changed, z3.Not(minc_changed))
+                timeout_lower = z3.And(timeout_allowed_by_state,
                                        # z3.Or(utilized_t),
                                        # decent_utilization,
-                                       z3.Not(maxc_changed),
-                                       z3.Not(minc_changed),
                                        # z3.Not(rate_above_minc)
+                                       z3.Or(none_changed, other_came_close)
                                        )
                 base_lower = z3.If(timeout_lower, 0, base_lower)
 
             if(c.fix_stale__max_c):
                 # Timeout upper bound if we are in the appropraite cycle in the
                 # state machine and we haven't recently utilized the link.
-                timeout_upper = z3.And(z3.Or(v.start_state_f[n] + et == reset_maxc_time,
-                                             v.start_state_f[n] + et == reset_maxc_time + cycle),
+                timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
+                                                 v.start_state_f[n] + et == reset_maxc_time + cycle)
+                other_came_close = z3.And(
+                    beliefs_close_mult, minc_changed, z3.Not(maxc_changed))
+                timeout_upper = z3.And(timeout_allowed_by_state,
                                        # z3.Not(decent_utilization),
                                        # z3.Not(z3.Or(utilized_t)),
                                        # z3.Not(beliefs_close),
-                                       z3.Not(minc_changed),
-                                       z3.Not(maxc_changed))
+                                       z3.Or(none_changed, other_came_close)
+                                       )
 
                 # timeout_upper_signal = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                 #                              v.start_state_f[n] + et == reset_maxc_time + cycle)
@@ -561,7 +571,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     #  network changed.
     for n in range(c.N):
         s.add(v.min_c[n][0] > 0)
-        s.add(v.min_c[n][0] < v.max_c[n][0])
+        s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
         if(not c.fix_stale__min_c):
             s.add(v.min_c[n][0] <= c.C)
         if(not c.fix_stale__max_c):
@@ -1278,6 +1288,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.beliefs_use_buffer = cc.template_beliefs_use_buffer
     c.fix_stale__min_c = cc.fix_stale__min_c
     c.fix_stale__max_c = cc.fix_stale__max_c
+    c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
 
     return c
 
@@ -1882,15 +1893,16 @@ def get_cex_df(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
 
-    for n in range(c.N):
-        utilized_t = [-1]
-        for t in range(1, c.T):
-            high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
-                                        for dt in range(c.D+1)]))
-            loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
-            utilized_t.append(get_raw_value(
-                counter_example.eval(z3.Or(high_delay, loss))))
-        df[f"utilized_{n},t"] = utilized_t
+    if(c.calculate_qdel):
+        for n in range(c.N):
+            utilized_t = [-1]
+            for t in range(1, c.T):
+                high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
+                                            for dt in range(c.D+1)]))
+                loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                utilized_t.append(get_raw_value(
+                    counter_example.eval(z3.Or(high_delay, loss))))
+            df[f"utilized_{n},t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
         bottle_queue_t = []
