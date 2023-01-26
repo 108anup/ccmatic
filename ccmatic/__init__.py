@@ -510,6 +510,7 @@ class BeliefProofs(Proofs):
                 logger.critical("Note, the desired string in above output is based "
                                 "on cegis metrics instead of optimization metrics.")
                 import ipdb; ipdb.set_trace()
+                return model
             else:
                 logger.info("Lemma passes")
 
@@ -607,8 +608,7 @@ class BeliefProofs(Proofs):
                 z3.Or(v.min_c[0][-1] * self.movement_mult__consistent < v.min_c[0][first],
                       v.max_c[0][-1] * self.movement_mult__consistent < v.max_c[0][first]))
         )
-        final_invalid = z3.Not(
-            v.min_c[0][-1] * c.min_maxc_minc_gap_mult < v.max_c[0][-1])
+        final_valid = v.min_c[0][-1] * c.min_maxc_minc_gap_mult <= v.max_c[0][-1]
 
         # # Alternate for this would have been that you count beliefs as changed
         # # only if they changed by a sufficient amount.
@@ -637,24 +637,41 @@ class BeliefProofs(Proofs):
 
         lemma1 = z3.Implies(
             z3.Not(self.initial_beliefs_consistent),
-            z3.Or(self.final_beliefs_consistent,
-                  final_moves_consistent,
-                  final_invalid,
-                  # d.desired_in_ss
-                  ))
+            z3.And(final_valid,
+                   z3.Or(self.final_beliefs_consistent,
+                         final_moves_consistent,
+                         # d.desired_in_ss
+                         )))
         # TODO: With beleifs timing out if they changed only slightly, we
         # probably don't need the statement about beliefs timing out when they
         # become too close.
         metric_lists = [
-            [Metric(self.movement_mult__consistent, c.maxc_minc_change_mult, 2, 1e-3, True)]
+            [Metric(self.movement_mult__consistent,
+                    c.maxc_minc_change_mult, 2, 1e-3, True)]
         ]
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists,
             lemma1, self.get_counter_example_str)
-        logger.info("Lemma 1")
-        model = find_optimum_bounds(self.solution, [os])
+        logger.info("Lemma 1: move quickly towards consistent")
+        # model = find_optimum_bounds(self.solution, [os])
 
-        # self.debug_verifier(lemma1, [])
+        self.recursive[self.movement_mult__consistent] = 1.1
+        """
+        [01/26 15:46:34]  Lemma 1
+        [01/26 15:46:34]  Testing link: adv
+        [01/26 15:57:56]  Solver gives unsat with loosest bounds.
+        [01/26 15:57:56]  --------------------------------------------------------------------------------
+        [01/26 15:57:56]  This Try: {'movement_mult__consistent': 1.1}
+        [01/26 15:57:56]  Finding bounds for movement_mult__consistent
+        [01/26 15:57:56]  Optimizing movement_mult__consistent.
+        [01/26 16:13:19]  Found bounds for movement_mult__consistent, 1.1, (1.1, None, 1.1008789062500002)
+        [01/26 16:13:19]  {'movement_mult__consistent': {1.1}}
+        [01/26 16:13:19]  ================================================================================
+        """
+        ss_assignments = [
+            self.movement_mult__consistent == 1.1
+        ]
+        model = self.debug_verifier(lemma1, ss_assignments)
 
     def deprecated_lemma1_2(self):
         """
@@ -781,8 +798,17 @@ class BeliefProofs(Proofs):
             link, self.vs, fixed_metrics, metric_lists,
             lemma2, self.get_counter_example_str)
         logger.info(
-            "Lemma 2: How quickly do we reach recursive range of minc/maxc.")
-        model = find_optimum_bounds(self.solution, [os])
+            "Lemma 2: move quickly towards maxc/minc.")
+        # model = find_optimum_bounds(self.solution, [os])
+
+        self.recursive[self.movement_mult__minc_maxc] = 2
+        ss_assignments = [
+            self.steady__min_c.lo == c.C/3,
+            self.steady__max_c.hi == 3 * c.C,
+            self.movement_mult__minc_maxc == 2
+        ]
+        self.debug_verifier(lemma2, ss_assignments)
+
 
     def deprecated_recursive_mult_gap(self):
         # Lemma 2, Step 1.1: Find smallest recursive state for mult gap.
@@ -855,6 +881,12 @@ class BeliefProofs(Proofs):
             (2) when probing is done by CCA, i.e.,
                 largest min_c at which probing won't be done (= c.C/2).
         """
+        ss_assignments = [
+            self.steady__min_c.lo == c.C/3,
+            self.steady__max_c.hi == 3 * c.C,
+        ]
+        self.debug_verifier(recursive_beliefs, ss_assignments)
+
 
     def lemma2_step2_possible_perf_with_recursive_minc_maxc(self):
         """
@@ -893,7 +925,7 @@ class BeliefProofs(Proofs):
                                 desired, self.get_counter_example_str)
         logger.info("Lemma 2, Step 2: What are the best metrics possible for"
                     "the recursive range of minc and maxc")
-        model = find_optimum_bounds(self.solution, [os])
+        # model = find_optimum_bounds(self.solution, [os])
 
         """
         [01/22 18:54:40]  --------------------------------------------------------------------------------
@@ -989,9 +1021,19 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, lemma3,
                                 self.get_counter_example_str)
-        logger.info("Lemma 3")
+        logger.info("Lemma 3: move quickly towards rate/queue")
         # find_optimum_bounds(self.solution, [os])
         self.recursive[self.movement_mult__rate] = 2
+
+        ss_assignments = [
+            self.steady__min_c.lo == c.C/3,
+            self.steady__max_c.hi == 3 * c.C,
+            self.steady__rate.lo == c.C/2,
+            self.steady__rate.hi == 2 * c.C,
+            self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D),
+            self.movement_mult__rate == 2
+        ]
+        self.debug_verifier(lemma3, ss_assignments)
 
     def lemma3_1_recursive_rate_queue(self):
         """
@@ -999,7 +1041,7 @@ class BeliefProofs(Proofs):
         """
         link = self.link
         c = link.c
-        desired = z3.Implies(
+        recur_rate_queue = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside,
                    self.initial_inside),
@@ -1017,8 +1059,8 @@ class BeliefProofs(Proofs):
             [Metric(self.steady__bottle_queue.hi, c.C * c.R, 10 * c.C * (c.R + c.D), EPS, False)]
         ]
         os = OptimizationStruct(link, self.vs, fixed_metrics,
-                                metric_lists, desired, self.get_counter_example_str)
-        logger.info("Lemma 3, Step 1 - Recursive state for rate, queue")
+                                metric_lists, recur_rate_queue, self.get_counter_example_str)
+        logger.info("Lemma 3, Step 1: recursive state for rate, queue")
         # find_optimum_bounds(self.solution, [os])
 
         self.recursive[self.steady__rate.lo] = c.C/2
@@ -1043,6 +1085,15 @@ class BeliefProofs(Proofs):
             Smallest recursive state is rate in [60, 200],
             bottle_queue is recursive in 300.
         """
+
+        ss_assignments = [
+            self.steady__min_c.lo == c.C/3,
+            self.steady__max_c.hi == 3 * c.C,
+            self.steady__rate.lo == c.C/2,
+            self.steady__rate.hi == 2 * c.C,
+            self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D)
+        ]
+        self.debug_verifier(recur_rate_queue, ss_assignments)
 
     def deprecated_lemma3_step1_1(self):
         """
@@ -1181,7 +1232,7 @@ class BeliefProofs(Proofs):
         ]
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, lemma4, self.get_counter_example_str)
-        logger.info("Lemma 4 - Objectives in steady state")
+        logger.info("Lemma 4: objectives in steady state (no link rate variations)")
         # model = find_optimum_bounds(self.solution, [os])
 
         """
@@ -1243,11 +1294,12 @@ class BeliefProofs(Proofs):
         # range. We should programatically figure these things out.
 
         # self.deprecated_lemma1_1()
-        self.lemma1()
-        # self.deprecated_recursive_mult_gap()
-        self.lemma2_step1_recursive_minc_maxc()
         # self.lemma2_step2_possible_perf_with_recursive_minc_maxc()
-        # self.lemma2()
-        self.lemma3_1_recursive_rate_queue()
-        self.lemma3()
-        self.lemma4()
+
+        self.lemma1()  # movement
+        # self.deprecated_recursive_mult_gap()
+        self.lemma2_step1_recursive_minc_maxc()  # recursion
+        self.lemma2()  # movement
+        self.lemma3_1_recursive_rate_queue()  # recursion
+        self.lemma3()  # movement
+        self.lemma4()  # performance

@@ -537,6 +537,7 @@ cc.use_belief_invariant = True
 cc.fix_stale__min_c = args.fix_minc
 cc.fix_stale__max_c = args.fix_maxc
 cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
+cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
 cc.desired_util_f = 0.5
