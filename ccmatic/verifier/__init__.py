@@ -689,7 +689,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
 
                 # LOWER
-                this_lower = measured_c * window / (window + 1)
+                this_lower = measured_c * window / (window + c.D)
                 overall_minc = z3_max(overall_minc, this_lower)
                 overall_minc = z3_max(overall_minc, this_lower)
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
@@ -698,7 +698,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 if(window - 1 > 0):
                     this_upper = z3.If(
                         utilized_cummulative[st],
-                        measured_c * window / (window - 1),
+                        measured_c * window / (window - c.D),
                         base_maxc)
                     # We could have replaced base_upper with overall_upper, but
                     # that creates a complicated encoding.

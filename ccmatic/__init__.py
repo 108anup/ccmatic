@@ -1233,7 +1233,7 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, lemma4, self.get_counter_example_str)
         logger.info("Lemma 4: objectives in steady state (no link rate variations)")
-        # model = find_optimum_bounds(self.solution, [os])
+        model = find_optimum_bounds(self.solution, [os])
 
         """
         [01/23 16:47:06]  Lemma 4 - Objectives in steady state
