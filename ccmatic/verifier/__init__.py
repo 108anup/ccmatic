@@ -196,6 +196,9 @@ class DesiredContainer:
     beliefs_improve: Optional[z3.BoolRef] = None
     stale_minc_improves: Optional[z3.BoolRef] = None
     stale_maxc_improves: Optional[z3.BoolRef] = None
+    initial_bw_consistent: Optional[z3.BoolRef] = None
+    final_bw_consistent: Optional[z3.BoolRef] = None
+    final_bw_moves_consistent: Optional[z3.BoolRef] = None
 
     def rename_vars(self, var_list: List[z3.ExprRef], template: str):
         conds = {
@@ -249,7 +252,10 @@ class DesiredContainer:
             "beliefs_remain_consistent": self.beliefs_remain_consistent,
             "beliefs_improve": self.beliefs_improve,
             "stale_minc_improves": self.stale_minc_improves,
-            "stale_maxc_improves": self.stale_maxc_improves
+            "stale_maxc_improves": self.stale_maxc_improves,
+            "initial_bw_consistent": self.initial_bw_consistent,
+            "final_bw_consistent": self.final_bw_consistent,
+            "final_bw_moves_consistent": self.final_bw_moves_consistent,
         }
 
         def get_val(cond):
@@ -366,60 +372,14 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
             s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
 
 
-def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+def update_bandwidth_beliefs_with_timeout(
+        c: ModelConfig, s: MySolver, v: Variables):
     assert(c.beliefs)
-    # Note beleifs are updated after packets have been recvd at time t.
-    # At time t, the CCA can only look at beliefs for time t-1.
 
     # For a timeout, we need enough history. So we can't trigger timeouts at
     # t=1.
     for n in range(c.N):
         s.add(v.start_state_f[n] == 0)
-
-    # Qdel
-    for n in range(c.N):
-        for et in range(c.T):
-            for dt in range(c.T):
-                s.add(z3.Implies(
-                    v.qdel[et][dt], v.min_qdel[n][et] == max(0, dt-c.D)))
-            s.add(z3.Implies(
-                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
-                v.min_qdel[n][et] == c.T-c.D))
-
-            for dt in range(c.T):
-                s.add(z3.Implies(
-                    v.qdel[et][dt], v.max_qdel[n][et] == dt+1))
-            s.add(z3.Implies(
-                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
-                v.max_qdel[n][et] == 1000 * c.T))
-
-    # Buffer
-    if(c.buf_min is not None and c.beliefs_use_buffer):
-        for n in range(c.N):
-            for et in range(1, c.T):
-                for dt in range(c.T):
-                    s.add(z3.Implies(
-                        v.qdel[et][dt],
-                        v.min_buffer[n][et] ==
-                        z3_max(v.min_buffer[n][et-1], max(0, dt-c.D))))
-                # TODO: is this the best way to handle the case when qdel > et?
-                s.add(z3.Implies(
-                    z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
-                    v.min_buffer[n][et] == z3_max(
-                        c.T-c.D,
-                        v.min_buffer[n][et-1])))
-
-                for dt in range(et+1):
-                    s.add(z3.Implies(
-                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et-1], v.qdel[et][dt]),
-                        v.max_buffer[n][et] ==
-                        z3_min(v.max_buffer[n][et-1], dt+1)))
-                # TODO: is this the best way to handle the case when qdel > et?
-                s.add(z3.Implies(
-                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
-                          z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
-                    v.max_buffer[n][et] ==
-                    v.max_buffer[n][et-1]))
 
     # Bandwidth beliefs (C)
     cycle = c.T-1  # as first time is chosen by verifier.
@@ -573,6 +533,138 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             s.add(v.max_c[n][et] == overall_upper)
 
 
+def update_bandwidth_beliefs_invalidation(
+        c: ModelConfig, s: MySolver, v: Variables):
+    assert(c.beliefs)
+
+    # Bandwidth beliefs (C)
+    for n in range(c.N):
+        for et in range(1, c.T):
+            # Compute utilization stats. Useful for updating {min, max}_c
+
+            # TODO: qdelay high or loss signals tell about network conditions at
+            # earlier time than when the CCA observed them. This lag perhaps
+            # needs to be incorporated.
+            utilized_t = [None for _ in range(et)]
+            utilized_cummulative = [None for _ in range(et)]
+            for st in range(et-1, -1, -1):
+                # Encodes that utilization must have been high if loss happened
+                # or if queing delay was more than D
+
+                # All of qdel might be False. So to check high delay we just
+                # check Not of low delay.
+                high_delay = z3.Not(z3.Or(*[v.qdel[st+1][dt]
+                                            for dt in range(c.D+1)]))
+                # Wrong:
+                # high_delay = z3.Or(*[v.qdel[st+1][dt]
+                #                      for dt in range(c.D+1, c.T)])
+                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                this_utilized = z3.Or(loss, high_delay)
+                utilized_t[st] = this_utilized
+                if(st + 1 == et):
+                    utilized_cummulative[st] = this_utilized
+                else:
+                    assert utilized_cummulative[st+1] is not None
+                    utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
+
+            """
+            In summary C >= r * n/(n+1) always, if we additionally know that
+            sending rate is higher than C then, C <= r * n/(n-1).
+            """
+            base_upper = v.max_c[n][et-1]
+            overall_lower = v.min_c[n][et-1]
+            overall_upper = v.max_c[n][et-1]
+            recomputed_lower = 0
+            for st in range(et-1, -1, -1):
+                window = et - st
+                measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
+
+                # LOWER
+                this_lower = measured_c * window / (window + 1)
+                overall_lower = z3_max(overall_lower, this_lower)
+                overall_lower = z3_max(overall_lower, this_lower)
+                recomputed_lower = z3_max(recomputed_lower, this_lower)
+
+                # UPPER
+                if(window - 1 > 0):
+                    this_upper = z3.If(
+                        utilized_cummulative[st],
+                        measured_c * window / (window - 1),
+                        base_upper)
+                    # We could have replaced base_upper with overall_upper, but
+                    # that creates a complicated encoding.
+                    assert isinstance(this_upper, z3.ArithRef)
+                    overall_upper = z3_min(overall_upper, this_upper)
+
+            # if maxc changed, then update minc
+            # if minc changed, then update maxc
+            # when things become invalid, both should not change.
+            s.add(
+                v.min_c[n][et] == z3.If(
+                    z3.And(overall_upper < overall_lower,
+                           overall_upper < v.max_c[n][et-1]),
+                    recomputed_lower, overall_lower))
+            reset_upper = z3_max(v.min_c[n][et], 3/2 * v.max_c[n][et-1])
+            s.add(
+                v.max_c[n][et] == z3.If(
+                    z3.And(overall_upper < overall_lower,
+                           overall_lower > v.min_c[n][et-1]),
+                    reset_upper, overall_upper))
+
+
+def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+    assert(c.beliefs)
+    # Note beleifs are updated after packets have been recvd at time t.
+    # At time t, the CCA can only look at beliefs for time t-1.
+
+    # Qdel
+    for n in range(c.N):
+        for et in range(c.T):
+            for dt in range(c.T):
+                s.add(z3.Implies(
+                    v.qdel[et][dt], v.min_qdel[n][et] == max(0, dt-c.D)))
+            s.add(z3.Implies(
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
+                v.min_qdel[n][et] == c.T-c.D))
+
+            for dt in range(c.T):
+                s.add(z3.Implies(
+                    v.qdel[et][dt], v.max_qdel[n][et] == dt+1))
+            s.add(z3.Implies(
+                z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
+                v.max_qdel[n][et] == 1000 * c.T))
+
+    # Buffer
+    if(c.buf_min is not None and c.beliefs_use_buffer):
+        for n in range(c.N):
+            for et in range(1, c.T):
+                for dt in range(c.T):
+                    s.add(z3.Implies(
+                        v.qdel[et][dt],
+                        v.min_buffer[n][et] ==
+                        z3_max(v.min_buffer[n][et-1], max(0, dt-c.D))))
+                # TODO: is this the best way to handle the case when qdel > et?
+                s.add(z3.Implies(
+                    z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(c.T)]),
+                    v.min_buffer[n][et] == z3_max(
+                        c.T-c.D,
+                        v.min_buffer[n][et-1])))
+
+                for dt in range(et+1):
+                    s.add(z3.Implies(
+                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et-1], v.qdel[et][dt]),
+                        v.max_buffer[n][et] ==
+                        z3_min(v.max_buffer[n][et-1], dt+1)))
+                # TODO: is this the best way to handle the case when qdel > et?
+                s.add(z3.Implies(
+                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
+                          z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
+                    v.max_buffer[n][et] ==
+                    v.max_buffer[n][et-1]))
+
+    update_bandwidth_beliefs_invalidation(c, s, v)
+
+
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     assert(c.beliefs)
 
@@ -583,6 +675,10 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         # s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
         s.add(v.min_c[n][0] >= 0)
         s.add(v.min_c[n][0] <= v.max_c[n][0])
+        """
+        Anytime that min_c > max_c happens, we want to see it happen within the
+        trace, not b4.
+        """
         if(not c.fix_stale__min_c):
             s.add(v.min_c[n][0] <= c.C)
         if(not c.fix_stale__max_c):
@@ -694,6 +790,36 @@ def get_stale_maxc_improves(cc: CegisConfig, c: ModelConfig, v: Variables):
     beliefs_become_invalid = z3.And(*beliefs_become_invalid_list)
     # stale_maxc_improves = z3.Implies(beliefs_bad, beliefs_eventually_reset)
     return beliefs_bad, z3.Or(beliefs_eventually_reset, beliefs_become_invalid)
+
+
+def get_bw_beliefs_move_consistent(cc: CegisConfig, c: ModelConfig, v: Variables):
+    first = 0  # cc.history
+    speed = 1
+    # For multi-flow, would need to think if both flows need to improve or just one.
+    final_moves_consistent = z3.Or([
+        z3.Or(
+            z3.And(
+                v.max_c[n][first] < c.C,
+                z3.Or(v.max_c[n][-1] > speed * v.max_c[n][first],
+                      v.min_c[n][-1] > speed * v.min_c[n][first])),
+            z3.And(
+                v.min_c[n][first] > c.C,
+                z3.Or(v.min_c[n][-1] * speed < v.min_c[n][first],
+                      v.max_c[n][-1] * speed < v.max_c[n][first]))
+        ) for n in range(c.N)
+    ])
+    initial_consistent = z3.And(
+        [v.max_c[n][first] >= c.C for n in range(c.N)] +
+        [v.min_c[n][first] <= c.C for n in range(c.N)]
+    )
+    final_consistent = z3.And(
+        [v.max_c[n][-1] >= c.C for n in range(c.N)] +
+        [v.min_c[n][-1] <= c.C for n in range(c.N)]
+    )
+    assert isinstance(initial_consistent, z3.BoolRef)
+    assert isinstance(final_consistent, z3.BoolRef)
+    assert isinstance(final_moves_consistent, z3.BoolRef)
+    return initial_consistent, final_consistent, final_moves_consistent
 
 
 # Deprecated
@@ -834,26 +960,43 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     #     beliefs_bad, beliefs_reset = get_beliefs_reset(cc, c, v)
     #     d.desired_belief_invariant = z3.If(beliefs_bad, beliefs_reset, invariant)
 
-    if(c.fix_stale__min_c):
-        minc_is_stale, stale_minc_improves = get_stale_minc_improves(cc, c, v)
-        d.stale_minc_improves = stale_minc_improves
-        invariant = z3.If(minc_is_stale,
-                          z3.Or(stale_minc_improves,
-                                d.desired_in_ss, d.beliefs_improve),
-                          invariant)
-        # invariant = z3.Or(invariant, stale_minc_improves)
+    if(c.fix_stale__max_c or c.fix_stale__min_c):
+        initial_consistent, final_consistent, final_moves_consistent = \
+            get_bw_beliefs_move_consistent(cc, c, v)
+        d.initial_bw_consistent = initial_consistent
+        d.final_bw_consistent = final_consistent
+        d.final_bw_moves_consistent = final_moves_consistent
+        final_invalid = z3.Or([v.max_c[n][-1] < v.min_c[n][-1]
+                              for n in range(c.N)])
+        invariant = z3.And(
+            z3.Not(final_invalid),
+            z3.Implies(z3.Not(d.initial_bw_consistent), z3.Or(
+                d.final_bw_consistent, d.final_bw_moves_consistent,
+                d.desired_in_ss))
+        )
         assert isinstance(invariant, z3.BoolRef)
         d.desired_belief_invariant = invariant
 
-    if(c.fix_stale__max_c):
-        maxc_is_stale, stale_maxc_improves = get_stale_maxc_improves(cc, c, v)
-        d.stale_maxc_improves = stale_maxc_improves
-        invariant = z3.If(maxc_is_stale,
-                          z3.Or(stale_maxc_improves,
-                                d.desired_in_ss, d.beliefs_improve),
-                          invariant)
-        assert isinstance(invariant, z3.BoolRef)
-        d.desired_belief_invariant = invariant
+    # if(c.fix_stale__min_c):
+    #     minc_is_stale, stale_minc_improves = get_stale_minc_improves(cc, c, v)
+    #     d.stale_minc_improves = stale_minc_improves
+    #     invariant = z3.If(minc_is_stale,
+    #                       z3.Or(stale_minc_improves,
+    #                             d.desired_in_ss, d.beliefs_improve),
+    #                       invariant)
+    #     # invariant = z3.Or(invariant, stale_minc_improves)
+    #     assert isinstance(invariant, z3.BoolRef)
+    #     d.desired_belief_invariant = invariant
+
+    # if(c.fix_stale__max_c):
+    #     maxc_is_stale, stale_maxc_improves = get_stale_maxc_improves(cc, c, v)
+    #     d.stale_maxc_improves = stale_maxc_improves
+    #     invariant = z3.If(maxc_is_stale,
+    #                       z3.Or(stale_maxc_improves,
+    #                             d.desired_in_ss, d.beliefs_improve),
+    #                       invariant)
+    #     assert isinstance(invariant, z3.BoolRef)
+    #     d.desired_belief_invariant = invariant
 
     return d
 
@@ -1218,7 +1361,7 @@ def get_cegis_vars(
                 [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
             verifier_vars.extend(flatten(
                 [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
-        verifier_vars.append(v.start_state_f)
+        verifier_vars.extend(flatten(v.start_state_f))
 
     if(c.app_limited):
         verifier_vars.extend(flatten(v.app_limits))
