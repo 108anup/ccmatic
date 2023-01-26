@@ -432,14 +432,14 @@ def update_bandwidth_beliefs_with_timeout(
             minc_changed = v.min_c[n][et-1] > v.min_c[n][0]
             maxc_changed = v.max_c[n][et-1] < v.max_c[n][0]
 
-            # minc_changed_significantly = v.min_c[n][et-1] > c.maxc_minc_change_mult * v.min_c[n][0]
-            # maxc_changed_significantly = v.max_c[n][et-1] * c.maxc_minc_change_mult < v.max_c[n][0]
+            minc_changed_significantly = v.min_c[n][et-1] > c.maxc_minc_change_mult * v.min_c[n][0]
+            maxc_changed_significantly = v.max_c[n][et-1] * c.maxc_minc_change_mult < v.max_c[n][0]
             # none_changed_significantly = z3.Not(z3.Or(minc_changed_significantly, maxc_changed_significantly))
             # rate_above_minc = z3.Or(*rate_above_minc_list)
 
             base_lower = v.min_c[n][et-1]
             base_upper = v.max_c[n][et-1]
-            # beliefs_close_mult = base_upper <= base_lower * c.min_maxc_minc_gap_mult
+            beliefs_close_mult = base_upper <= base_lower * c.min_maxc_minc_gap_mult
             # decent_utilization = z3.Sum(utilized_t) >= 2
 
             """
@@ -456,16 +456,20 @@ def update_bandwidth_beliefs_with_timeout(
                 # AND, if either none changed, or other changed and brought beliefs close.
                 timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_minc_time,
                                                  v.start_state_f[n] + et == reset_minc_time + cycle)
-                # other_came_close = z3.And(
-                #     beliefs_close_mult, maxc_changed_significantly, z3.Not(minc_changed_significantly))
-                timeout_lower = z3.And(timeout_allowed_by_state,
-                                       # z3.Or(utilized_t),
-                                       # decent_utilization,
-                                       # z3.Not(rate_above_minc)
-                                       # z3.Or(none_changed_significantly, other_came_close),
-                                       z3.Not(minc_changed),
-                                       z3.Not(maxc_changed),
-                                       )
+                other_came_close = z3.And(
+                    beliefs_close_mult, maxc_changed)
+                # timeout_lower = z3.And(timeout_allowed_by_state,
+                #                        # z3.Or(utilized_t),
+                #                        # decent_utilization,
+                #                        # z3.Not(rate_above_minc)
+                #                        z3.Or(none_changed_significantly, other_came_close),
+                #                        z3.Not(minc_changed),
+                #                        # z3.Not(maxc_changed),
+                #                        )
+                timeout_lower = z3.If(
+                    z3.Or(minc_changed, z3.Not(timeout_allowed_by_state)), False,
+                    z3.Or(other_came_close, z3.Not(maxc_changed_significantly))
+                )
                 base_lower = z3.If(timeout_lower, 0, base_lower)
 
             if(c.fix_stale__max_c):
@@ -473,16 +477,36 @@ def update_bandwidth_beliefs_with_timeout(
                 # state machine and we haven't recently utilized the link.
                 timeout_allowed_by_state = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                                                  v.start_state_f[n] + et == reset_maxc_time + cycle)
-                # other_came_close = z3.And(
-                #     beliefs_close_mult, minc_changed_significantly, z3.Not(maxc_changed_significantly))
-                timeout_upper = z3.And(timeout_allowed_by_state,
-                                       # z3.Not(decent_utilization),
-                                       # z3.Not(z3.Or(utilized_t)),
-                                       # z3.Not(beliefs_close),
-                                       # z3.Or(none_changed_significantly, other_came_close),
-                                       z3.Not(minc_changed),
-                                       z3.Not(maxc_changed),
-                                       )
+                other_came_close = z3.And(
+                    beliefs_close_mult, minc_changed)
+                # timeout_upper = z3.And(timeout_allowed_by_state,
+                #                        # z3.Not(decent_utilization),
+                #                        # z3.Not(z3.Or(utilized_t)),
+                #                        # z3.Not(beliefs_close),
+                #                        z3.Or(none_changed_significantly, other_came_close),
+                #                        # z3.Not(minc_changed),
+                #                        z3.Not(maxc_changed),
+                #                        )
+                timeout_upper = z3.If(
+                    z3.Or(maxc_changed, z3.Not(timeout_allowed_by_state)), False,
+                    z3.Or(other_came_close, z3.Not(minc_changed_significantly))
+                )
+                """
+                Philosophy: we consider beliefs invalid when they are close
+                enough, so that it does not take arbitrarily long to reset them.
+
+                Only timing out out when no beleifs change is fine for
+                invariant. But then we risk indefinitely not timing out maxc
+                when minc only improves slightly: this happens when max is stale
+                maxc < 2 * minc and cca is sending at or below minc. jitter
+                causes ackrate to be above minc and slightly improves it. this
+                can happen indefinitely.
+
+                TODO: see if we can avoid timing out minc when maxc changes
+                slightly. If maxc changes slightly, chances are that minc even
+                using good measurements is a good bound, so unnecessarily timing
+                it out might still be fine.
+                """
 
                 # timeout_upper_signal = z3.Or(v.start_state_f[n] + et == reset_maxc_time,
                 #                              v.start_state_f[n] + et == reset_maxc_time + cycle)
@@ -671,10 +695,10 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # TODO: Use this only if we are requiring CCA to not reset beliefs when it thinks
     #  network changed.
     for n in range(c.N):
-        # s.add(v.min_c[n][0] >= v.alpha)
-        # s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
-        s.add(v.min_c[n][0] >= 0)
-        s.add(v.max_c[n][0] > 0)
+        s.add(v.min_c[n][0] >= v.alpha)
+        s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
+        # s.add(v.min_c[n][0] >= 0)
+        # s.add(v.max_c[n][0] > 0)
         s.add(v.min_c[n][0] <= v.max_c[n][0])
         """
         Anytime that min_c > max_c happens, we want to see it happen within the

@@ -66,6 +66,7 @@ elif (cond):
 n_expr = 3
 n_cond = n_expr - 1
 rhs_vars = ['min_c', 'max_c']
+rhs_vars = ['min_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
          for i in range(n_expr)]
