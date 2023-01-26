@@ -674,6 +674,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         # s.add(v.min_c[n][0] >= v.alpha)
         # s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult < v.max_c[n][0])
         s.add(v.min_c[n][0] >= 0)
+        s.add(v.max_c[n][0] > 0)
         s.add(v.min_c[n][0] <= v.max_c[n][0])
         """
         Anytime that min_c > max_c happens, we want to see it happen within the
