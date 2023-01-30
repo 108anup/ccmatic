@@ -19,6 +19,8 @@ from pyz3_utils.common import GlobalConfig
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
+# z3.set_param('arith.solver', 2)
+
 
 def get_args():
 
@@ -95,13 +97,17 @@ logger.info(f"Using cond_vars: {cond_vars}")
 
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
-cond_consts = [z3.Real(f"Gen__const_cond{i}")
-               for i in range(n_cond)]
+cond_consts_strs = ['R', 'alpha']
+cond_consts: Dict[str, List[z3.ExprRef]] = {
+    cc: [z3.Real(f"Gen__const_cond__{cc}{i}")
+         for i in range(n_cond)]
+    for cc in cond_consts_strs
+}
 
 critical_generator_vars = flatten(cond_coeffs) \
     + flatten_dict(expr_coeffs) + flatten(expr_consts)
 generator_vars: List[z3.ExprRef] = critical_generator_vars \
-    + flatten(cond_consts)
+    + flatten_dict(cond_consts)
 
 search_range_expr_coeffs = [1/2, 1, 3/2, 2]
 search_range_expr_consts = [-1, 0, 1]
@@ -109,7 +115,7 @@ search_range_cond_coeffs_time = [-1, 0, 1]
 search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
 search_range_cond_coeffs = list(
     set(search_range_cond_coeffs_bytes + search_range_cond_coeffs_time))
-search_range_cond_consts = list(range(-10, 11))
+search_range_cond_consts = list(range(-2, 3))
 
 domain_clauses = []
 for expr_coeff in flatten_dict(expr_coeffs):
@@ -127,7 +133,7 @@ for cond_coeff in flatten(cond_coeffs):
             z3.Or(*[cond_coeff == x for x in search_range_cond_coeffs_time]))
     else:
         assert False
-for cond_const in cond_consts:
+for cond_const in flatten_dict(cond_consts):
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
 
@@ -202,7 +208,8 @@ def get_template_definitions(
                     cond_lhs += get_product_ite(
                         cond_coeffs[ci][cvi], cond_var,
                         search_range_cond_coeffs)
-                cond_lhs += cond_consts[ci]
+                cond_lhs += cond_consts['R'][ci] * c.R
+                cond_lhs += cond_consts['alpha'][ci] * v.alpha
                 conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
@@ -246,9 +253,12 @@ def get_solution_str(
             coeff = get_raw_value(solution.eval(cond_coeffs[ci][cvi]))
             if(coeff != 0):
                 cond_str += f"+ {coeff}{cond_var_str} "
-        const = get_raw_value(solution.eval(cond_consts[ci]))
+        const = get_raw_value(solution.eval(cond_consts['R'][ci]))
         if(const != 0):
-            cond_str += f"+ {const} "
+            cond_str += f"+ {const}R "
+        const = get_raw_value(solution.eval(cond_consts['alpha'][ci]))
+        if(const != 0):
+            cond_str += f"+ {const}alpha "
         if(cond_str == ""):
             cond_str = "0 "
         cond_str += "> 0"
@@ -299,7 +309,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 2 for i in range(1, n_expr)] +
     [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
      for cvi in range(len(cond_vars))]
 )
@@ -323,7 +333,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 1 for i in range(1, n_expr)] +
     [expr_consts[i] == 1 for i in range(1, n_expr)] +
-    [cond_consts[i] == 0 for i in range(n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
      for cvi in range(len(cond_vars))]
 )
@@ -342,8 +352,8 @@ known_solution_list = [
     expr_coeffs['min_c'][1] == 1/2,
     cond_coeffs[0][cv_to_cvi['min_c']] == 2,
     cond_coeffs[0][cv_to_cvi['max_c']] == -1,
-    cond_consts[0] == 0,
-    cond_consts[1] == -2,
+    cond_consts['R'][0] == 0,
+    cond_consts['R'][1] == -2,
     cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
 ]
 for cv in cond_vars:
@@ -356,7 +366,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 2 for i in range(2, n_expr)] +
     [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
      for cvi in range(len(cond_vars))]
 )
@@ -375,8 +385,8 @@ known_solution_list = [
     expr_coeffs['min_c'][1] == 1/2,
     cond_coeffs[0][cv_to_cvi['min_c']] == -2,
     cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts[0] == 0,
-    cond_consts[1] == -2,
+    cond_consts['R'][0] == 0,
+    cond_consts['R'][1] == -2,
     cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
 ]
 for cv in cond_vars:
@@ -389,7 +399,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
     [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
      for cvi in range(len(cond_vars))]
 )
@@ -406,13 +416,13 @@ else:
 known_solution_list = [
     cond_coeffs[0][cv_to_cvi['min_c']] == -2,
     cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts[0] == 0,
+    cond_consts['R'][0] == 0,
     expr_coeffs['min_c'][0] == 2,
     expr_consts[0] == 0,
 
     cond_coeffs[1][cv_to_cvi['min_c']] == 1/2,
     cond_coeffs[1][cv_to_cvi['max_c']] == -1/2,
-    cond_consts[1] == 10,
+    cond_consts['R'][1] == 10,
     expr_coeffs['min_c'][1] == 1,
     expr_consts[1] == -1
 ]
@@ -425,7 +435,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
     [expr_consts[i] == 0 for i in range(2, n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
      for cvi in range(len(cond_vars))]
 )
@@ -443,13 +453,13 @@ If queue large, then drain, elseif beliefs large, then probe, otherwise minc.
 """
 known_solution_list = [
     cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
-    cond_consts[0] == -2,
+    cond_consts['R'][0] == -2,
     expr_coeffs['min_c'][0] == 1,
     expr_consts[0] == -1,
 
     cond_coeffs[1][cv_to_cvi['min_c']] == -1,
     cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
-    cond_consts[1] == 0,
+    cond_consts['R'][1] == 0,
     expr_coeffs['min_c'][1] == 2,
     expr_consts[1] == 0
 ]
@@ -463,7 +473,7 @@ for cv in cond_vars:
 known_solution_list.extend(
     [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
     [expr_consts[i] == 0 for i in range(2, n_expr)] +
-    [cond_consts[i] == 0 for i in range(2, n_cond)] +
+    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
     [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
      for cvi in range(len(cond_vars))]
 )
