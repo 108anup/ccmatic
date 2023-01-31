@@ -95,13 +95,16 @@ cond_vars = bytes_cvs + time_cvs
 cv_to_cvi = {x: i for i, x in enumerate(cond_vars)}
 logger.info(f"Using cond_vars: {cond_vars}")
 
+time_consts = ['R']
+bytes_consts = ['alpha']
 cond_coeffs = [[z3.Real(f"Gen__coeff_{cv}_cond{i}")
                 for cv in cond_vars] for i in range(n_cond)]
-cond_consts_strs = ['R', 'alpha']
+cond_consts_strs = time_consts + bytes_consts
+# cond_consts_strs = ['R']
 cond_consts: Dict[str, List[z3.ExprRef]] = {
-    cc: [z3.Real(f"Gen__const_cond__{cc}{i}")
-         for i in range(n_cond)]
-    for cc in cond_consts_strs
+    cc_str: [z3.Real(f"Gen__const_cond__{cc_str}{i}")
+             for i in range(n_cond)]
+    for cc_str in cond_consts_strs
 }
 
 critical_generator_vars = flatten(cond_coeffs) \
@@ -137,24 +140,27 @@ for cond_const in flatten_dict(cond_consts):
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
 
-# # Limit the search space
-# # Only 4 instead of 9 expressions.
-# for ei in range(n_expr):
-#     domain_clauses.append(
-#         z3.Or(*[
-#             z3.And(*[expr_coeffs['min_c'][ei] == 2, expr_consts[ei] == 0]),
-#             z3.And(*[expr_coeffs['min_c'][ei] == 1/2, expr_consts[ei] == 0]),
-#             expr_coeffs['min_c'][ei] == 1,
-#             # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
-#             # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
-#         ]))
+# Limit the search space
+# Only 5 instead of 9 expressions.
+for ei in range(n_expr):
+    domain_clauses.append(
+        z3.Or(*[
+            z3.And(*[expr_coeffs['min_c'][ei] == 2, expr_consts[ei] == 0]),
+            z3.And(*[expr_coeffs['min_c'][ei] == 1/2, expr_consts[ei] == 0]),
+            expr_coeffs['min_c'][ei] == 1,
+            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
+            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
+            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
+        ]))
 
 # Only compare qtys with the same units.
 for ci in range(n_cond):
-    bytes_non_zero = z3.Or(
-        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in bytes_cvs])
-    time_non_zero = z3.Or(
-        *[cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in time_cvs])
+    bytes_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in bytes_cvs]
+    bytes_values += [cond_consts[cc_str][ci] != 0 for cc_str in bytes_consts]
+    bytes_non_zero = z3.Or(*bytes_values)
+    time_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in time_cvs]
+    time_values += [cond_consts[cc_str][ci] != 0 for cc_str in time_consts]
+    time_non_zero = z3.Or(*time_values)
     domain_clauses.extend(
         [z3.Implies(bytes_non_zero, z3.Not(time_non_zero)),
          z3.Implies(time_non_zero, z3.Not(bytes_non_zero))]
@@ -208,8 +214,13 @@ def get_template_definitions(
                     cond_lhs += get_product_ite(
                         cond_coeffs[ci][cvi], cond_var,
                         search_range_cond_coeffs)
-                cond_lhs += cond_consts['R'][ci] * c.R
-                cond_lhs += cond_consts['alpha'][ci] * v.alpha
+                for cc_str in cond_consts_strs:
+                    if(cc_str == "R"):
+                        cond_lhs += cond_consts['R'][ci] * c.R
+                    elif(cc_str == "alpha"):
+                        cond_lhs += cond_consts['alpha'][ci] * v.alpha
+                    else:
+                        assert False
                 conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
@@ -232,12 +243,12 @@ def get_template_definitions(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
-            # template_definitions.append(
-            #     v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+            template_definitions.append(
+                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
             # template_definitions.append(
             #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
-            template_definitions.append(
-                v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            # template_definitions.append(
+            #     v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
     return template_definitions
 
 
@@ -253,12 +264,10 @@ def get_solution_str(
             coeff = get_raw_value(solution.eval(cond_coeffs[ci][cvi]))
             if(coeff != 0):
                 cond_str += f"+ {coeff}{cond_var_str} "
-        const = get_raw_value(solution.eval(cond_consts['R'][ci]))
-        if(const != 0):
-            cond_str += f"+ {const}R "
-        const = get_raw_value(solution.eval(cond_consts['alpha'][ci]))
-        if(const != 0):
-            cond_str += f"+ {const}alpha "
+        for cc_str in cond_consts_strs:
+            const = get_raw_value(solution.eval(cond_consts[cc_str][ci]))
+            if(const != 0):
+                cond_str += f"+ {const}{cc_str} "
         if(cond_str == ""):
             cond_str = "0 "
         cond_str += "> 0"
@@ -347,29 +356,30 @@ elif(min_qdel - 2 > 0):
 else:
     r = 2 * min_c
 """
-known_solution_list = [
-    expr_coeffs['min_c'][0] == 1,
-    expr_coeffs['min_c'][1] == 1/2,
-    cond_coeffs[0][cv_to_cvi['min_c']] == 2,
-    cond_coeffs[0][cv_to_cvi['max_c']] == -1,
-    cond_consts['R'][0] == 0,
-    cond_consts['R'][1] == -2,
-    cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
-]
-for cv in cond_vars:
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-    if(cv not in ['min_qdel']):
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs['min_c'][i] == 2 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
+if(n_cond >= 2):
+    known_solution_list = [
+        expr_coeffs['min_c'][0] == 1,
+        expr_coeffs['min_c'][1] == 1/2,
+        cond_coeffs[0][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == -1,
+        cond_consts['R'][0] == 0,
+        cond_consts['R'][1] == -2,
+        cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_qdel']):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 2 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
 blast_then_minc = z3.And(*known_solution_list)
 
 """
@@ -380,29 +390,30 @@ elif(min_qdel - 2 > 0):
 else:
     r = min_c
 """
-known_solution_list = [
-    expr_coeffs['min_c'][0] == 2,
-    expr_coeffs['min_c'][1] == 1/2,
-    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
-    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts['R'][0] == 0,
-    cond_consts['R'][1] == -2,
-    cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
-]
-for cv in cond_vars:
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-    if(cv not in ['min_qdel']):
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(n_expr)] +
-    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
+if(n_cond >= 2):
+    known_solution_list = [
+        expr_coeffs['min_c'][0] == 2,
+        expr_coeffs['min_c'][1] == 1/2,
+        cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+        cond_consts['R'][0] == 0,
+        cond_consts['R'][1] == -2,
+        cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_qdel']):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
 blast_then_minc_qdel = z3.And(*known_solution_list)
 
 """
@@ -413,32 +424,33 @@ elif (+ 1/2min_c + -1/2max_c + 10 > 0):
 else:
     r_f[n][t] = max(alpha, 1min_c)
 """
-known_solution_list = [
-    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
-    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
-    cond_consts['R'][0] == 0,
-    expr_coeffs['min_c'][0] == 2,
-    expr_consts[0] == 0,
+if(n_cond >= 2):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+        cond_consts['R'][0] == 0,
+        expr_coeffs['min_c'][0] == 2,
+        expr_consts[0] == 0,
 
-    cond_coeffs[1][cv_to_cvi['min_c']] == 1/2,
-    cond_coeffs[1][cv_to_cvi['max_c']] == -1/2,
-    cond_consts['R'][1] == 10,
-    expr_coeffs['min_c'][1] == 1,
-    expr_consts[1] == -1
-]
-for cv in cond_vars:
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(2, n_expr)] +
-    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
+        cond_coeffs[1][cv_to_cvi['min_c']] == 1/2,
+        cond_coeffs[1][cv_to_cvi['max_c']] == -1/2,
+        cond_consts['R'][1] == 10,
+        expr_coeffs['min_c'][1] == 1,
+        expr_consts[1] == -1
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
 blast_then_medblast_then_minc_negalpha = z3.And(*known_solution_list)
 
 """
@@ -451,32 +463,33 @@ else:
 
 If queue large, then drain, elseif beliefs large, then probe, otherwise minc.
 """
-known_solution_list = [
-    cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
-    cond_consts['R'][0] == -2,
-    expr_coeffs['min_c'][0] == 1,
-    expr_consts[0] == -1,
+if(n_cond >= 2):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
+        cond_consts['R'][0] == -2,
+        expr_coeffs['min_c'][0] == 1,
+        expr_consts[0] == -1,
 
-    cond_coeffs[1][cv_to_cvi['min_c']] == -1,
-    cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
-    cond_consts['R'][1] == 0,
-    expr_coeffs['min_c'][1] == 2,
-    expr_consts[1] == 0
-]
-for cv in cond_vars:
-    if(cv not in ['min_qdel']):
-        known_solution_list.append(
-            cond_coeffs[0][cv_to_cvi[cv]] == 0)
-    if(cv not in ['min_c', 'max_c']):
-        known_solution_list.append(
-            cond_coeffs[1][cv_to_cvi[cv]] == 0)
-known_solution_list.extend(
-    [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
-    [expr_consts[i] == 0 for i in range(2, n_expr)] +
-    [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
-    [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
-     for cvi in range(len(cond_vars))]
-)
+        cond_coeffs[1][cv_to_cvi['min_c']] == -1,
+        cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
+        cond_consts['R'][1] == 0,
+        expr_coeffs['min_c'][1] == 2,
+        expr_consts[1] == 0
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_qdel']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
 drain_then_blast_then_stable = z3.And(*known_solution_list)
 
 # """

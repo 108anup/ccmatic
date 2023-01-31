@@ -1,0 +1,62 @@
+[01/30 19:53:27]  Namespace(infinite_buffer=False, finite_buffer=False, dynamic_buffer=True, T=9, ideal=True, app_limited=False, fix_minc=False, fix_maxc=False, optimize=False, proofs=False, solution=None)
+[01/30 19:53:27]  Using cond_vars: ['min_c', 'max_c', 'min_qdel']
+[01/30 19:53:27]  Adver: desired_util_f=0.5, desired_queue_bound_multiplier=4, desired_queue_bound_alpha=3, desired_loss_count_bound=4, desired_large_loss_count_bound=4, desired_loss_amount_bound_multiplier=3, desired_loss_amount_bound_alpha=3
+[01/30 19:53:27]  Ideal: desired_util_f=0.5, desired_queue_bound_multiplier=4, desired_queue_bound_alpha=3, desired_loss_count_bound=4, desired_large_loss_count_bound=4, desired_loss_amount_bound_multiplier=3, desired_loss_amount_bound_alpha=3
+[01/30 19:53:27]  --------------------------------------------------------------------------------
+[01/30 19:53:27]  Iteration: 1 (0 solution, 0 counterexamples)
+[01/30 19:53:27]  Generator returned sat in 0.005639 secs.
+[01/30 19:53:27]  Candidate solution: 
+[1m[94mif (0 > 0):
+    r_f[n][t] = max(alpha,  + 2min_c + 2max_c + 1alpha)
+elif (0 > 0):
+    r_f[n][t] = max(alpha,  + 2min_c + 2max_c + 1alpha)
+else:
+    r_f[n][t] = max(alpha,  + 2min_c + 2max_c + 1alpha)[0m
+[01/30 19:53:32]  Improved number of small numbers from 138 to 138 out of a max of 138
+[01/30 19:53:32]  Verifer returned sat in 4.164219 secs.
+[01/30 19:53:32]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t  ideal__min_c_0,t  ideal__max_c_0,t  ideal__min_qdel_0,t      queue_t  utilized_0,t  qdelay_t
+0           -884.277778                -905.0         -884.277778         0.500000         0.500000              -905.0          0.500000                  0.000000         89.388889             100.0                  5.0    20.222222          -1.0       6.0
+1           -505.000000                -805.0         -505.000000    379298.500000       379.277778              -805.0          0.500000                  0.500000         89.388889             100.0                  0.0   299.500000           1.0       0.0
+2           -125.722222                -705.0         -125.722222    379577.777778       379.277778              -705.0          0.500000                  0.500000         89.388889             100.0                  0.0   578.777778           0.0       1.0
+3            253.555556                -605.0          253.555556    379857.055556       379.277778              -605.0          0.500000                  0.500000         89.388889             100.0                  1.0   858.055556           1.0       2.0
+4            632.833333                -505.0          632.833333    380136.333333       379.277778              -505.0          0.500000                  0.500000         89.388889             100.0                  1.0  1137.333333           1.0       2.0
+5           1012.111111                -405.0         1012.111111    380415.611111       379.277778              -405.0          0.500000                  0.500000         89.388889             100.0                  2.0  1416.611111           1.0       3.0
+6           1391.388889                -305.0         1391.388889    380694.888889       379.277778              -305.0        279.277778                  0.500000         89.388889             100.0                  3.0  1417.111111           1.0       4.0
+7           1770.666667                -205.0         1770.666667    380974.166667       379.277778              -205.0        558.555556                279.277778         89.388889             100.0                  4.0  1417.111111           1.0       5.0
+8           2149.944444                -105.0         2149.944444    381253.444444       379.277778              -105.0        837.833333                558.555556         89.388889             100.0                  4.0  1417.111111           1.0       5.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=False, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=3, 
+, large_loss_count=3, loss_amount=2512/3, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/2, buf_size=12754/9, start_state=[0].[0m
+[01/30 19:53:32]  --------------------------------------------------------------------------------
+[01/30 19:53:32]  Iteration: 2 (0 solution, 1 counterexamples)
+[01/30 19:53:35]  Generator returned sat in 3.345391 secs.
+[01/30 19:53:35]  Candidate solution: 
+[1m[94mif (+ -2alpha > 0):
+    r_f[n][t] = max(alpha,  + 2min_c + 1/2max_c + -1alpha)
+elif (+ -1/2min_c + -1/2max_c + -1alpha > 0):
+    r_f[n][t] = max(alpha,  + 1/2min_c + 1/2max_c + -1alpha)
+else:
+    r_f[n][t] = max(alpha,  + 1/2min_c + 1/2max_c + 1alpha)[0m
+[01/30 19:53:56]  Improved number of small numbers from 84 to 138 out of a max of 138
+[01/30 19:53:56]  Verifer returned sat in 20.965922 secs.
+[01/30 19:53:56]  Counter example: 
+[93m   ideal__tot_arrival_t  ideal__tot_service_t  ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t  ideal__min_c_0,t  ideal__max_c_0,t  ideal__min_qdel_0,t   queue_t  utilized_0,t  qdelay_t
+0         225781.242432          225780.24292       225781.242432         0.499756         0.499512        225780.24292          0.499756                  0.000000         89.388428        113.610107                  0.0  0.499756          -1.0       1.0
+1         225883.241455          225880.24292       225883.241455    102000.022949       101.999023        225880.24292          1.999023                  0.499756         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+2         225985.240479          225980.24292       225985.240479    102002.021973       101.999023        225980.24292          3.998047                  1.999023         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+3         226087.239502          226080.24292       226087.239502    102004.020996       101.999023        226080.24292          5.997070                  3.998047         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+4         226189.238525          226180.24292       226189.238525    102006.020020       101.999023        226180.24292          7.996094                  5.997070         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+5         226291.237549          226280.24292       226291.237549    102008.019043       101.999023        226280.24292          9.995117                  7.996094         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+6         226393.236572          226380.24292       226393.236572    102010.018066       101.999023        226380.24292         11.994141                  9.995117         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+7         226495.235596          226480.24292       226495.235596    102012.017090       101.999023        226480.24292         13.993164                 11.994141         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+8         226597.234619          226580.24292       226597.234619    102014.016113       101.999023        226580.24292         15.992188                 13.993164         89.388428        113.610107                  0.0  0.999512           1.0       0.0
+fefficient=True, bounded_queue=True, bounded_loss_count=False, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=8, 
+, large_loss_count=7, loss_amount=14329/1024, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2047/4096, buf_size=2047/2048, start_state=[0].[0m
+[01/30 19:53:56]  --------------------------------------------------------------------------------
+[01/30 19:53:56]  Iteration: 3 (0 solution, 2 counterexamples)
+[01/30 19:54:24]  Generator returned unsat in 26.902984 secs.
+[01/30 19:54:24]  [96mNo more solutions found[0m
+[01/30 19:54:24]  Final solutions:
+[01/30 19:54:24]  Took 56.208472 secs.
