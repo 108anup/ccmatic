@@ -67,8 +67,8 @@ elif (cond):
 
 n_expr = 3
 n_cond = n_expr - 1
-rhs_vars = ['min_c', 'max_c']
 rhs_vars = ['min_c']
+rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
          for i in range(n_expr)]
@@ -112,7 +112,7 @@ critical_generator_vars = flatten(cond_coeffs) \
 generator_vars: List[z3.ExprRef] = critical_generator_vars \
     + flatten_dict(cond_consts)
 
-search_range_expr_coeffs = [1/2, 1, 3/2, 2]
+search_range_expr_coeffs = [0, 1/2, 1, 3/2, 2]
 search_range_expr_consts = [-1, 0, 1]
 search_range_cond_coeffs_time = [-1, 0, 1]
 search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]

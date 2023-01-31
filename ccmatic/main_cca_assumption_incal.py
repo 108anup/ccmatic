@@ -314,14 +314,23 @@ def get_assumption(c, v):
 # CCmatic inputs
 ctx = z3.main_ctx()
 assumption = get_assumption(c, v)
+definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
+assert isinstance(definitions, z3.ExprRef)
+# cca_definitions are verifier only. does not matter if they are here...
 specification = z3.Implies(
     z3.And(environment, assumption), z3.Not(poor_utilization))
 # # Try synth assumption that breaks CCA.
 # specification = z3.Implies(
 #     z3.And(environment, assumption), poor_utilization)
-definitions = z3.And(ccac_domain, ccac_definitions, cca_definitions)
-assert isinstance(definitions, z3.ExprRef)
-# cca_definitions are verifier only. does not matter if they are here...
+
+NO_VE = True
+if(NO_VE):
+    environment = z3.And(environment, definitions)
+    specification = z3.Implies(
+        z3.And(environment, assumption), z3.Not(poor_utilization))
+    verifier_vars = verifier_vars + definition_vars
+    definitions = True
+    definition_vars = []
 
 if(cc.use_ref_cca):
     assumption_alt = get_assumption(c_alt, v_alt)
@@ -626,8 +635,8 @@ if (__name__ == "__main__"):
     debug_known_solution = None
     if DEBUG:
         debug_known_solution = known_solution
-        search_constraints = z3.And(search_constraints, known_solution)
-        assert(isinstance(search_constraints, z3.ExprRef))
+        # search_constraints = z3.And(search_constraints, known_solution)
+        # assert(isinstance(search_constraints, z3.ExprRef))
 
         # Definitions (including template)
         with open('tmp/definitions.txt', 'w') as f:

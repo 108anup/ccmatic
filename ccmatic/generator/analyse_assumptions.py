@@ -435,6 +435,14 @@ def filter_print_assumptions(
         get_solution_str: Callable,
         outdir: str = "tmp", suffix: str = "",
         known_assumption_record: Optional[pd.DataFrame] = None):
+    # import ipdb; ipdb.set_trace()
+
+    # # Check if known assumption is in the assumption records
+    # for i, rec in assumption_records.iterrows():
+    #     if(rec.equals(known_assumption_record)):
+    #         print("Equal")
+    # print("Loop end")
+
     assumption_assignments, assumption_expressions = \
         parse_and_create_assumptions(assumption_records,
                                      assumption_template)
