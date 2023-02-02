@@ -127,7 +127,7 @@ class CegisCCAGen(Cegis):
             critical_generator_vars = self.metadata.critical_generator_vars
         remove_solution(
             self.generator, solution, critical_generator_vars,
-            self.ctx, self._n_proved_solutions)
+            self.ctx, self._n_proved_solutions, model_completion=True)
 
     # def get_counter_example_str(counter_example: z3.ModelRef,
     #                             verifier_vars: List[z3.ExprRef]):
