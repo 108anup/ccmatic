@@ -1,7 +1,9 @@
 #!/bin/bash
 
 set -xe
-MONO="${MONO:---monotonic}"
+
+# Call with MONO=--monotonic
+MONO="${MONO:-}"
 DIR=./logs/assumptions_that_fix_cca-ideal_verifier$MONO
 mkdir -p $DIR
 
@@ -14,6 +16,7 @@ run() {
 }
 
 tmux rename-window av$MONO
+
 tmux split-window -h
 tmux split-window -v
 tmux select-pane -t 1

@@ -2,7 +2,8 @@
 
 set -xe
 
-MONO="${MONO:---monotonic}"
+# Call with MONO=--monotonic
+MONO="${MONO:-}"
 DIR=./logs/assumptions_that_fix_cca$MONO
 mkdir -p $DIR
 
