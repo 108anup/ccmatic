@@ -498,7 +498,7 @@ def override_remove_solution(self: Cegis, solution: z3.ModelRef):
 
     # Above trick gets rid of proved solutions.
     remove_solution(self.generator, solution,
-                    critical_generator_vars, self.ctx,
+                    this_critical_generator_vars, self.ctx,
                     self._n_proved_solutions, model_completion=True)
 
     # import ipdb; ipdb.set_trace()
