@@ -13,6 +13,7 @@ run() {
     tmux send-keys "$cmd" Enter
 }
 
+tmux rename-window av$MONO
 tmux split-window -h
 tmux split-window -v
 tmux select-pane -t 1
@@ -27,5 +28,7 @@ tmux select-pane -t 3
 run bbr 0.1
 tmux select-pane -t 4
 run bbr 0.45
+
+tmux select-layout tiled
 
 set +xe
