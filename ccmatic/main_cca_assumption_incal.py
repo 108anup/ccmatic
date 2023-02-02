@@ -113,8 +113,7 @@ vn = VariableNames(v)
 cca_definitions = get_cca_definition(c, v)
 cca_vvars = get_cca_vvars(c, v)
 verifier_vars.extend(flatten(cca_vvars))
-# environment = z3.And(environment, periodic_constriants, cca_definitions)
-environment = z3.And(environment, cca_definitions)
+# environment = z3.And(environment, periodic_constriants)
 assert c.N == 1
 desired = z3.Or(v.c_f[0][-1] > v.c_f[0][cc.history],
                 v.S[-1] - v.S[0] >= util_frac * c.C * c.T)
@@ -323,7 +322,7 @@ specification = z3.Implies(
 # specification = z3.Implies(
 #     z3.And(environment, assumption), poor_utilization)
 
-NO_VE = True
+NO_VE = False
 if(NO_VE):
     environment = z3.And(environment, definitions)
     specification = z3.Implies(
