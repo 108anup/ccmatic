@@ -12,6 +12,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
 from ccmatic.verifier import setup_ccac_for_cegis
 from ccmatic.verifier.ideal import IdealLink
+from cegis.util import z3_max
 from pyz3_utils.my_solver import MySolver
 
 
@@ -96,15 +97,16 @@ def cca_bbr_deterministic(c: ModelConfig, s: MySolver, v: Variables, pre=""):
                 max_rate[dt] = z3.If(rate > max_rate[dt-1],
                                      rate, max_rate[dt-1])
 
-            s.add(v.c_f[n][t] == 2 * max_rate[-1] * P)
+            rate_to_use = z3_max(max_rate[-1], 2 * v.alpha/P)
+            s.add(v.c_f[n][t] == 2 * rate_to_use * P)
             s_0 = (start_state_f[n] == (0 - t / c.R) % cycle)
             s_1 = (start_state_f[n] == (1 - t / c.R) % cycle)
             s.add(z3.Implies(s_0,
-                             v.r_f[n][t] == 1.25 * max_rate[-1]))
+                             v.r_f[n][t] == 1.25 * rate_to_use))
             s.add(z3.Implies(s_1,
-                             v.r_f[n][t] == 0.8 * max_rate[-1]))
+                             v.r_f[n][t] == 0.8 * rate_to_use))
             s.add(z3.Implies(z3.And(z3.Not(s_0), z3.Not(s_1)),
-                             v.r_f[n][t] == 1 * max_rate[-1]))
+                             v.r_f[n][t] == 1 * rate_to_use))
 
         # # Fix r so that generator can't change r to break cca_defs
         # for t in range(c.R + P):

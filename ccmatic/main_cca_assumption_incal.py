@@ -560,6 +560,26 @@ assert isinstance(ccac_paper_assumption, z3.BoolRef)
 ccac_paper_assumption_record = get_solution_df_from_known_solution(
     z3.And(ccac_paper_assumption, search_constraints), critical_generator_vars)
 
+# Never retain tokens (ideal link)
+known_solution_list = []
+# Ineq 0: C0 + Ct - W[t] - S[t] <= 0
+known_solution_list.append(coeffs[0][vname2vnum['C']][0] == 1)
+known_solution_list.append(coeffs[0][vname2vnum['W']][0] == -1)
+known_solution_list.append(coeffs[0][vname2vnum['S']][0] == -1)
+for vname in ineq_var_symbols[:-1]:
+    if(vname not in ['C', 'W', 'S']):
+        known_solution_list.append(coeffs[0][vname2vnum[vname]][0] == 0)
+    known_solution_list.append(coeffs[0][vname2vnum[vname]][1] == 0)
+known_solution_list.append(clauses[0][0])
+known_solution_list.append(z3.Not(clausenegs[0][0]))
+# Ineq 1: 0 <= 0
+for vname in ineq_var_symbols[:-1]:
+    known_solution_list.append(coeffs[1][vname2vnum[vname]][0] == 0)
+    known_solution_list.append(coeffs[1][vname2vnum[vname]][1] == 0)
+known_solution_list.append(z3.Not(clauses[0][1]))
+known_solution_list.append(z3.Not(clausenegs[0][1]))
+ideal_link_assumption = z3.And(*known_solution_list)
+
 # # Waste never happens
 # known_solution_list = []
 # known_solution_list.append(coeffs[0][vname2vnum['W']][0] == 1)
