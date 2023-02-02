@@ -2,15 +2,17 @@
 
 set -xe
 
-DIR=./logs/assumptions_that_fix_cca_and_include_loss-non_mono
+MONO="${MONO:---monotonic}"
+DIR=./logs/assumptions_that_fix_cca$MONO
 mkdir -p $DIR
+
 
 run() {
     dut=$1
     ref=$2
     util=$3
     logpath=$DIR/$dut-ref_$ref-util$util.csv
-    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref"
+    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref $MONO"
     tmux send-keys "$cmd" Enter
 }
 

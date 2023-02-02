@@ -66,6 +66,9 @@ def get_args():
     # parser.add_argument('--simplify-assumptions', action='store_true', default=False)
     parser.add_argument('--use-assumption-verifier',
                         action='store_true', default=False)
+    parser.add_argument('--monotonic',
+                        action='store_true', default=False)
+
 
     args = parser.parse_args()
     return args
@@ -87,7 +90,7 @@ cc.template_mode_switching = False
 cc.template_qdel = True
 
 cc.use_ref_cca = True if args.ref is not None else False
-cc.monotonic_inc_assumption = False
+cc.monotonic_inc_assumption = args.monotonic
 
 cc.compose = True
 cc.cca = args.dut
@@ -471,23 +474,27 @@ def get_generator_view(solution: z3.ModelRef, generator_vars: List[z3.ExprRef],
 
 
 def override_remove_solution(self: Cegis, solution: z3.ModelRef):
-    # this_critical_generator_vars: List[z3.ExprRef] = \
-    #     flatten(clauses) + flatten(clausenegs)
+    this_critical_generator_vars: List[z3.ExprRef] = \
+        flatten(clauses) + flatten(clausenegs)
 
-    # for ineqnum in range(nineq):
-    #     ineq_appears = False
-    #     for clausenum in range(nclause):
-    #         pos_appears = get_raw_value(solution.eval(clauses[clausenum][ineqnum]))
-    #         neg_appears = get_raw_value(solution.eval(clausenegs[clausenum][ineqnum]))
-    #         # Assume don't cares are false.
-    #         pos_appears = pos_appears if isinstance(pos_appears, bool) else False
-    #         neg_appears = neg_appears if isinstance(neg_appears, bool) else False
-    #         if(pos_appears or neg_appears):
-    #             ineq_appears = True
-    #             break
-    #     if(ineq_appears):
-    #         # We don't want new solutions that only differ in consts.
-    #         this_critical_generator_vars += flatten(coeffs[ineqnum])
+    for ineqnum in range(nineq):
+        ineq_appears = False
+        for clausenum in range(nclause):
+            pos_appears = get_raw_value(solution.eval(
+                clauses[clausenum][ineqnum], model_completion=True))
+            neg_appears = get_raw_value(solution.eval(
+                clausenegs[clausenum][ineqnum], model_completion=True))
+            assert isinstance(pos_appears, bool)
+            assert isinstance(neg_appears, bool)
+            # # Assume don't cares are false.
+            # pos_appears = pos_appears if isinstance(pos_appears, bool) else False
+            # neg_appears = neg_appears if isinstance(neg_appears, bool) else False
+            if(pos_appears or neg_appears):
+                ineq_appears = True
+                break
+        if(ineq_appears):
+            # We don't want new solutions that only differ in consts.
+            this_critical_generator_vars += flatten(coeffs[ineqnum])
 
     # Above trick gets rid of proved solutions.
     remove_solution(self.generator, solution,
