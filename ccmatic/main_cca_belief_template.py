@@ -713,6 +713,7 @@ else:
     args_str += f"opt_feasible={not args.opt_feasible_n}-"
     args_str += f"opt_ideal={args.ideal}"
     run_log_path = f'logs/optimizations/{args_str}.csv'
+    logger.info(f"Run log at: {run_log_path}")
 
     if(ADD_IDEAL_LINK):
         assert isinstance(ideal_link, CCmatic)

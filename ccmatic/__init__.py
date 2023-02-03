@@ -263,7 +263,8 @@ class CCmatic():
             cg = CegisCCAGen(
                 self.generator_vars, vvars, [],
                 self.search_constraints, True, spec,
-                self.ctx, debug_known_solution, md)
+                self.ctx, debug_known_solution, md,
+                solution_log_path=solution_log_path, run_log_path=run_log_path)
         cg.get_solution_str = self.get_solution_str
         cg.get_counter_example_str = self.get_counter_example_str
         cg.get_generator_view = self.get_generator_view
