@@ -9,8 +9,8 @@ run() {
     args=$@
     echo $args
     # cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 $args"
-    # cmd="timeout 7d python -m ccmatic.main_cca_lossless_ccmatic $args"
-    cmd="echo $args"
+    cmd="timeout 7d python -m ccmatic.main_cca_lossless_ccmatic $args"
+    # cmd="echo $args"
     tmux send-keys "$cmd" Enter
 }
 
