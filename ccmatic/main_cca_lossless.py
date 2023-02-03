@@ -288,7 +288,9 @@ try:
     md = CegisMetaData(critical_generator_vars)
     cg = CegisCCAGen(generator_vars, verifier_vars, definition_vars,
                      search_constraints, definitions, specification, ctx,
-                     debug_known_solution, md, solution_log_path='tmp/hotnets-composeTrue.csv')
+                     debug_known_solution, md,
+                     solution_log_path='tmp/hotnets-composeTrue.csv',
+                     run_log_path='tmp/run_log.csv')
     cg.get_solution_str = get_solution_str
     cg.get_counter_example_str = get_counter_example_str
     cg.get_generator_view = get_generator_view

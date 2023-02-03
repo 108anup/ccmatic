@@ -689,7 +689,7 @@ else:
 
         multicegis = MultiCegis(
             generator_vars, search_constraints, critical_generator_vars,
-            verifier_structs, link.ctx, None, None)
+            verifier_structs, link.ctx, None, None, run_log_path='tmp/run_log.csv')
         multicegis.get_solution_str = get_solution_str
 
         try_except(multicegis.run)

@@ -111,11 +111,12 @@ class CegisCCAGen(Cegis):
             definitions: z3.ExprRef, specification: z3.ExprRef,
             ctx: z3.Context, known_solution: Optional[z3.ExprRef] = None,
             metadata: Optional[CegisMetaData] = None,
-            solution_log_path: Optional[str] = None):
+            solution_log_path: Optional[str] = None,
+            run_log_path: Optional[str] = None):
         super(CegisCCAGen, self).__init__(
             generator_vars, verifier_vars, definition_vars,
             search_constraints, definitions, specification, ctx,
-            known_solution, solution_log_path)
+            known_solution, solution_log_path, run_log_path)
         self.metadata = metadata
 
     def remove_solution(self, solution: z3.ModelRef):
