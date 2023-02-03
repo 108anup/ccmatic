@@ -2,6 +2,7 @@ import z3
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Union, Callable
+from ccmatic.cegis import CegisConfig
 
 from cegis import NAME_TEMPLATE
 
@@ -89,11 +90,20 @@ def get_val_list(model: z3.ModelRef, l: List) -> List:
     return ret
 
 
-def get_product_ite(discrete_var, cts_var, discrete_domain):
+def get_product_ite_cc(cc: CegisConfig, discrete_var, cts_var, discrete_domain) -> z3.ArithRef:
+    if(cc.opt_pdt):
+        return get_product_ite(discrete_var, cts_var, discrete_domain)
+    else:
+        return discrete_var * cts_var
+
+
+def get_product_ite(discrete_var, cts_var, discrete_domain) -> z3.ArithRef:
     term_list = []
     for val in discrete_domain:
         term_list.append(z3.If(discrete_var == val, val * cts_var, 0))
-    return z3.Sum(*term_list)
+    ret = z3.Sum(*term_list)
+    assert isinstance(ret, z3.ArithRef)
+    return ret
 
 
 def get_renamed_vars(var_list, n_cex):

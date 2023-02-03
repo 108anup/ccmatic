@@ -1,3 +1,5 @@
+import sys
+import os
 import argparse
 import copy
 import logging
@@ -11,8 +13,10 @@ from ccac.variables import Variables
 from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
                      find_optimum_bounds)
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten, flatten_dict, get_product_ite, try_except
+from ccmatic.common import (flatten, flatten_dict, get_product_ite_cc,
+                            try_except)
 from cegis.multi_cegis import MultiCegis
+from cegis.quantified_smt import ExistsForall
 from cegis.util import Metric, get_raw_value, z3_max
 from pyz3_utils.common import GlobalConfig
 
@@ -26,17 +30,25 @@ def get_args():
 
     parser = argparse.ArgumentParser(description='Belief template')
 
-    parser.add_argument('--infinite-buffer', action='store_true', default=False)
-    parser.add_argument('--finite-buffer', action='store_true', default=False)
-    parser.add_argument('--dynamic-buffer', action='store_true', default=False)
+    parser.add_argument('--infinite-buffer', action='store_true')
+    parser.add_argument('--finite-buffer', action='store_true')
+    parser.add_argument('--dynamic-buffer', action='store_true')
     parser.add_argument('-T', action='store', type=int, default=6)
-    parser.add_argument('--ideal', action='store_true', default=False)
-    parser.add_argument('--app-limited', action='store_true', default=False)
-    parser.add_argument('--fix-minc', action='store_true', default=False)
-    parser.add_argument('--fix-maxc', action='store_true', default=False)
-    parser.add_argument('--optimize', action='store_true', default=False)
-    parser.add_argument('--proofs', action='store_true', default=False)
+    parser.add_argument('--ideal', action='store_true')
+    parser.add_argument('--app-limited', action='store_true')
+    parser.add_argument('--fix-minc', action='store_true')
+    parser.add_argument('--fix-maxc', action='store_true')
+    parser.add_argument('--optimize', action='store_true')
+    parser.add_argument('--proofs', action='store_true')
     parser.add_argument('--solution', action='store', type=int, default=None)
+
+    # optimizations test
+    parser.add_argument('--opt-cegis-n', action='store_true')
+    parser.add_argument('--opt-ve-n', action='store_true')
+    parser.add_argument('--opt-pdt-n', action='store_true')
+    parser.add_argument('--opt-wce-n', action='store_true')
+    parser.add_argument('--opt-feasible-n', action='store_true')
+
     args = parser.parse_args()
     return args
 
@@ -66,6 +78,8 @@ elif (cond):
 """
 
 n_expr = 3
+if(args.infinite_buffer):
+    n_expr = 2
 n_cond = n_expr - 1
 rhs_vars = ['min_c']
 rhs_vars = ['min_c', 'max_c']
@@ -211,8 +225,8 @@ def get_template_definitions(
                     # else:
                     #     assert False
 
-                    cond_lhs += get_product_ite(
-                        cond_coeffs[ci][cvi], cond_var,
+                    cond_lhs += get_product_ite_cc(
+                        cc, cond_coeffs[ci][cvi], cond_var,
                         search_range_cond_coeffs)
                 for cc_str in cond_consts_strs:
                     if(cc_str == "R"):
@@ -224,12 +238,13 @@ def get_template_definitions(
                 conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
-                expr = get_product_ite(
-                        expr_consts[ei], v.alpha,
-                        search_range_expr_consts)
+                expr = get_product_ite_cc(
+                    cc, expr_consts[ei], v.alpha,
+                    search_range_expr_consts)
                 for rv in rhs_vars:
-                    expr += get_product_ite(
-                        expr_coeffs[rv][ei], v.__getattribute__(rv)[n][t-1],
+                    expr += get_product_ite_cc(
+                        cc, expr_coeffs[rv][ei],
+                        v.__getattribute__(rv)[n][t-1],
                         search_range_expr_coeffs)
                 exprs.append(expr)
 
@@ -577,9 +592,12 @@ else:
     cc.desired_loss_amount_bound_multiplier = 3
     cc.desired_loss_amount_bound_alpha = 3
 
-
+cc.opt_cegis = not args.opt_cegis_n
+cc.opt_ve = not args.opt_ve_n
+cc.opt_pdt = not args.opt_pdt_n
+cc.opt_wce = not args.opt_wce_n
+cc.feasible_response = args.opt_feasible_n
 cc.ideal_link = False
-cc.feasible_response = False
 
 link = CCmatic(cc)
 try_except(link.setup_config_vars)
@@ -682,6 +700,20 @@ elif(args.proofs):
     bp = BeliefProofs(link, solution)
     bp.proofs()
 else:
+
+    fname = os.path.basename(sys.argv[0])
+    args_str = f"fname={fname}-"
+    args_str += f"infinite_buffer={args.infinite_buffer}-"
+    args_str += f"finite_buffer={args.finite_buffer}-"
+    args_str += f"dynamic_buffer={args.dynamic_buffer}-"
+    args_str += f"opt_cegis={not args.opt_cegis_n}-"
+    args_str += f"opt_ve={not args.opt_ve_n}-"
+    args_str += f"opt_pdt={not args.opt_pdt_n}-"
+    args_str += f"opt_wce={not args.opt_wce_n}-"
+    args_str += f"opt_feasible={not args.opt_feasible_n}-"
+    args_str += f"opt_ideal={args.ideal}"
+    run_log_path = f'logs/optimizations/{args_str}.csv'
+
     if(ADD_IDEAL_LINK):
         assert isinstance(ideal_link, CCmatic)
         links = [ideal_link, link]
@@ -689,9 +721,16 @@ else:
 
         multicegis = MultiCegis(
             generator_vars, search_constraints, critical_generator_vars,
-            verifier_structs, link.ctx, None, None, run_log_path='tmp/run_log.csv')
+            verifier_structs, link.ctx, None, None, run_log_path=run_log_path)
         multicegis.get_solution_str = get_solution_str
 
         try_except(multicegis.run)
     else:
-        link.run_cegis()
+        if(link.cc.opt_cegis):
+            link.run_cegis(run_log_path=run_log_path)
+        else:
+            ef = ExistsForall(
+                generator_vars, link.verifier_vars + link.definition_vars, search_constraints,
+                z3.Implies(link.definitions, link.specification), critical_generator_vars,
+                get_solution_str, run_log_path=run_log_path)
+            try_except(ef.run_all)

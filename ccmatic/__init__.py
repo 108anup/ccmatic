@@ -226,12 +226,16 @@ class CCmatic():
         if(val < 0):
             return f'-{-val}{suffix}'
 
-    def run_cegis(self, known_solution: Optional[z3.ExprRef]=None):
+    def run_cegis(self, known_solution: Optional[z3.ExprRef]=None,
+                  solution_log_path: Optional[str] = None,
+                  run_log_path: Optional[str] = None):
         # Directly update any closures or critical_generator_vars
         # or any other expression before calling run function.
 
         assert self.get_solution_str is not None, \
             "This needs to be set manually based on template."
+
+        cc = self.cc
 
         # Debugging:
         debug_known_solution = None
@@ -251,14 +255,23 @@ class CCmatic():
         cg = CegisCCAGen(
             self.generator_vars, self.verifier_vars, self.definition_vars,
             self.search_constraints, self.definitions, self.specification,
-            self.ctx, debug_known_solution, md)
+            self.ctx, debug_known_solution, md, solution_log_path=solution_log_path,
+            run_log_path=run_log_path)
+        if(not cc.opt_ve):
+            vvars = self.verifier_vars + self.definition_vars
+            spec = z3.Implies(self.definitions, self.specification)
+            cg = CegisCCAGen(
+                self.generator_vars, vvars, [],
+                self.search_constraints, True, spec,
+                self.ctx, debug_known_solution, md)
         cg.get_solution_str = self.get_solution_str
         cg.get_counter_example_str = self.get_counter_example_str
         cg.get_generator_view = self.get_generator_view
         cg.get_verifier_view = self.get_verifier_view
-        run_verifier = functools.partial(
-            run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
-        cg.run_verifier = run_verifier
+        if(cc.opt_wce):
+            run_verifier = functools.partial(
+                run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
+            cg.run_verifier = run_verifier
         try_except(cg.run)
 
     def get_verifier_struct(self):

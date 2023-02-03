@@ -71,6 +71,13 @@ class CegisConfig:
     monotonic_inc_assumption: bool = False
     assumption_verifier: bool = False
 
+    opt_cegis: bool = True  # using exists forall with z3 if this is off
+    opt_ve: bool = True
+    opt_pdt: bool = True
+    opt_wce: bool = True
+    # feasible_response  # already has a flag
+    # ideal_link   # is outside the scope of a single CC instance
+
     DEBUG: bool = False
 
     def desire_tag(self) -> str:
