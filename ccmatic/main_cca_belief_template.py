@@ -82,7 +82,7 @@ if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
 rhs_vars = ['min_c']
-rhs_vars = ['min_c', 'max_c']
+# rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
          for i in range(n_expr)]
@@ -712,7 +712,7 @@ else:
     args_str += f"opt_wce={not args.opt_wce_n}-"
     args_str += f"opt_feasible={not args.opt_feasible_n}-"
     args_str += f"opt_ideal={args.ideal}"
-    run_log_path = f'logs/optimizations/{args_str}.csv'
+    run_log_path = f'logs/optimizations/no_maxc/{args_str}.csv'
     logger.info(f"Run log at: {run_log_path}")
 
     if(ADD_IDEAL_LINK):

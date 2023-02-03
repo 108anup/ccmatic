@@ -12,12 +12,13 @@ run() {
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window opt-eval$BUFFER
+tmux rename-window no_maxc-opt-eval$BUFFER
 
 tmux split-window -h
 tmux split-window -v
 tmux split-window -v
 tmux select-pane -t 1
+tmux split-window -v
 tmux split-window -v
 tmux split-window -v
 tmux split-window -v
@@ -36,8 +37,11 @@ tmux select-pane -t 5
 run $BUFFER --opt-feasible-n
 tmux select-pane -t 6
 run $BUFFER
+
 tmux select-pane -t 7
 run $BUFFER --ideal
+tmux select-pane -t 8
+run $BUFFER --ideal --opt-feasible-n
 
 tmux select-layout tiled
 
