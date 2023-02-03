@@ -7,7 +7,7 @@ BUFFER="${BUFFER:---dynamic-buffer}"
 run() {
     args=$@
     echo $args
-    cmd="python -m ccmatic.main_cca_belief_template -T 9 $args"
+    cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 $args"
     # cmd="echo $args"
     tmux send-keys "$cmd" Enter
 }
