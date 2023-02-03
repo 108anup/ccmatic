@@ -1,18 +1,20 @@
 #!/bin/bash
 
-set -xe
+# set -xe
 
 BUFFER="${BUFFER:---dynamic-buffer}"
+BUFFER=""
 
 run() {
     args=$@
     echo $args
-    cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 $args"
-    # cmd="echo $args"
+    # cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 $args"
+    # cmd="timeout 7d python -m ccmatic.main_cca_lossless_ccmatic $args"
+    cmd="echo $args"
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window no_maxc-opt-eval$BUFFER
+tmux rename-window lossless-opt-eval$BUFFER
 
 tmux split-window -h
 tmux split-window -v
@@ -45,4 +47,4 @@ run $BUFFER --ideal --opt-feasible-n
 
 tmux select-layout tiled
 
-set +xe
+# set +xe
