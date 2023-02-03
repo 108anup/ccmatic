@@ -476,18 +476,27 @@ elif (+ -1min_c + 1/2max_c > 0):
 else:
     r_f[n][t] = max(alpha, 1min_c)
 
+[01/11 08:17:45]  28: if (+ 1min_qdel + -2 > 0):
+    r_f[n][t] = max(alpha, 1/2min_c)
+elif (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha, 2min_c)
+else:
+    r_f[n][t] = max(alpha, 1min_c)
+
 If queue large, then drain, elseif beliefs large, then probe, otherwise minc.
 """
 if(n_cond >= 2):
     known_solution_list = [
         cond_coeffs[0][cv_to_cvi['min_qdel']] == 1,
         cond_consts['R'][0] == -2,
-        expr_coeffs['min_c'][0] == 1,
-        expr_consts[0] == -1,
+        cond_consts['alpha'][0] == 0,
+        expr_coeffs['min_c'][0] == 1/2,
+        expr_consts[0] == 0,
 
         cond_coeffs[1][cv_to_cvi['min_c']] == -1,
         cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
         cond_consts['R'][1] == 0,
+        cond_consts['alpha'][1] == 0,
         expr_coeffs['min_c'][1] == 2,
         expr_consts[1] == 0
     ]
@@ -502,10 +511,52 @@ if(n_cond >= 2):
         [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
         [expr_consts[i] == 0 for i in range(2, n_expr)] +
         [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
         [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
          for cvi in range(len(cond_vars))]
     )
 drain_then_blast_then_stable = z3.And(*known_solution_list)
+
+"""
+[01/30 20:30:37]  35: if (+ 2min_c + -3/2max_c + -1alpha > 0):
+    r_f[n][t] = max(alpha,  + 1min_c + -1alpha)
+elif (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha,  + 2min_c)
+else:
+    r_f[n][t] = max(alpha,  + 1min_c)
+"""
+if(n_cond >= 2):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == -3/2,
+        cond_consts['R'][0] == 0,
+        cond_consts['alpha'][0] == -1,
+        expr_coeffs['min_c'][0] == 1,
+        expr_consts[0] == -1,
+
+        cond_coeffs[1][cv_to_cvi['min_c']] == -1,
+        cond_coeffs[1][cv_to_cvi['max_c']] == 2/3,
+        cond_consts['R'][1] == 0,
+        cond_consts['alpha'][1] == 0,
+        expr_coeffs['min_c'][1] == 3/2,
+        expr_consts[1] == 0
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
+blast_then_medblast_then_minc_negalpha_correct_units = \
+    z3.And(*known_solution_list)
 
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
@@ -544,11 +595,13 @@ drain_then_blast_then_stable = z3.And(*known_solution_list)
 
 solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              blast_then_medblast_then_minc_negalpha,
-             drain_then_blast_then_stable
-             # synth_min_buffer
+             drain_then_blast_then_stable,
+             # synth_min_buffer,
+             blast_then_medblast_then_minc_negalpha_correct_units
              ]
 
 # known_solution = z3.And(*known_solution_list)
+known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
@@ -728,10 +781,12 @@ else:
         try_except(multicegis.run)
     else:
         if(link.cc.opt_cegis):
-            link.run_cegis(run_log_path=run_log_path)
+            link.run_cegis(known_solution=known_solution,
+                           run_log_path=run_log_path)
         else:
             ef = ExistsForall(
                 generator_vars, link.verifier_vars + link.definition_vars, search_constraints,
-                z3.Implies(link.definitions, link.specification), critical_generator_vars,
+                z3.Implies(link.definitions,
+                           link.specification), critical_generator_vars,
                 get_solution_str, run_log_path=run_log_path)
             try_except(ef.run_all)
