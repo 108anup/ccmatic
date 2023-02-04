@@ -649,7 +649,7 @@ cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
 cc.opt_pdt = not args.opt_pdt_n
 cc.opt_wce = not args.opt_wce_n
-cc.feasible_response = args.opt_feasible_n
+cc.feasible_response = not args.opt_feasible_n
 cc.ideal_link = False
 
 link = CCmatic(cc)
