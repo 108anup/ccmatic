@@ -3,7 +3,7 @@
 # set -xe
 
 BUFFER="${BUFFER:---dynamic-buffer}"
-BUFFER=""
+# BUFFER=""
 
 run() {
     args=$@
@@ -14,11 +14,12 @@ run() {
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window lossless-opt-eval$BUFFER
+tmux rename-window belief-opt$BUFFER
 
+tmux split-window -h
 tmux split-window -v
 tmux split-window -v
-tmux split-window -v
+tmux select-pane -t 1
 tmux split-window -v
 tmux split-window -v
 tmux split-window -v
