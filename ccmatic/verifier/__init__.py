@@ -1229,22 +1229,14 @@ def calculate_qbound_defs(c: ModelConfig, s: MySolver, v: Variables):
         s.add(v.qbound[t][0])
 
     for t in range(1, c.T):
-        for dt in range(1, c.T):
-            if(dt <= t):
-                s.add(
-                    z3.Implies(v.S[t] == v.S[t-1],
-                               v.qbound[t][dt] == v.qbound[t-1][dt]))
-                s.add(
-                    z3.Implies(v.S[t] != v.S[t-1],
-                               v.qbound[t][dt] ==
-                               (v.S[t] <= v.A[t-dt] - v.L[t-dt])))
-            else:
-                s.add(
-                    z3.Implies(v.S[t] == v.S[t-1],
-                               v.qbound[t][dt] == v.qbound[t-1][dt]))
-                # Let solver choose non-deterministically what happens when
-                # S[t] != S[t-1] for t-dt < 0, i.e.,
-                # no constraint on qbound[t][dt>t]
+        for dt in range(1, t+1):
+            s.add(
+                z3.Implies(v.S[t] == v.S[t-1],
+                           v.qbound[t][dt] == v.qbound[t-1][dt]))
+            s.add(
+                z3.Implies(v.S[t] != v.S[t-1],
+                           v.qbound[t][dt] ==
+                           (v.S[t] <= v.A[t-dt] - v.L[t-dt])))
 
 
 def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
@@ -1261,6 +1253,14 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
             # If queuing delay at t is greater than dt+1 then
             # it is also greater than dt.
             s.add(z3.Implies(v.qbound[t][dt+1], v.qbound[t][dt]))
+
+    for t in range(1, c.T):
+        for dt in range(t+1, c.T):
+            s.add(z3.Implies(v.S[t] == v.S[t-1],
+                             v.qbound[t][dt] == v.qbound[t-1][dt]))
+            # Let solver choose non-deterministically what happens when
+            # S[t] != S[t-1] for t-dt < 0, i.e.,
+            # no constraint on qbound[t][dt>t]
 
     for t in range(c.T-1):
         for dt in range(c.T-1):
@@ -1282,16 +1282,24 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
                 z3.Not(v.qbound[t][dt]),
                 z3.Not(v.qbound[t+1][dt+1])))
 
-    # Queueing delay cannot be more than buffer/C + D.
+    # # Queueing delay cannot be more than buffer/C + D.
+    # if(c.buf_min is not None):
+    #     max_delay_float = c.buf_min/c.C + c.D
+    #     max_delay_ceil = math.ceil(max_delay_float)
+    #     lowest_unallowed_delay = max_delay_ceil
+    #     if(max_delay_float == max_delay_ceil):
+    #         lowest_unallowed_delay = max_delay_ceil + 1
+    #     if(lowest_unallowed_delay <= c.T - 1):
+    #         for t in range(c.T):
+    #             s.add(z3.Not(v.qbound[t][lowest_unallowed_delay]))
+
+    # Delay cannot be more than max_delay. This means that one of
+    # qbound[t][dt>max_delay] are False
     if(c.buf_min is not None):
-        max_delay_float = c.buf_min/c.C + c.D
-        max_delay_ceil = math.ceil(max_delay_float)
-        lowest_unallowed_delay = max_delay_ceil
-        if(max_delay_float == max_delay_ceil):
-            lowest_unallowed_delay = max_delay_ceil + 1
-        if(lowest_unallowed_delay <= c.T - 1):
-            for t in range(c.T):
-                s.add(z3.Not(v.qbound[t][lowest_unallowed_delay]))
+        max_delay = c.buf_min/c.C + c.D
+        for t in range(c.T):
+            for dt in range(c.T):
+                s.add(z3.Implies(dt > max_delay, z3.Not(v.qbound[t][dt])))
 
 
 def last_decrease_defs(c: ModelConfig, s: MySolver, v: Variables):
@@ -1326,9 +1334,9 @@ def exceed_queue_defs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
-    # qdel[t][dt<t] is deterministic
     # qdel[t][dt>=t] is non-deterministic (including,
-    # qdel[0][dt], qdel[t][dt>t-1])
+    #                qdel[0][dt], qdel[t][dt>t-1])
+    # qdel[t][dt<t] is deterministic
     """
            dt
          0 1 2 3
@@ -1339,23 +1347,14 @@ def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
       3| d d d n
     """
 
-    # Let solver choose non-deterministically what happens for
-    # t = 0, i.e., no constraint on qdel[0][dt].
     for t in range(1, c.T):
-        for dt in range(c.T):
-            if(dt <= t-1):
-                s.add(z3.Implies(v.S[t] != v.S[t - 1],
-                                 v.qdel[t][dt] == z3.And(
-                    v.A[t - dt - 1] - v.L[t - dt - 1] < v.S[t],
-                    v.A[t - dt] - v.L[t - dt] >= v.S[t])))
-                s.add(z3.Implies(v.S[t] == v.S[t - 1],
-                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
-            else:
-                s.add(z3.Implies(v.S[t] == v.S[t - 1],
-                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
-                # We let solver choose non-deterministically what happens when
-                # S[t] != S[t-1] for dt > t-1, i.e.,
-                # no constraint on qdel[t][dt>t-1]
+        for dt in range(t):
+            s.add(z3.Implies(v.S[t] != v.S[t - 1],
+                             v.qdel[t][dt] == z3.And(
+                v.A[t - dt - 1] - v.L[t - dt - 1] < v.S[t],
+                v.A[t - dt] - v.L[t - dt] >= v.S[t])))
+            s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                             v.qdel[t][dt] == v.qdel[t-1][dt]))
 
 
 def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
@@ -1364,6 +1363,16 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
     # deterministic variables.
     for t in range(c.T):
         s.add(z3.Sum(*v.qdel[t]) <= 1)
+
+    # Let solver choose non-deterministically what happens for
+    # t = 0, i.e., no constraint on qdel[0][dt].
+    for t in range(1, c.T):
+        for dt in range(t, c.T):
+            s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                             v.qdel[t][dt] == v.qdel[t-1][dt]))
+            # We let solver choose non-deterministically what happens when
+            # S[t] != S[t-1] for dt > t-1, i.e.,
+            # no constraint on qdel[t][dt>t-1]
 
     # qdel[t][dt] is True iff queueing delay is >=dt but <dt+1
     # If queuing delay at time t1 is dt1, then queuing delay at time t2=t1+1,

@@ -821,7 +821,7 @@ class BeliefProofs(Proofs):
             self.steady__max_c.hi == 3 * c.C,
             self.movement_mult__minc_maxc == 2
         ]
-        self.debug_verifier(lemma2, ss_assignments)
+        model = self.debug_verifier(lemma2, ss_assignments)
 
 
     def deprecated_recursive_mult_gap(self):
@@ -899,7 +899,7 @@ class BeliefProofs(Proofs):
             self.steady__min_c.lo == c.C/3,
             self.steady__max_c.hi == 3 * c.C,
         ]
-        self.debug_verifier(recursive_beliefs, ss_assignments)
+        model = self.debug_verifier(recursive_beliefs, ss_assignments)
 
 
     def lemma2_step2_possible_perf_with_recursive_minc_maxc(self):
@@ -1047,7 +1047,7 @@ class BeliefProofs(Proofs):
             self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D),
             self.movement_mult__rate == 2
         ]
-        self.debug_verifier(lemma3, ss_assignments)
+        model = self.debug_verifier(lemma3, ss_assignments)
 
     def lemma3_1_recursive_rate_queue(self):
         """
@@ -1107,7 +1107,7 @@ class BeliefProofs(Proofs):
             self.steady__rate.hi == 2 * c.C,
             self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D)
         ]
-        self.debug_verifier(recur_rate_queue, ss_assignments)
+        model = self.debug_verifier(recur_rate_queue, ss_assignments)
 
     def deprecated_lemma3_step1_1(self):
         """
