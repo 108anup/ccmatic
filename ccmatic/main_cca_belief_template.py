@@ -637,7 +637,7 @@ cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
 cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
-cc.desired_util_f = 0.5
+cc.desired_util_f = 0.4
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
 if(cc.infinite_buffer):
