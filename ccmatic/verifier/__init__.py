@@ -1447,6 +1447,7 @@ def setup_ccac():
     c.T = 9
 
     s = MySolver()
+    s.warn_undeclared = False
     v = Variables(c, s)
 
     # s.add(z3.And(v.S[0] <= 1000, v.S[0] >= -1000))

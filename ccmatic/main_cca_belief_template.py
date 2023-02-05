@@ -563,6 +563,48 @@ if(n_cond >= 2):
 blast_then_medblast_then_minc_negalpha_correct_units = \
     z3.And(*known_solution_list)
 
+"""
+[01/30 20:30:37]  35: if (+ 2min_c + -3/2max_c + -1alpha > 0):
+    r_f[n][t] = max(alpha,  + 1min_c + -1alpha)
+elif (+ -1min_c + 1/2max_c > 0):
+    r_f[n][t] = max(alpha,  + 2min_c)
+else:
+    r_f[n][t] = max(alpha,  + 1min_c)
+"""
+if(n_cond >= 2):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == -3/2,
+        cond_consts['R'][0] == 0,
+        cond_consts['alpha'][0] == -1,
+        expr_coeffs['min_c'][0] == 1,
+        expr_consts[0] == -1,
+
+        cond_coeffs[1][cv_to_cvi['min_c']] == -1,
+        cond_coeffs[1][cv_to_cvi['max_c']] == 2/3,
+        cond_consts['R'][1] == 0,
+        cond_consts['alpha'][1] == 0,
+        expr_coeffs['min_c'][1] == 2,
+        expr_consts[1] == 0
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
+blast_then_medblast_then_minc_negalpha_correct_units_higher_util = \
+    z3.And(*known_solution_list)
+
+
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
 #     r_f[n][t] = max(alpha, 2min_c)
@@ -602,7 +644,8 @@ solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              blast_then_medblast_then_minc_negalpha,
              drain_then_blast_then_stable,
              # synth_min_buffer,
-             blast_then_medblast_then_minc_negalpha_correct_units
+             blast_then_medblast_then_minc_negalpha_correct_units,
+             blast_then_medblast_then_minc_negalpha_correct_units_higher_util
              ]
 
 # known_solution = z3.And(*known_solution_list)
@@ -613,6 +656,7 @@ known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
 cc = CegisConfig()
+# cc.DEBUG = True
 cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
@@ -646,10 +690,10 @@ if(cc.infinite_buffer):
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
 else:
-    cc.desired_loss_count_bound = 4
-    cc.desired_large_loss_count_bound = 4
-    cc.desired_loss_amount_bound_multiplier = 3
-    cc.desired_loss_amount_bound_alpha = 3
+    cc.desired_loss_count_bound = (cc.T-1)/2
+    cc.desired_large_loss_count_bound = (cc.T-1)/2
+    cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 - 1
+    cc.desired_loss_amount_bound_alpha = (cc.T-1)/2 - 1
 
 cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n

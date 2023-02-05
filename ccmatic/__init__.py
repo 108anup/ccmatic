@@ -823,7 +823,6 @@ class BeliefProofs(Proofs):
         ]
         model = self.debug_verifier(lemma2, ss_assignments)
 
-
     def deprecated_recursive_mult_gap(self):
         # Lemma 2, Step 1.1: Find smallest recursive state for mult gap.
         desired = z3.Implies(
@@ -835,7 +834,7 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists, desired, self.get_counter_example_str)
         logger.info("Lemma 2: Find recursive state for mult gap")
-        # find_optimum_bounds(self.solution, [os])
+        model = find_optimum_bounds(self.solution, [os])
         """
         [01/24 23:03:53]  Lemma 2: Find recursive state for mult gap
         [01/24 23:03:53]  Testing link: adv
@@ -875,7 +874,8 @@ class BeliefProofs(Proofs):
         recursive_beliefs = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside),
-            self.final_beliefs_inside)
+            z3.And(self.final_beliefs_consistent,
+                   self.final_beliefs_inside))
         metric_lists = [
             [Metric(self.steady__min_c.lo, EPS, c.C-EPS, EPS, True),
              Metric(self.steady__max_c.hi, c.C+EPS, 10 * c.C, EPS, False)]
@@ -883,10 +883,16 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, [], metric_lists,
                                 recursive_beliefs, self.get_counter_example_str)
         logger.info("Lemma 2: recursive state for minc and maxc")
-        # find_optimum_bounds(self.solution, [os])
+        model = find_optimum_bounds(self.solution, [os])
 
+        # First solution that drains slowly
         self.recursive[self.steady__min_c.lo] = c.C/3
         self.recursive[self.steady__max_c.hi] = 3 * c.C
+
+        # Second solution that keeps smaller range
+        import ipdb; ipdb.set_trace()
+
+        # Third solution that drains faster
 
         """
         We find 38.8 and 300 as the recursive region for minc and maxc.
@@ -1300,6 +1306,10 @@ class BeliefProofs(Proofs):
         [01/24 03:40:34]  ================================================================================
         """
 
+        """
+        The one with correct units also gets the same bounds as above.
+        """
+
     def proofs(self):
         self.setup_steady_variables_functions()
         self.setup_conditions()
@@ -1310,7 +1320,7 @@ class BeliefProofs(Proofs):
         # self.deprecated_lemma1_1()
         # self.lemma2_step2_possible_perf_with_recursive_minc_maxc()
 
-        self.lemma1()  # movement
+        # self.lemma1()  # movement
         # self.deprecated_recursive_mult_gap()
         self.lemma2_step1_recursive_minc_maxc()  # recursion
         self.lemma2()  # movement
