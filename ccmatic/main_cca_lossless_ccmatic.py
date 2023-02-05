@@ -104,7 +104,9 @@ def get_expr(cc, lvar_symbol, t, n) -> z3.ArithRef:
                 cc, this_coeff, rvar[time_idx], search_range)
             term_list.append(this_term)
     expr = z3.Sum(*term_list) \
-        + get_product_ite_cc(cc, consts[lvar_symbol], v.alpha, search_range)
+        + consts[lvar_symbol] * v.alpha
+    # alpha is const for generator, no need to use the non-linear relaxation
+    # get_product_ite_cc(cc, consts[lvar_symbol], v.alpha, search_range)
     assert isinstance(expr, z3.ArithRef)
     return expr
 
@@ -192,7 +194,7 @@ cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
 cc.opt_pdt = not args.opt_pdt_n
 cc.opt_wce = not args.opt_wce_n
-cc.feasible_response = args.opt_feasible_n
+cc.feasible_response = not args.opt_feasible_n
 cc.ideal_link = False
 
 link = CCmatic(cc)

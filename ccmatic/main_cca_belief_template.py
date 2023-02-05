@@ -238,9 +238,11 @@ def get_template_definitions(
                 conds.append(cond_lhs > 0)
 
             for ei in range(n_expr):
-                expr = get_product_ite_cc(
-                    cc, expr_consts[ei], v.alpha,
-                    search_range_expr_consts)
+                expr = expr_consts[ei] * v.alpha
+                # alpha is a const for generator, no need to apply the non-linear relaxation.
+                # get_product_ite_cc(
+                #     cc, expr_consts[ei], v.alpha,
+                #     search_range_expr_consts)
                 for rv in rhs_vars:
                     expr += get_product_ite_cc(
                         cc, expr_coeffs[rv][ei],
@@ -413,6 +415,8 @@ if(n_cond >= 2):
         cond_coeffs[0][cv_to_cvi['max_c']] == 1,
         cond_consts['R'][0] == 0,
         cond_consts['R'][1] == -2,
+        cond_consts['alpha'][0] == 0,
+        cond_consts['alpha'][1] == 0,
         cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
     ]
     for cv in cond_vars:
@@ -426,6 +430,7 @@ if(n_cond >= 2):
         [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
         [expr_consts[i] == 0 for i in range(n_expr)] +
         [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
         [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
          for cvi in range(len(cond_vars))]
     )
@@ -535,10 +540,10 @@ if(n_cond >= 2):
         expr_consts[0] == -1,
 
         cond_coeffs[1][cv_to_cvi['min_c']] == -1,
-        cond_coeffs[1][cv_to_cvi['max_c']] == 2/3,
+        cond_coeffs[1][cv_to_cvi['max_c']] == 1/2,
         cond_consts['R'][1] == 0,
         cond_consts['alpha'][1] == 0,
-        expr_coeffs['min_c'][1] == 3/2,
+        expr_coeffs['min_c'][1] == 2,
         expr_consts[1] == 0
     ]
     for cv in cond_vars:
@@ -624,6 +629,7 @@ cc.T = args.T
 cc.history = cc.R
 cc.cca = "none"
 
+cc.rate_or_window = 'rate'
 cc.use_belief_invariant = True
 cc.fix_stale__min_c = args.fix_minc
 cc.fix_stale__max_c = args.fix_maxc
