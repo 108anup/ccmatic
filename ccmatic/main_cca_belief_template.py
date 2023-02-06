@@ -82,7 +82,8 @@ n_expr = 3
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
-rhs_vars = ['min_c', 'r_f']
+rhs_vars = ['min_c']
+# rhs_vars = ['min_c', 'r_f']
 # rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
@@ -521,6 +522,11 @@ if(n_cond >= 2):
         [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
          for cvi in range(len(cond_vars))]
     )
+    for rv in rhs_vars:
+        if(rv != 'min_c'):
+            for ei in range(n_expr):
+                known_solution_list.append(
+                    expr_coeffs[rv][ei] == 0)
 drain_then_blast_then_stable = z3.And(*known_solution_list)
 
 """
@@ -561,6 +567,11 @@ if(n_cond >= 2):
         [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
          for cvi in range(len(cond_vars))]
     )
+    for rv in rhs_vars:
+        if(rv != 'min_c'):
+            for ei in range(n_expr):
+                known_solution_list.append(
+                    expr_coeffs[rv][ei] == 0)
 blast_then_medblast_then_minc_negalpha_correct_units = \
     z3.And(*known_solution_list)
 
@@ -692,7 +703,7 @@ solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              ]
 
 known_solution = z3.And(*known_solution_list)
-known_solution = blast_then_medblast_then_minc_negalpha_correct_units
+# known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
 # search_constraints = z3.And(search_constraints, known_solution)
@@ -845,7 +856,7 @@ elif(args.proofs):
     solution = solutions[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
-    bp = BeliefProofs(link, solution)
+    bp = BeliefProofs(link, solution, args.solution)
     bp.proofs()
 else:
 
