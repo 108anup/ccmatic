@@ -1853,6 +1853,17 @@ def get_desired_necessary(
         z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd,
               d.ramp_down_queue, d.ramp_down_bq))
 
+    # # Simpler desired necessary
+    # d.desired_necessary = z3.And(
+    #     z3.Or(d.fefficient, d.ramp_up_cwnd),
+    #     z3.Or(d.bounded_queue, d.ramp_down_bq),
+    #     z3.Or(d.bounded_loss_count, d.ramp_down_cwnd),
+    #     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd),
+    #     z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd))
+
+    # Above, instead of d.ramp_down_bq, we could use d.ramp_down_cwnd or
+    # d.ramp_down_queue.
+
     return d
 
 
