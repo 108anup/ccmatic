@@ -54,7 +54,7 @@ logger.info(args)
 # ----------------------------------------------------------------
 # TEMPLATE
 # Generator search space
-HISTORY = 3
+HISTORY = 4
 rhs_var_symbols = ['S_f']
 # rhs_var_symbols = ['c_f', 'S_f']
 lhs_var_symbols = ['c_f']
@@ -146,6 +146,25 @@ def get_solution_str(solution: z3.ModelRef,
     return ret
 
 
+def desired_high_util_low_delay(c, v, first, util_frac, delay_bound):
+    cond_list = []
+    for t in range(first, c.T):
+        cond_list.append(v.A[t] - v.L[t] - v.S[t] <= delay_bound)
+    # Queue seen by a new packet should not be more that delay_bound
+    low_delay = z3.And(*cond_list)
+    # Serviced should be at least util_frac that could have been serviced
+    high_util = v.S[-1] - v.S[first] >= util_frac * c.C * (c.T-1-first-c.D)
+    # If the cwnd0 is very low then CCA should increase cwnd
+    ramp_up = v.c_f[0][-1] > v.c_f[0][first]
+    # If the queue is large to begin with then, CCA should cause queue to decrease.
+    ramp_down = v.A[-1] - v.L[-1] - v.S[-1] < v.A[first] - v.L[first] - v.S[first]
+
+    desired = z3.And(
+        z3.Or(high_util, ramp_up),
+        z3.Or(low_delay, ramp_down))
+    return desired, high_util, low_delay, ramp_up, ramp_down
+
+
 # ----------------------------------------------------------------
 # KNOWN SOLUTIONS
 # (for debugging)
@@ -170,7 +189,7 @@ cc.template_fi_reset = False
 cc.template_beliefs = False
 cc.template_beliefs_use_buffer = False
 cc.N = 1
-# cc.T = args.T
+cc.T = 7
 cc.history = HISTORY
 cc.cca = "paced"
 
@@ -201,6 +220,10 @@ link = CCmatic(cc)
 try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
+desired_adv = desired_high_util_low_delay(
+    c, v, cc.history, cc.desired_util_f,
+    cc.desired_queue_bound_multiplier * c.C * (c.R + c.D))[0]
+link.desired = desired_adv
 
 link.setup_cegis_loop(
     search_constraints,
@@ -221,6 +244,10 @@ if(args.ideal):
 
     c, _, v = ideal_link.c, ideal_link.s, ideal_link.v
     template_definitions = get_template_definitions(cc_ideal, c, v)
+    desired_ideal = desired_high_util_low_delay(
+        c, v, cc_ideal.history, cc_ideal.desired_util_f,
+        cc_ideal.desired_queue_bound_multiplier * c.C * (c.R + c.D))[0]
+    link.desired = desired_ideal
 
     ideal_link.setup_cegis_loop(
         search_constraints,
@@ -240,7 +267,7 @@ args_str += f"opt_pdt={not args.opt_pdt_n}-"
 args_str += f"opt_wce={not args.opt_wce_n}-"
 args_str += f"opt_feasible={not args.opt_feasible_n}-"
 args_str += f"opt_ideal={args.ideal}"
-run_log_path = f'logs/optimizations/lossless/{args_str}.csv'
+run_log_path = f'logs/optimizations/lossless-old_desired-T7_history4/{args_str}.csv'
 logger.info(f"Run log at: {run_log_path}")
 
 if(args.ideal):
