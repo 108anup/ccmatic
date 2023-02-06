@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument('--optimize', action='store_true')
     parser.add_argument('--proofs', action='store_true')
     parser.add_argument('--solution', action='store', type=int, default=None)
+    parser.add_argument('--run-log-dir', action='store', default=None)
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -81,7 +82,7 @@ n_expr = 3
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
-rhs_vars = ['min_c']
+rhs_vars = ['min_c', 'r_f']
 # rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
@@ -296,7 +297,7 @@ def get_solution_str(
         for rv in rhs_vars:
             coeff = get_raw_value(solution.eval(expr_coeffs[rv][ei]))
             if(coeff != 0):
-                expr_str += f" + {coeff}{rv}"
+                expr_str += f" + {coeff}{rv}[n][t-1]"
         if(const != 0):
             expr_str += f" + {const}alpha"
         if(expr_str == ""):
@@ -848,19 +849,21 @@ elif(args.proofs):
     bp.proofs()
 else:
 
-    fname = os.path.basename(sys.argv[0])
-    args_str = f"fname={fname}-"
-    args_str += f"infinite_buffer={args.infinite_buffer}-"
-    args_str += f"finite_buffer={args.finite_buffer}-"
-    args_str += f"dynamic_buffer={args.dynamic_buffer}-"
-    args_str += f"opt_cegis={not args.opt_cegis_n}-"
-    args_str += f"opt_ve={not args.opt_ve_n}-"
-    args_str += f"opt_pdt={not args.opt_pdt_n}-"
-    args_str += f"opt_wce={not args.opt_wce_n}-"
-    args_str += f"opt_feasible={not args.opt_feasible_n}-"
-    args_str += f"opt_ideal={args.ideal}"
-    run_log_path = f'logs/optimizations/{args_str}.csv'
-    logger.info(f"Run log at: {run_log_path}")
+    run_log_path = None
+    if(args.run_log_dir):
+        fname = os.path.basename(sys.argv[0])
+        args_str = f"fname={fname}-"
+        args_str += f"infinite_buffer={args.infinite_buffer}-"
+        args_str += f"finite_buffer={args.finite_buffer}-"
+        args_str += f"dynamic_buffer={args.dynamic_buffer}-"
+        args_str += f"opt_cegis={not args.opt_cegis_n}-"
+        args_str += f"opt_ve={not args.opt_ve_n}-"
+        args_str += f"opt_pdt={not args.opt_pdt_n}-"
+        args_str += f"opt_wce={not args.opt_wce_n}-"
+        args_str += f"opt_feasible={not args.opt_feasible_n}-"
+        args_str += f"opt_ideal={args.ideal}"
+        run_log_path = os.path.join(args.run_log_dir, f'{args_str}.csv')
+        logger.info(f"Run log at: {run_log_path}")
 
     if(ADD_IDEAL_LINK):
         assert isinstance(ideal_link, CCmatic)
