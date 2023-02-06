@@ -82,8 +82,8 @@ n_expr = 3
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
-rhs_vars = ['min_c']
-# rhs_vars = ['min_c', 'r_f']
+# rhs_vars = ['min_c']
+rhs_vars = ['min_c', 'r_f']
 # rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
@@ -91,6 +91,7 @@ expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     for rv in rhs_vars
 }
 expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
+logger.info(f"Using expr rhs_vars: {rhs_vars}")
 
 # Cond vars with units
 bytes_cvs = ['min_c', 'max_c']
@@ -156,18 +157,19 @@ for cond_const in flatten_dict(cond_consts):
     domain_clauses.append(
         z3.Or(*[cond_const == x for x in search_range_cond_consts]))
 
-# Limit the search space
-# Only 5 instead of 9 expressions.
-for ei in range(n_expr):
-    domain_clauses.append(
-        z3.Or(*[
-            z3.And(*[expr_coeffs['min_c'][ei] == 2, expr_consts[ei] == 0]),
-            z3.And(*[expr_coeffs['min_c'][ei] == 1/2, expr_consts[ei] == 0]),
-            expr_coeffs['min_c'][ei] == 1,
-            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
-            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
-            # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
-        ]))
+if(len(rhs_vars) == 1):
+    # Limit the search space
+    # Only 5 instead of 9 expressions.
+    for ei in range(n_expr):
+        domain_clauses.append(
+            z3.Or(*[
+                z3.And(*[expr_coeffs['min_c'][ei] == 2, expr_consts[ei] == 0]),
+                z3.And(*[expr_coeffs['min_c'][ei] == 1/2, expr_consts[ei] == 0]),
+                expr_coeffs['min_c'][ei] == 1,
+                # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 1]),
+                # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
+                # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
+            ]))
 
 # Only compare qtys with the same units.
 for ci in range(n_cond):

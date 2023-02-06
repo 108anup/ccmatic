@@ -3,18 +3,19 @@
 # set -xe
 
 BUFFER="${BUFFER:---dynamic-buffer}"
-BUFFER=""
+# BUFFER=""
+OUTDIR=belief_template-simple_desired-r_f
 
 run() {
     args=$@
     echo $args
-    # cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 $args"
-    cmd="timeout 7d python -m ccmatic.main_cca_lossless_ccmatic $args"
+    cmd="timeout 7d python -m ccmatic.main_cca_belief_template -T 9 --run-log-dir logs/optimizations/$OUTDIR $args"
+    # cmd="timeout 7d python -m ccmatic.main_cca_lossless_ccmatic $args"
     # cmd="echo $args"
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window hot_old_desired$BUFFER
+tmux rename-window $OUTDIR
 
 tmux split-window -h
 tmux split-window -v
@@ -41,8 +42,8 @@ tmux select-pane -t 4
 run $BUFFER --opt-feasible-n --opt-wce-n
 
 tmux select-pane -t 5
-# VE + pdt + feasible
-run $BUFFER --opt-wce-n
+# WCE only
+run $BUFFER --opt-ve-n --opt-pdt-n --opt-feasible-n
 tmux select-pane -t 6
 # VE + pdt + WCE
 run $BUFFER --opt-feasible-n
@@ -51,7 +52,7 @@ tmux select-pane -t 7
 # VE + pdt + WCE + ideal
 run $BUFFER --opt-feasible-n --ideal
 tmux select-pane -t 8
-# VE + pdt + feasible + WCE + ideal
-run $BUFFER --ideal
+# ideal only
+run $BUFFER --opt-ve-n --opt-pdt-n --opt-feasible-n --opt-wce-n --ideal
 
 # set +xe
