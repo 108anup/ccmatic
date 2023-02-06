@@ -851,6 +851,7 @@ else:
 
     run_log_path = None
     if(args.run_log_dir):
+        os.makedirs(args.run_log_dir, exist_ok=True)
         fname = os.path.basename(sys.argv[0])
         args_str = f"fname={fname}-"
         args_str += f"infinite_buffer={args.infinite_buffer}-"
