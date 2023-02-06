@@ -668,7 +668,15 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # high_delay = z3.Or(*[v.qdel[st+1][dt]
                 #                      for dt in range(c.D+1, c.T)])
                 loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
-                this_utilized = z3.Or(loss, high_delay)
+                # We can only count qdelay when packets actually arrived.
+                # Otherwise the qdelay is stale.
+
+                # We assume the link is utilized if we did not recv any packets.
+                # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
+                # This causes us to never have long enough utilized window (hence we can't improve max_c).
+                # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
+                #                        z3.Or(loss, high_delay))
+                this_utilized = z3.And(z3.Or(loss, high_delay))
                 utilized_t[st] = this_utilized
                 if(st + 1 == et):
                     utilized_cummulative[st] = this_utilized
@@ -2156,8 +2164,8 @@ def get_cex_df(
             ret.append(val)
         return ret
     cex_dict = {
-        get_name_for_list(vn.A): _get_model_value(v.A),
-        get_name_for_list(vn.S): _get_model_value(v.S),
+        # get_name_for_list(vn.A): _get_model_value(v.A),
+        # get_name_for_list(vn.S): _get_model_value(v.S),
         # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
@@ -2230,12 +2238,18 @@ def get_cex_df(
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
         bottle_queue_t = []
+        token_queue_t = []
         for t in range(c.T):
             bottle_queue_t.append(
                 get_raw_value(counter_example.eval(
                     v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
                 )))
+            token_queue_t.append(
+                get_raw_value(counter_example.eval(
+                    v.C0 + c.C * t - v.W[t] - v.S[t]
+                )))
         df["bottle_queue_t"] = bottle_queue_t
+        df["token_queue_t"] = token_queue_t
 
         upper_S = []
         for t in range(c.T):

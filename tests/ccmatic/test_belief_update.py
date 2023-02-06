@@ -11,8 +11,8 @@ def setup():
     cc = CegisConfig()
     cc.name = "adv"
     cc.synth_ss = False
-    cc.infinite_buffer = False
-    cc.dynamic_buffer = True
+    cc.infinite_buffer = True
+    cc.dynamic_buffer = False
     cc.app_limited = False
     cc.buffer_size_multiplier = 1
     cc.template_qdel = True
@@ -91,5 +91,41 @@ def test_belief_does_not_degrade():
         import ipdb; ipdb.set_trace()
 
 
+def test_beliefs_remain_consistent():
+    cc, link = setup()
+    c, _, v = link.c, link.s, link.v
+
+    # Beliefs consistent
+    _initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
+                                       for n in range(c.N)])
+    _initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
+                                       for n in range(c.N)])
+    initial_beliefs_consistent = z3.And(
+        _initial_minc_consistent, _initial_maxc_consistent)
+    _final_minc_consistent = z3.And([v.min_c[n][-1] <= c.C
+                                    for n in range(c.N)])
+    _final_maxc_consistent = z3.And([v.max_c[n][-1] >= c.C
+                                    for n in range(c.N)])
+    final_beliefs_consistent = z3.And(
+        _final_minc_consistent, _final_maxc_consistent)
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(z3.Not(z3.Implies(initial_beliefs_consistent,
+                                   final_beliefs_consistent)))
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        print(model.eval(initial_beliefs_consistent))
+        print(model.eval(final_beliefs_consistent))
+        import ipdb; ipdb.set_trace()
+
+
 if (__name__ == "__main__"):
-    test_belief_does_not_degrade()
+    # test_belief_does_not_degrade()
+    test_beliefs_remain_consistent()
