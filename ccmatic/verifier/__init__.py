@@ -1838,8 +1838,8 @@ def get_desired_necessary(
             > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
     else:
         # For ideal link
-        d.ramp_down_bq = False
-        d.ramp_up_bq = False
+        d.ramp_down_bq = d.ramp_down_queue
+        d.ramp_up_bq = d.ramp_up_queue
 
     d.desired_necessary = z3.And(
         z3.Or(d.fefficient, d.ramp_up_cwnd,
