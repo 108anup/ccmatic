@@ -42,6 +42,8 @@ def get_args():
     parser.add_argument('--proofs', action='store_true')
     parser.add_argument('--solution', action='store', type=int, default=None)
     parser.add_argument('--run-log-dir', action='store', default=None)
+    parser.add_argument('--use-belief-invariant-n', action='store_true')
+    parser.add_argument('--ideal-only', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -82,8 +84,8 @@ n_expr = 3
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
-# rhs_vars = ['min_c']
-rhs_vars = ['min_c', 'r_f']
+rhs_vars = ['min_c']
+# rhs_vars = ['min_c', 'r_f']
 # rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
@@ -736,14 +738,14 @@ cc.history = cc.R
 cc.cca = "none"
 
 cc.rate_or_window = 'rate'
-cc.use_belief_invariant = True
+cc.use_belief_invariant = not args.use_belief_invariant_n
 cc.fix_stale__min_c = args.fix_minc
 cc.fix_stale__max_c = args.fix_maxc
 cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
 cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
-cc.desired_util_f = 0.4
+cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
 if(cc.infinite_buffer):
@@ -751,6 +753,14 @@ if(cc.infinite_buffer):
     cc.desired_large_loss_count_bound = 0
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
+elif(args.ideal_only):
+    cc.desired_util_f = 0.9
+    cc.desired_queue_bound_multiplier = 0
+    cc.desired_queue_bound_alpha = 4
+    cc.desired_loss_count_bound = 0
+    cc.desired_large_loss_count_bound = 0
+    cc.desired_loss_amount_bound_multiplier = 0
+    cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
     cc.desired_large_loss_count_bound = (cc.T-1)/2
@@ -762,7 +772,9 @@ cc.opt_ve = not args.opt_ve_n
 cc.opt_pdt = not args.opt_pdt_n
 cc.opt_wce = not args.opt_wce_n
 cc.feasible_response = not args.opt_feasible_n
-cc.ideal_link = False
+
+cc.ideal_link = args.ideal_only
+assert not (args.ideal_only and args.ideal)
 
 link = CCmatic(cc)
 try_except(link.setup_config_vars)

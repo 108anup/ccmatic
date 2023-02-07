@@ -718,7 +718,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
 
                 # UPPER
-                if(window - 1 > 0):
+                if(window - c.D > 0):
                     this_upper = z3.If(
                         utilized_cummulative[st],
                         measured_c * window / (window - c.D),

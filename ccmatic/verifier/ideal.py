@@ -213,6 +213,7 @@ class IdealLink:
     def setup_cegis_basic(cc: CegisConfig):
         check_config(cc)
         c = setup_ccac_for_cegis(cc)
+        c.D = 0
         s = MySolver()
         s.warn_undeclared = False
         v = Variables(c, s, cc.name)
