@@ -76,7 +76,7 @@ ADD_IDEAL_LINK = args.ideal
 
 
 template_type = TemplateType.IF_ELSE_CHAIN
-template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 
 """
 if (cond):
@@ -86,7 +86,9 @@ elif (cond):
 ...
 """
 
-n_expr = 4
+n_expr = 3
+if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
+    n_expr = 4
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
@@ -677,7 +679,10 @@ blast_then_medblast_then_minc_negalpha_correct_units_lower_loss = \
 
 """
 if (+ -2min_c + max_c > 0):
-    r_f[n][t] = max(alpha,  r_f[n][t-1] + alpha)
+    if(2min_c - r_f - alpha > 0)
+        r_f[n][t] = max(alpha,  r_f[n][t-1] + alpha)
+    else:
+        r_f[n][t] = max(alpha,  + 2min_c)
 else:
     r_f[n][t] = max(alpha,  + 1min_c)
 """
@@ -686,21 +691,34 @@ known_solution_list = [
     cond_coeffs[0][cv_to_cvi['max_c']] == 1,
     cond_consts['R'][0] == 0,
     cond_consts['alpha'][0] == 0,
+
+    cond_coeffs[1][cv_to_cvi['min_c']] == 2,
+    cond_coeffs[1][cv_to_cvi['r_f']] == -1,
+    cond_consts['R'][1] == 0,
+    cond_consts['alpha'][1] == -1,
+
     expr_coeffs['min_c'][0] == 0,
     expr_coeffs['r_f'][0] == 1,
-    expr_consts[0] == 1
+    expr_consts[0] == 1,
+
+    expr_coeffs['min_c'][1] == 2,
+    expr_coeffs['r_f'][1] == 0,
+    expr_consts[1] == 0
 ]
 for cv in cond_vars:
     if(cv not in ['min_c', 'max_c']):
         known_solution_list.append(
             cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_c', 'r_f']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
     known_solution_list.extend(
-        [expr_coeffs['min_c'][i] == 1 for i in range(1, n_expr)] +
-        [expr_coeffs['r_f'][i] == 0 for i in range(1, n_expr)] +
-        [expr_consts[i] == 0 for i in range(1, n_expr)] +
-        [cond_consts['R'][i] == 0 for i in range(1, n_cond)] +
-        [cond_consts['alpha'][i] == 0 for i in range(1, n_cond)] +
-        [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_coeffs['r_f'][i] == 0 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
          for cvi in range(len(cond_vars))]
     )
 aitd = z3.And(*known_solution_list)
@@ -754,6 +772,7 @@ known_solution = z3.And(*known_solution_list)
 # known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
+# known_solution = aitd
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
