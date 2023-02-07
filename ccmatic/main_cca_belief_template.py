@@ -1,3 +1,4 @@
+import enum
 import sys
 import os
 import argparse
@@ -15,6 +16,7 @@ from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, flatten_dict, get_product_ite_cc,
                             try_except)
+from ccmatic.generator import TemplateType, str_on_template_execution, value_on_template_execution
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
 from cegis.util import Metric, get_raw_value, z3_max
@@ -72,6 +74,10 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 
+
+template_type = TemplateType.IF_ELSE_CHAIN
+template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+
 """
 if (cond):
     rate = choose [minc + eps, 2*minc, minc - eps, minc/2]
@@ -80,12 +86,12 @@ elif (cond):
 ...
 """
 
-n_expr = 3
+n_expr = 4
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
-rhs_vars = ['min_c']
-# rhs_vars = ['min_c', 'r_f']
+# rhs_vars = ['min_c']
+rhs_vars = ['min_c', 'r_f']
 # rhs_vars = ['min_c', 'max_c']
 expr_coeffs: Dict[str, List[z3.ExprRef]] = {
     rv: [z3.Real(f"Gen__coeff_expr__{rv}{i}")
@@ -96,7 +102,8 @@ expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 logger.info(f"Using expr rhs_vars: {rhs_vars}")
 
 # Cond vars with units
-bytes_cvs = ['min_c', 'max_c']
+bytes_cvs = ['r_f']
+bytes_cvs += ['min_c', 'max_c']
 if(args.app_limited):
     bytes_cvs.extend(['A_f', 'app_limits'])
 time_cvs = ['min_qdel']
@@ -172,6 +179,13 @@ if(len(rhs_vars) == 1):
                 # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == -1]),
                 # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
             ]))
+
+if('r_f' in rhs_vars):
+    # Does not make sense to have both r_f and min_c on rhs.
+    for ei in range(n_expr):
+        domain_clauses.append(
+            z3.Or(expr_coeffs['min_c'][ei] == 0, expr_coeffs['r_f'][ei] == 0)
+        )
 
 # Only compare qtys with the same units.
 for ci in range(n_cond):
@@ -256,22 +270,17 @@ def get_template_definitions(
                         search_range_expr_coeffs)
                 exprs.append(expr)
 
-            rate = exprs[-1]
-            assert isinstance(rate, z3.ArithRef)
-            for ci in range(n_cond-1, -1, -1):
-                rate = z3.If(conds[ci], exprs[ci], rate)
-                assert isinstance(rate, z3.ArithRef)
-
+            rate = value_on_template_execution(template_type, conds, exprs)
             template_definitions.append(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
-            template_definitions.append(
-                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+            # template_definitions.append(
+            #     v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
             # template_definitions.append(
             #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            template_definitions.append(
+                v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
     return template_definitions
 
 
@@ -309,13 +318,18 @@ def get_solution_str(
             expr_str = "0"
         return expr_str
 
-    ret += f"if ({get_cond(0)}):"
-    ret += f"\n    r_f[n][t] = max(alpha, {get_expr(0)})"
-    for ci in range(1, n_cond):
-        ret += f"\nelif ({get_cond(ci)}):"
-        ret += f"\n    r_f[n][t] = max(alpha, {get_expr(ci)})"
-    ret += f"\nelse:"
-    ret += f"\n    r_f[n][t] = max(alpha, {get_expr(n_expr-1)})"
+    conds = [get_cond(i) for i in range(n_cond)]
+    exprs = [f"max(alpha, {get_expr(i)})" for i in range(n_expr)]
+    ret = "r_f[n][t] = \n"
+    ret += "\n".join(str_on_template_execution(template_type, conds, exprs))
+
+    # ret += f"if ({get_cond(0)}):"
+    # ret += f"\n    r_f[n][t] = max(alpha, {get_expr(0)})"
+    # for ci in range(1, n_cond):
+    #     ret += f"\nelif ({get_cond(ci)}):"
+    #     ret += f"\n    r_f[n][t] = max(alpha, {get_expr(ci)})"
+    # ret += f"\nelse:"
+    # ret += f"\n    r_f[n][t] = max(alpha, {get_expr(n_expr-1)})"
     return ret
 
 
@@ -661,6 +675,35 @@ if(n_cond >= 2):
 blast_then_medblast_then_minc_negalpha_correct_units_lower_loss = \
     z3.And(*known_solution_list)
 
+"""
+if (+ -2min_c + max_c > 0):
+    r_f[n][t] = max(alpha,  r_f[n][t-1] + alpha)
+else:
+    r_f[n][t] = max(alpha,  + 1min_c)
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts['R'][0] == 0,
+    cond_consts['alpha'][0] == 0,
+    expr_coeffs['min_c'][0] == 0,
+    expr_coeffs['r_f'][0] == 1,
+    expr_consts[0] == 1
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(1, n_expr)] +
+        [expr_coeffs['r_f'][i] == 0 for i in range(1, n_expr)] +
+        [expr_consts[i] == 0 for i in range(1, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(1, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(1, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(1, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
+aitd = z3.And(*known_solution_list)
 
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
@@ -703,7 +746,8 @@ solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              # synth_min_buffer,
              blast_then_medblast_then_minc_negalpha_correct_units,
              blast_then_medblast_then_minc_negalpha_correct_units_higher_util,
-             blast_then_medblast_then_minc_negalpha_correct_units_lower_loss
+             blast_then_medblast_then_minc_negalpha_correct_units_lower_loss,
+             aitd
              ]
 
 known_solution = z3.And(*known_solution_list)
@@ -780,6 +824,11 @@ link = CCmatic(cc)
 try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
+
+# d = link.d
+# desired = link.desired
+# desired = z3.And(desired, d.bounded_large_loss_count)
+# link.desired = desired
 
 link.setup_cegis_loop(
     search_constraints,
