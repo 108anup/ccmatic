@@ -1,11 +1,13 @@
-import math
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import z3
+
 from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
@@ -2410,4 +2412,28 @@ def get_gen_cex_df(
         #     qbound_val_list = get_val_list(solution, _get_renamed(qbound_list))
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
+
+    # df['service_delta'] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift()
     return df
+
+
+def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpath: str):
+    vn = VariableNames(v)
+    fig, ax = plt.subplots()
+    xx = list(range(c.T))
+    ax.plot(xx, df[get_name_for_list(vn.A_f[0])], color='blue', label='arrival')
+    ax.plot(xx, df[get_name_for_list(vn.S_f[0])], color='red', label='service')
+    ubl = []
+    lbl = []
+    for t in range(c.T):
+        if(t >= c.D):
+            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t-c.D])))
+        else:
+            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
+        ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
+    ax.plot(xx, lbl, color='black', alpha=0.5)
+    ax.plot(xx, ubl, color='black', alpha=0.5)
+    ax.legend()
+    ax.grid(True)
+    fig.set_tight_layout(True)
+    fig.savefig(fpath, bbox_inches='tight', pad_inches=0.01)
