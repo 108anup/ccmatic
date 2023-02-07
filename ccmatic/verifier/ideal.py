@@ -30,6 +30,8 @@ class IdealLink:
 
         if c.buf_min is not None:
             s.add(v.A[0] - v.L[0] <= v.S[0] + c.buf_min)
+            s.add(z3.Implies(z3.Or([v.L_f[n][0] > v.Ld_f[n][0] for n in range(c.N)]),
+                             v.A[0] - v.L[0] == v.S[0] + c.buf_min))
         for t in range(1, c.T):
             if c.buf_min is None:  # no loss case
                 s.add(v.L[t] == v.L[0])
@@ -213,7 +215,7 @@ class IdealLink:
     def setup_cegis_basic(cc: CegisConfig):
         check_config(cc)
         c = setup_ccac_for_cegis(cc)
-        c.D = 0
+        # c.D = 0
         s = MySolver()
         s.warn_undeclared = False
         v = Variables(c, s, cc.name)

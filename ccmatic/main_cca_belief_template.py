@@ -754,7 +754,7 @@ if(cc.infinite_buffer):
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
 elif(args.ideal_only):
-    cc.desired_util_f = 0.9
+    cc.desired_util_f = 0.6
     cc.desired_queue_bound_multiplier = 0
     cc.desired_queue_bound_alpha = 4
     cc.desired_loss_count_bound = 0
