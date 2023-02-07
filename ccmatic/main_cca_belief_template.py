@@ -678,13 +678,17 @@ blast_then_medblast_then_minc_negalpha_correct_units_lower_loss = \
     z3.And(*known_solution_list)
 
 """
-if (+ -2min_c + max_c > 0):
-    if(2min_c - r_f - alpha > 0)
-        r_f[n][t] = max(alpha,  r_f[n][t-1] + alpha)
+r_f[n][t] =
+if (+ -2min_c + 1max_c > 0):
+    if (+ -1r_f + 2min_c + -1alpha > 0):
+        max(alpha,  + 1r_f[n][t-1] + 1alpha)
     else:
-        r_f[n][t] = max(alpha,  + 2min_c)
+        max(alpha,  + 2min_c[n][t-1])
 else:
-    r_f[n][t] = max(alpha,  + 1min_c)
+    if (0 > 0):
+        max(alpha,  + 1min_c[n][t-1])
+    else:
+        max(alpha,  + 1min_c[n][t-1])
 """
 known_solution_list = [
     cond_coeffs[0][cv_to_cvi['min_c']] == -2,
