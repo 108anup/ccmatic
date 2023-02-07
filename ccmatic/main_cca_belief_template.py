@@ -719,8 +719,12 @@ cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
-cc.app_limited = args.app_limited
 cc.buffer_size_multiplier = 1
+
+cc.app_limited = args.app_limited
+cc.app_rate = 0.5 * cc.C
+cc.app_burst_factor = 1
+
 cc.template_qdel = True
 cc.template_queue_bound = False
 cc.template_fi_reset = False

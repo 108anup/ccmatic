@@ -371,6 +371,21 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
         for t in range(1, c.T):
             s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
 
+    if(c.app_burst_factor is not None and c.app_rate is not None):
+        burst = c.app_burst_factor * c.app_rate * 1
+        # here one is the time quanta            ^^^
+
+        def alpha(t):
+            return burst + c.app_rate * t
+
+        # From https://leboudec.github.io/netcal/
+        for n in range(c.N):
+            for t in range(c.T):
+                for st in range(t+1):
+                    s.add(v.app_limits[n][t] <= v.app_limits[n][st] + alpha(t-st))
+                if(t >= 1):
+                    s.add(v.app_limits[n][t] >= v.app_limits[n][t-1] + c.app_rate * 1)
+
 
 def update_bandwidth_beliefs_with_timeout(
         c: ModelConfig, s: MySolver, v: Variables):
@@ -1613,7 +1628,10 @@ def setup_ccac_for_cegis(cc: CegisConfig):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
+
     c.app_limited = cc.app_limited
+    c.app_rate = cc.app_rate
+    c.app_burst_factor = cc.app_burst_factor
 
     c.beliefs = cc.template_beliefs
     c.beliefs_use_buffer = cc.template_beliefs_use_buffer
