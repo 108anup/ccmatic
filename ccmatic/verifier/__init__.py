@@ -1909,10 +1909,17 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
 
     if(c.app_limited):
-        all_app_limited = z3.And(*[
-            v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
-            for n in range(c.N)])
-        d.fefficient = z3.Or(d.fefficient, all_app_limited)
+        # all_app_limited = z3.And(*[
+        #     v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
+        #     for n in range(c.N)])
+        # d.fefficient = z3.Or(d.fefficient, all_app_limited)
+
+        # I can't expect 50% link utilization if app sends at 30% link rate. App
+        # can blast packets on the last second, so I can't expect app saturation
+        # at the last second.
+        d.fefficient = (v.S[-1] - v.S[first-1] >=
+                        (c.T-1-(first-1)-c.D)
+                        * z3_min(cc.app_rate, cc.desired_util_f * c.C))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):

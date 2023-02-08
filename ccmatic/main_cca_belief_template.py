@@ -872,8 +872,9 @@ cc.dynamic_buffer = args.dynamic_buffer
 cc.buffer_size_multiplier = 1
 
 cc.app_limited = args.app_limited
-cc.app_rate = 0.5 * cc.C
-cc.app_burst_factor = 1
+if(args.app_limited):
+    cc.app_rate = z3.Real('app_rate')  # 0.5 * cc.C
+    cc.app_burst_factor = 1
 
 cc.template_qdel = True
 cc.template_queue_bound = False
@@ -934,6 +935,10 @@ if(NO_LARGE_LOSS):
     desired = link.desired
     desired = z3.And(desired, d.bounded_large_loss_count)
     link.desired = desired
+
+if(args.app_limited):
+    link.environment = z3.And(link.environment, cc.app_rate >= 0.1 * cc.C)
+    link.verifier_vars.append(cc.app_rate)
 
 link.setup_cegis_loop(
     search_constraints,

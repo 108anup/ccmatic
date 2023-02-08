@@ -178,9 +178,10 @@ class CCmatic():
                     [counter_example.eval(v.start_state_f[n])
                      for n in range(c.N)])
 
-            ret = "{}\n{}, alpha={}, buf_size={}{}.".format(
+            app_rate = counter_example.eval(cc.app_rate)
+            ret = "{}\n{}, alpha={}, buf_size={}{}, app_rate={}.".format(
                 df, desired_string, counter_example.eval(v.alpha),
-                buf_size, start_state_str)
+                buf_size, start_state_str, app_rate)
             return ret
 
         def get_verifier_view(
