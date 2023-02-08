@@ -76,7 +76,6 @@ ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = False
 USE_CWND_CAP = True
 
-
 template_type = TemplateType.IF_ELSE_CHAIN
 template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
@@ -193,11 +192,17 @@ if(len(rhs_vars) == 1):
                 # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
             ]))
 
-# Does not make sense to have more than one of r_f, max_c, and min_c on rhs.
 if(len(rhs_vars) > 1):
     for ei in range(n_expr):
+        # Exactly one of the rhs_vars need to be non zero: r_f, max_c, and min_c.
         domain_clauses.append(
-            z3.Or([expr_coeffs[rv][ei] == 0 for rv in rhs_vars])
+            z3.Sum([expr_coeffs[rv][ei] != 0 for rv in rhs_vars]) == 1
+        )
+        # If the const term is non zero, then the rhs_var must have coeff 1.
+        domain_clauses.append(
+            z3.Implies(
+                expr_consts[ei] != 0,
+                z3.Sum([expr_coeffs[rv][ei] for rv in rhs_vars]) == 1)
         )
 
 # Only compare qtys with the same units.
