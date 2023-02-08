@@ -1,9 +1,12 @@
 import z3
 from typing import List
+from ccac.variables import VariableNames
 
 from ccmatic import CCmatic
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import try_except
+from ccmatic.verifier import get_cex_df, plot_cex
+from cegis import get_unsat_core
 from pyz3_utils.my_solver import MySolver
 
 
@@ -115,14 +118,58 @@ def test_beliefs_remain_consistent():
     verifier.add(link.environment)
     verifier.add(z3.Not(z3.Implies(initial_beliefs_consistent,
                                    final_beliefs_consistent)))
+    # r = z3.Real('r')
+
+    for n in range(c.N):
+        for t in range(c.T):
+            # verifier.add(z3.Or(v.r_f[n][t] == r, v.r_f[n][t] == r/2))
+            # verifier.add(v.r_f[n][t] > 0)
+            # verifier.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+
+            verifier.add(v.c_f[n][t] == c.C * (c.R + c.D) / 3)
+            verifier.add(v.r_f[n][t] == v.c_f[n][t]/c.R)
 
     sat = verifier.check()
     print(sat)
     if(str(sat) == "sat"):
         model = verifier.model()
+        vn = VariableNames(v)
+        df = get_cex_df(model, v, vn, c)
         print(link.get_counter_example_str(model, link.verifier_vars))
         print(model.eval(initial_beliefs_consistent))
         print(model.eval(final_beliefs_consistent))
+        plot_cex(model, df, c, v, 'tmp/cex_df.pdf')
+
+        # verifier2 = MySolver()
+        # verifier2.warn_undeclared = False
+        # verifier2.add(link.definitions)
+        # verifier2.add(link.environment)
+        # # r = z3.Real('r')
+
+        # for n in range(c.N):
+        #     for t in range(c.T):
+        #         # verifier2.add(z3.Or(v.r_f[n][t] == r/2, v.r_f[n][t] == r))
+        #         verifier2.add(v.r_f[n][t] > 0)
+        #         verifier2.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+        # verifier2.add(v.A[0] == model.eval(v.A[0]))
+        # verifier2.add(v.L[0] == model.eval(v.L[0]))
+
+        # for t in range(c.T):
+        #     verifier2.add(v.S[t] == model.eval(v.S[t]))
+
+        # sat = verifier2.check()
+        # print(sat)
+        # if(str(sat) == 'sat'):
+        #     model = verifier2.model()
+        #     vn = VariableNames(v)
+        #     df = get_cex_df(model, v, vn, c)
+        #     print(link.get_counter_example_str(model, link.verifier_vars))
+        #     print(model.eval(initial_beliefs_consistent))
+        #     print(model.eval(final_beliefs_consistent))
+        #     plot_cex(model, df, c, v, 'tmp/cex_df2.pdf')
+        # else:
+        #     uc = get_unsat_core(verifier2)
+
         import ipdb; ipdb.set_trace()
 
 

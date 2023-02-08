@@ -1,3 +1,4 @@
+import enum
 import sys
 import os
 import argparse
@@ -15,6 +16,7 @@ from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, flatten_dict, get_product_ite_cc,
                             try_except)
+from ccmatic.generator import TemplateType, str_on_template_execution, value_on_template_execution
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
 from cegis.util import Metric, get_raw_value, z3_max
@@ -42,6 +44,8 @@ def get_args():
     parser.add_argument('--proofs', action='store_true')
     parser.add_argument('--solution', action='store', type=int, default=None)
     parser.add_argument('--run-log-dir', action='store', default=None)
+    parser.add_argument('--use-belief-invariant-n', action='store_true')
+    parser.add_argument('--ideal-only', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -70,6 +74,10 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 
+
+template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+
 """
 if (cond):
     rate = choose [minc + eps, 2*minc, minc - eps, minc/2]
@@ -79,6 +87,8 @@ elif (cond):
 """
 
 n_expr = 3
+if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
+    n_expr = 4
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
@@ -94,9 +104,11 @@ expr_consts = [z3.Real(f"Gen__const_expr{i}") for i in range(n_expr)]
 logger.info(f"Using expr rhs_vars: {rhs_vars}")
 
 # Cond vars with units
-bytes_cvs = ['min_c', 'max_c']
+bytes_cvs = ['r_f']
+bytes_cvs += ['min_c', 'max_c']
 if(args.app_limited):
-    bytes_cvs.extend(['A_f', 'app_limits'])
+    # bytes_cvs.extend(['A_f', 'app_limits'])
+    bytes_cvs.append('app_outstanding')
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
@@ -129,13 +141,17 @@ critical_generator_vars = flatten(cond_coeffs) \
 generator_vars: List[z3.ExprRef] = critical_generator_vars \
     + flatten_dict(cond_consts)
 
-search_range_expr_coeffs = [0, 1/2, 1, 3/2, 2]
+# search_range_expr_coeffs = [0, 1/2, 1, 3/2, 2]
+search_range_expr_coeffs = [0, 1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
+
 search_range_cond_coeffs_time = [-1, 0, 1]
-search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
+# search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
+search_range_cond_coeffs_bytes = [x for x in range(-2, 3)]
 search_range_cond_coeffs = list(
     set(search_range_cond_coeffs_bytes + search_range_cond_coeffs_time))
-search_range_cond_consts = list(range(-2, 3))
+# search_range_cond_consts = list(range(-2, 3))
+search_range_cond_consts = list(range(-1, 2))
 
 domain_clauses = []
 for expr_coeff in flatten_dict(expr_coeffs):
@@ -171,18 +187,24 @@ if(len(rhs_vars) == 1):
                 # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
             ]))
 
+if('r_f' in rhs_vars):
+    # Does not make sense to have both r_f and min_c on rhs.
+    for ei in range(n_expr):
+        domain_clauses.append(
+            z3.Or(expr_coeffs['min_c'][ei] == 0, expr_coeffs['r_f'][ei] == 0)
+        )
+
 # Only compare qtys with the same units.
 for ci in range(n_cond):
     bytes_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in bytes_cvs]
     bytes_values += [cond_consts[cc_str][ci] != 0 for cc_str in bytes_consts]
     bytes_non_zero = z3.Or(*bytes_values)
+
     time_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in time_cvs]
     time_values += [cond_consts[cc_str][ci] != 0 for cc_str in time_consts]
     time_non_zero = z3.Or(*time_values)
-    domain_clauses.extend(
-        [z3.Implies(bytes_non_zero, z3.Not(time_non_zero)),
-         z3.Implies(time_non_zero, z3.Not(bytes_non_zero))]
-    )
+
+    domain_clauses.append(z3.Or(z3.Not(bytes_non_zero), z3.Not(time_non_zero)))
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
@@ -203,8 +225,8 @@ def get_template_definitions(
                 for cvi, cond_var_str in enumerate(cond_vars):
                     if(cond_var_str.endswith('_c')):
                         cond_var = v.__getattribute__(cond_var_str)[n][t-1] * c.R
-                    elif(cond_var_str == 'app_limits'):
-                        cond_var = v.app_limits[n][t]
+                    elif(cond_var_str == 'app_outstanding'):
+                        cond_var = v.app_limits[n][t] - v.A_f[n][t-1]
                     elif(cond_var_str.endswith('_buffer_bytes')):
                         if(cond_var_str == 'min_buffer_bytes'):
                             cond_var = v.min_buffer[n][t-1] * v.min_c[n][t-1]
@@ -254,22 +276,17 @@ def get_template_definitions(
                         search_range_expr_coeffs)
                 exprs.append(expr)
 
-            rate = exprs[-1]
-            assert isinstance(rate, z3.ArithRef)
-            for ci in range(n_cond-1, -1, -1):
-                rate = z3.If(conds[ci], exprs[ci], rate)
-                assert isinstance(rate, z3.ArithRef)
-
+            rate = value_on_template_execution(template_type, conds, exprs)
             template_definitions.append(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
-            template_definitions.append(
-                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+            # template_definitions.append(
+            #     v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
             # template_definitions.append(
             #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            template_definitions.append(
+                v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
     return template_definitions
 
 
@@ -307,13 +324,18 @@ def get_solution_str(
             expr_str = "0"
         return expr_str
 
-    ret += f"if ({get_cond(0)}):"
-    ret += f"\n    r_f[n][t] = max(alpha, {get_expr(0)})"
-    for ci in range(1, n_cond):
-        ret += f"\nelif ({get_cond(ci)}):"
-        ret += f"\n    r_f[n][t] = max(alpha, {get_expr(ci)})"
-    ret += f"\nelse:"
-    ret += f"\n    r_f[n][t] = max(alpha, {get_expr(n_expr-1)})"
+    conds = [get_cond(i) for i in range(n_cond)]
+    exprs = [f"max(alpha, {get_expr(i)})" for i in range(n_expr)]
+    ret = "r_f[n][t] = \n"
+    ret += "\n".join(str_on_template_execution(template_type, conds, exprs))
+
+    # ret += f"if ({get_cond(0)}):"
+    # ret += f"\n    r_f[n][t] = max(alpha, {get_expr(0)})"
+    # for ci in range(1, n_cond):
+    #     ret += f"\nelif ({get_cond(ci)}):"
+    #     ret += f"\n    r_f[n][t] = max(alpha, {get_expr(ci)})"
+    # ret += f"\nelse:"
+    # ret += f"\n    r_f[n][t] = max(alpha, {get_expr(n_expr-1)})"
     return ret
 
 
@@ -659,6 +681,55 @@ if(n_cond >= 2):
 blast_then_medblast_then_minc_negalpha_correct_units_lower_loss = \
     z3.And(*known_solution_list)
 
+"""
+r_f[n][t] =
+if (+ -2min_c + 1max_c > 0):
+    if (+ -1r_f + 2min_c + -1alpha > 0):
+        max(alpha,  + 1r_f[n][t-1] + 1alpha)
+    else:
+        max(alpha,  + 2min_c[n][t-1])
+else:
+    if (0 > 0):
+        max(alpha,  + 1min_c[n][t-1])
+    else:
+        max(alpha,  + 1min_c[n][t-1])
+"""
+known_solution_list = [
+    cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+    cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+    cond_consts['R'][0] == 0,
+    cond_consts['alpha'][0] == 0,
+
+    cond_coeffs[1][cv_to_cvi['min_c']] == 2,
+    cond_coeffs[1][cv_to_cvi['r_f']] == -1,
+    cond_consts['R'][1] == 0,
+    cond_consts['alpha'][1] == -1,
+
+    expr_coeffs['min_c'][0] == 0,
+    expr_coeffs['r_f'][0] == 1,
+    expr_consts[0] == 1,
+
+    expr_coeffs['min_c'][1] == 2,
+    expr_coeffs['r_f'][1] == 0,
+    expr_consts[1] == 0
+]
+for cv in cond_vars:
+    if(cv not in ['min_c', 'max_c']):
+        known_solution_list.append(
+            cond_coeffs[0][cv_to_cvi[cv]] == 0)
+    if(cv not in ['min_c', 'r_f']):
+        known_solution_list.append(
+            cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+        [expr_coeffs['r_f'][i] == 0 for i in range(2, n_expr)] +
+        [expr_consts[i] == 0 for i in range(2, n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+         for cvi in range(len(cond_vars))]
+    )
+aitd = z3.And(*known_solution_list)
 
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
@@ -701,13 +772,15 @@ solutions = [mimd, aiad, blast_then_minc, blast_then_minc_qdel,
              # synth_min_buffer,
              blast_then_medblast_then_minc_negalpha_correct_units,
              blast_then_medblast_then_minc_negalpha_correct_units_higher_util,
-             blast_then_medblast_then_minc_negalpha_correct_units_lower_loss
+             blast_then_medblast_then_minc_negalpha_correct_units_lower_loss,
+             aitd
              ]
 
 known_solution = z3.And(*known_solution_list)
 # known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
+# known_solution = aitd
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
@@ -719,8 +792,12 @@ cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
-cc.app_limited = args.app_limited
 cc.buffer_size_multiplier = 1
+
+cc.app_limited = args.app_limited
+cc.app_rate = 0.5 * cc.C
+cc.app_burst_factor = 1
+
 cc.template_qdel = True
 cc.template_queue_bound = False
 cc.template_fi_reset = False
@@ -732,14 +809,14 @@ cc.history = cc.R
 cc.cca = "none"
 
 cc.rate_or_window = 'rate'
-cc.use_belief_invariant = True
+cc.use_belief_invariant = not args.use_belief_invariant_n
 cc.fix_stale__min_c = args.fix_minc
 cc.fix_stale__max_c = args.fix_maxc
 cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
 cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
-cc.desired_util_f = 0.4
+cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
 if(cc.infinite_buffer):
@@ -747,6 +824,14 @@ if(cc.infinite_buffer):
     cc.desired_large_loss_count_bound = 0
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
+elif(args.ideal_only):
+    cc.desired_util_f = 0.6
+    cc.desired_queue_bound_multiplier = 0
+    cc.desired_queue_bound_alpha = 4
+    cc.desired_loss_count_bound = 0
+    cc.desired_large_loss_count_bound = 0
+    cc.desired_loss_amount_bound_multiplier = 0
+    cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
     cc.desired_large_loss_count_bound = (cc.T-1)/2
@@ -758,12 +843,19 @@ cc.opt_ve = not args.opt_ve_n
 cc.opt_pdt = not args.opt_pdt_n
 cc.opt_wce = not args.opt_wce_n
 cc.feasible_response = not args.opt_feasible_n
-cc.ideal_link = False
+
+cc.ideal_link = args.ideal_only
+assert not (args.ideal_only and args.ideal)
 
 link = CCmatic(cc)
 try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
+
+# d = link.d
+# desired = link.desired
+# desired = z3.And(desired, d.bounded_large_loss_count)
+# link.desired = desired
 
 link.setup_cegis_loop(
     search_constraints,

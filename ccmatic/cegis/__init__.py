@@ -47,7 +47,11 @@ class CegisConfig:
     infinite_buffer: bool = False
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
     dynamic_buffer: bool = False
+
     app_limited: bool = False
+    app_rate: Optional[float] = None
+    app_burst_factor: Optional[float] = None
+
     fix_stale__max_c: bool = False
     fix_stale__min_c: bool = False
     min_maxc_minc_gap_mult: float = 1

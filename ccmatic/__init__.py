@@ -727,6 +727,8 @@ class BeliefProofs(Proofs):
             self.recursive[self.steady__min_c.lo] = c.C/2
             self.recursive[self.steady__max_c.hi] = 2.5 * c.C
 
+            self.recursive[self.movement_mult__minc_maxc] = 1.2
+
         # blast_then_medblast_then_minc_negalpha_correct_units_lower_loss
         if(self.solution_id == 8):
             pass

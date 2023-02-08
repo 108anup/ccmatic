@@ -1,11 +1,13 @@
-import math
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import z3
+
 from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
@@ -371,6 +373,21 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
         for t in range(1, c.T):
             s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
 
+    if(c.app_burst_factor is not None and c.app_rate is not None):
+        burst = c.app_burst_factor * c.app_rate * 1
+        # here one is the time quanta            ^^^
+
+        def alpha(t):
+            return burst + c.app_rate * t
+
+        # From https://leboudec.github.io/netcal/
+        for n in range(c.N):
+            for t in range(c.T):
+                for st in range(t+1):
+                    s.add(v.app_limits[n][t] <= v.app_limits[n][st] + alpha(t-st))
+                if(t >= 1):
+                    s.add(v.app_limits[n][t] >= v.app_limits[n][t-1] + c.app_rate * 1)
+
 
 def update_bandwidth_beliefs_with_timeout(
         c: ModelConfig, s: MySolver, v: Variables):
@@ -703,7 +720,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
 
                 # UPPER
-                if(window - 1 > 0):
+                if(window - c.D > 0):
                     this_upper = z3.If(
                         utilized_cummulative[st],
                         measured_c * window / (window - c.D),
@@ -1177,6 +1194,8 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
 
     if c.buf_min is not None:
         s.add(v.A[0] - v.L[0] <= v.C0 + c.C * 0 - v.W[0] + c.buf_min)
+        s.add(z3.Implies(z3.Or([v.L_f[n][0] > v.Ld_f[n][0] for n in range(c.N)]),
+                         v.A[0] - v.L[0] == v.C0 + c.C * 0 - v.W[0] + c.buf_min))
     for t in range(1, c.T):
         if c.buf_min is None:  # no loss case
             s.add(v.L[t] == v.L[0])
@@ -1613,7 +1632,10 @@ def setup_ccac_for_cegis(cc: CegisConfig):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
+
     c.app_limited = cc.app_limited
+    c.app_rate = cc.app_rate
+    c.app_burst_factor = cc.app_burst_factor
 
     c.beliefs = cc.template_beliefs
     c.beliefs_use_buffer = cc.template_beliefs_use_buffer
@@ -2390,4 +2412,28 @@ def get_gen_cex_df(
         #     qbound_val_list = get_val_list(solution, _get_renamed(qbound_list))
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
+
+    # df['service_delta'] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift()
     return df
+
+
+def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpath: str):
+    vn = VariableNames(v)
+    fig, ax = plt.subplots()
+    xx = list(range(c.T))
+    ax.plot(xx, df[get_name_for_list(vn.A_f[0])], color='blue', label='arrival')
+    ax.plot(xx, df[get_name_for_list(vn.S_f[0])], color='red', label='service')
+    ubl = []
+    lbl = []
+    for t in range(c.T):
+        if(t >= c.D):
+            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t-c.D])))
+        else:
+            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
+        ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
+    ax.plot(xx, lbl, color='black', alpha=0.5)
+    ax.plot(xx, ubl, color='black', alpha=0.5)
+    ax.legend()
+    ax.grid(True)
+    fig.set_tight_layout(True)
+    fig.savefig(fpath, bbox_inches='tight', pad_inches=0.01)
