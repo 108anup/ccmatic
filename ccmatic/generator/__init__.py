@@ -35,8 +35,8 @@ def value_if_else_chain(
 
 
 def value_if_else_compound_depth_1(
-    conds: List[z3.BoolRef],
-    exprs: List[z3.ArithRef]) -> z3.ArithRef:
+        conds: List[z3.BoolRef],
+        exprs: List[z3.ArithRef]) -> z3.ArithRef:
     n_cond = len(conds)
     n_expr = len(exprs)
     assert n_expr % 2 == 0
@@ -65,7 +65,7 @@ def value_if_else_compound_depth_1(
         e1 = exprs[2*i+0]
         e2 = exprs[2*i+1]
 
-        if(2*i+1 == n_cond):
+        if (2*i+1 == n_cond):
             c1 = None
             c2 = conds[2*i+0]
         else:
@@ -75,10 +75,29 @@ def value_if_else_compound_depth_1(
         root_expr = value_if_else_chain(
             [c2], [e1, e2])
         root_exprs.append(root_expr)
-        if(c1 is not None):
+        if (c1 is not None):
             root_conds.append(c1)
     return value_if_else_chain(
         root_conds, root_exprs)
+
+
+def value_if_else_3leaf_unbalanced(
+        conds: List[z3.BoolRef],
+        exprs: List[z3.ArithRef]) -> z3.ArithRef:
+    n_cond = len(conds)
+    n_expr = len(exprs)
+    assert n_expr == 3
+    """
+    if(c1):
+        if(c2):
+            e1
+        else:
+            e2
+    else:
+        e3
+    """
+    mid_expr = value_if_else_chain([conds[1]], exprs[:-1])
+    return value_if_else_chain([conds[0]], [mid_expr, exprs[-1]])
 
 
 def value_on_template_execution(
@@ -91,26 +110,26 @@ def value_on_template_execution(
     n_expr = len(exprs)
     assert n_expr == n_cond + 1
 
-    if(template_type == TemplateType.IF_ELSE_CHAIN):
+    if (template_type == TemplateType.IF_ELSE_CHAIN):
         return value_if_else_chain(conds, exprs)
-
-    elif(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
+    elif (template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
         return value_if_else_compound_depth_1(conds, exprs)
-
+    elif (template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+        return value_if_else_3leaf_unbalanced(conds, exprs)
     else:
         assert False
 
 
-def add_indent(l: List[str]):
+def add_indent(lines: List[str]):
     ret = []
-    for s in l:
+    for s in lines:
         ret.append("    " + s)
     return ret
 
 
 def str_if_else_chain(
-    conds: List[str],
-    exprs: List[Union[str, List[str]]]) -> List[str]:
+        conds: List[str],
+        exprs: List[Union[str, List[str]]]) -> List[str]:
 
     n_cond = len(conds)
     n_expr = len(exprs)
@@ -128,13 +147,13 @@ def str_if_else_chain(
         IF = "if" if ci == 0 else "elif"
         ret.append(f"{IF} ({conds[ci]}):")
         expr = exprs[ci]
-        if(isinstance(expr, list)):
+        if (isinstance(expr, list)):
             ret.extend(add_indent(expr))
         else:
             ret.append(f"    {expr}")
     ret.append(f"else:")
     expr = exprs[n_cond]
-    if(isinstance(expr, list)):
+    if (isinstance(expr, list)):
         ret.extend(add_indent(expr))
     else:
         ret.append(f"    {expr}")
@@ -142,8 +161,8 @@ def str_if_else_chain(
 
 
 def str_if_else_compound_depth1(
-    conds: List[str],
-    exprs: List[Union[str, List[str]]]) -> List[str]:
+        conds: List[str],
+        exprs: List[Union[str, List[str]]]) -> List[str]:
     n_cond = len(conds)
     n_expr = len(exprs)
     assert n_expr % 2 == 0
@@ -172,7 +191,7 @@ def str_if_else_compound_depth1(
         e1 = exprs[2*i+0]
         e2 = exprs[2*i+1]
 
-        if(2*i+1 == n_cond):
+        if (2*i+1 == n_cond):
             c1 = None
             c2 = conds[2*i+0]
         else:
@@ -181,9 +200,28 @@ def str_if_else_compound_depth1(
 
         root_expr = str_if_else_chain([c2], [e1, e2])
         root_exprs.append(root_expr)
-        if(c1 is not None):
+        if (c1 is not None):
             root_conds.append(c1)
     return str_if_else_chain(root_conds, root_exprs)
+
+
+def str_if_else_3leaf_unbalanced(
+        conds: List[str],
+        exprs: List[Union[str, List[str]]]) -> List[str]:
+    n_cond = len(conds)
+    n_expr = len(exprs)
+    assert n_expr == 3
+    """
+    if(c1):
+        if(c2):
+            e1
+        else:
+            e2
+    else:
+        e3
+    """
+    mid_expr = str_if_else_chain([conds[1]], exprs[:-1])
+    return str_if_else_chain([conds[0]], [mid_expr, exprs[-1]])
 
 
 def str_on_template_execution(
@@ -196,11 +234,11 @@ def str_on_template_execution(
     n_expr = len(exprs)
     assert n_expr == n_cond + 1
 
-    if(template_type == TemplateType.IF_ELSE_CHAIN):
+    if (template_type == TemplateType.IF_ELSE_CHAIN):
         return str_if_else_chain(conds, exprs)
-
-    elif(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
+    elif (template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
         return str_if_else_compound_depth1(conds, exprs)
-
+    elif (template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+        return str_if_else_3leaf_unbalanced(conds, exprs)
     else:
         assert False
