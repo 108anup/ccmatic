@@ -1360,8 +1360,8 @@ class BeliefProofs(Proofs):
 
         # self.lemma1()  # movement
         # self.deprecated_recursive_mult_gap()
-        self.lemma2_step1_recursive_minc_maxc()  # recursion
-        self.lemma2()  # movement
+        # self.lemma2_step1_recursive_minc_maxc()  # recursion
+        # self.lemma2()  # movement
         self.lemma3_1_recursive_rate_queue()  # recursion
         self.lemma3()  # movement
         self.lemma4()  # performance

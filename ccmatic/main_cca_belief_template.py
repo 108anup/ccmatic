@@ -74,10 +74,12 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = False
+USE_CWND_CAP = True
 
 
 template_type = TemplateType.IF_ELSE_CHAIN
 template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -90,6 +92,8 @@ elif (cond):
 n_expr = 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_expr = 4
+elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+    n_expr = 3
 if(args.infinite_buffer):
     n_expr = 2
 n_cond = n_expr - 1
@@ -283,12 +287,12 @@ def get_template_definitions(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
-            template_definitions.append(
-                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            if (USE_CWND_CAP):
+                template_definitions.append(
+                    v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            else:
+                template_definitions.append(
+                    v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
     return template_definitions
 
 
@@ -696,7 +700,9 @@ else:
     else:
         max(alpha,  + 1min_c[n][t-1])
 """
-if('r_f' in rhs_vars and 'r_f' in cond_vars):
+if ('r_f' in rhs_vars and
+    'r_f' in cond_vars and
+        template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     known_solution_list = [
         cond_coeffs[0][cv_to_cvi['min_c']] == -2,
         cond_coeffs[0][cv_to_cvi['max_c']] == 1,
@@ -745,6 +751,57 @@ if('r_f' in rhs_vars and 'r_f' in cond_vars):
              for cvi in range(len(cond_vars))]
         )
 aitd = z3.And(*known_solution_list)
+
+"""
+r_f[n][t] =
+if (+ -2min_c + 1max_c > 0):
+    if (+ -1r_f + 2min_c + -1alpha > 0):
+        max(alpha,  + 1r_f[n][t-1] + 1alpha)
+    else:
+        max(alpha,  + 2min_c[n][t-1])
+else:
+    max(alpha,  + 1min_c[n][t-1])
+"""
+if ('r_f' in rhs_vars and
+    'r_f' in cond_vars and
+        template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+        cond_consts['R'][0] == 0,
+        cond_consts['alpha'][0] == 0,
+
+        cond_coeffs[1][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[1][cv_to_cvi['r_f']] == -1,
+        cond_consts['R'][1] == 0,
+        cond_consts['alpha'][1] == -1,
+
+        expr_coeffs['min_c'][0] == 0,
+        expr_coeffs['r_f'][0] == 1,
+        expr_consts[0] == 1,
+
+        expr_coeffs['min_c'][1] == 2,
+        expr_coeffs['r_f'][1] == 0,
+        expr_consts[1] == 0,
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_c', 'r_f']):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+        known_solution_list.extend(
+            [expr_coeffs['min_c'][i] == 1 for i in range(2, n_expr)] +
+            [expr_coeffs['r_f'][i] == 0 for i in range(2, n_expr)] +
+            [expr_consts[i] == 0 for i in range(2, n_expr)] +
+            [cond_consts['R'][i] == 0 for i in range(2, n_cond)] +
+            [cond_consts['alpha'][i] == 0 for i in range(2, n_cond)] +
+            [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+             for cvi in range(len(cond_vars))]
+        )
+aitd = z3.And(*known_solution_list)
+
 
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
