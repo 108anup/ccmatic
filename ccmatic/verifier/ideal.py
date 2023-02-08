@@ -140,6 +140,9 @@ class IdealLink:
                 verifier_vars.extend(flatten(
                     [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
 
+        if(c.app_limited):
+            verifier_vars.extend(flatten(v.app_limits))
+
         return verifier_vars, definition_vars
 
     @staticmethod
