@@ -209,6 +209,8 @@ class IdealLink:
             #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
         if(c.beliefs):
             initial_beliefs(c, s, v)
+        if(c.app_limited):
+            app_limits_env(c, s, v)
         return s
 
     @staticmethod
