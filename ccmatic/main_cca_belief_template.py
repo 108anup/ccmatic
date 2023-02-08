@@ -107,7 +107,8 @@ logger.info(f"Using expr rhs_vars: {rhs_vars}")
 bytes_cvs = ['r_f']
 bytes_cvs += ['min_c', 'max_c']
 if(args.app_limited):
-    bytes_cvs.extend(['A_f', 'app_limits'])
+    # bytes_cvs.extend(['A_f', 'app_limits'])
+    bytes_cvs.append('app_outstanding')
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
@@ -140,13 +141,17 @@ critical_generator_vars = flatten(cond_coeffs) \
 generator_vars: List[z3.ExprRef] = critical_generator_vars \
     + flatten_dict(cond_consts)
 
-search_range_expr_coeffs = [0, 1/2, 1, 3/2, 2]
+# search_range_expr_coeffs = [0, 1/2, 1, 3/2, 2]
+search_range_expr_coeffs = [0, 1/2, 1, 2]
 search_range_expr_consts = [-1, 0, 1]
+
 search_range_cond_coeffs_time = [-1, 0, 1]
-search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
+# search_range_cond_coeffs_bytes = [x/2 for x in range(-4, 5)]
+search_range_cond_coeffs_bytes = [x for x in range(-2, 3)]
 search_range_cond_coeffs = list(
     set(search_range_cond_coeffs_bytes + search_range_cond_coeffs_time))
-search_range_cond_consts = list(range(-2, 3))
+# search_range_cond_consts = list(range(-2, 3))
+search_range_cond_consts = list(range(-1, 2))
 
 domain_clauses = []
 for expr_coeff in flatten_dict(expr_coeffs):
@@ -194,13 +199,12 @@ for ci in range(n_cond):
     bytes_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in bytes_cvs]
     bytes_values += [cond_consts[cc_str][ci] != 0 for cc_str in bytes_consts]
     bytes_non_zero = z3.Or(*bytes_values)
+
     time_values = [cond_coeffs[ci][cv_to_cvi[cv]] != 0 for cv in time_cvs]
     time_values += [cond_consts[cc_str][ci] != 0 for cc_str in time_consts]
     time_non_zero = z3.Or(*time_values)
-    domain_clauses.extend(
-        [z3.Implies(bytes_non_zero, z3.Not(time_non_zero)),
-         z3.Implies(time_non_zero, z3.Not(bytes_non_zero))]
-    )
+
+    domain_clauses.append(z3.Or(z3.Not(bytes_non_zero), z3.Not(time_non_zero)))
 
 search_constraints = z3.And(*domain_clauses)
 assert(isinstance(search_constraints, z3.ExprRef))
@@ -221,8 +225,8 @@ def get_template_definitions(
                 for cvi, cond_var_str in enumerate(cond_vars):
                     if(cond_var_str.endswith('_c')):
                         cond_var = v.__getattribute__(cond_var_str)[n][t-1] * c.R
-                    elif(cond_var_str == 'app_limits'):
-                        cond_var = v.app_limits[n][t]
+                    elif(cond_var_str == 'app_outstanding'):
+                        cond_var = v.app_limits[n][t] - v.A_f[n][t-1]
                     elif(cond_var_str.endswith('_buffer_bytes')):
                         if(cond_var_str == 'min_buffer_bytes'):
                             cond_var = v.min_buffer[n][t-1] * v.min_c[n][t-1]
