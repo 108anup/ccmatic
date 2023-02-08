@@ -4,7 +4,7 @@
 
 BUFFER="${BUFFER:---dynamic-buffer}"
 # BUFFER=""
-OUTDIR=belief_template-simple_desired-r_f
+OUTDIR=belief_template$BUFFER
 
 run() {
     args=$@

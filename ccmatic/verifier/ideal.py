@@ -11,7 +11,7 @@ from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate
                               calculate_qdel_defs, calculate_qdel_env, check_config,
                               exceed_queue_defs, fifo_service, get_desired_in_ss, initial_beliefs,
                               last_decrease_defs, monotone_defs, monotone_env,
-                              setup_ccac_for_cegis, update_beliefs)
+                              setup_ccac_for_cegis, update_beliefs, app_limits_env)
 from pyz3_utils.my_solver import MySolver
 
 
@@ -209,6 +209,8 @@ class IdealLink:
             #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
         if(c.beliefs):
             initial_beliefs(c, s, v)
+        if(c.app_limited):
+            app_limits_env(c, s, v)
         return s
 
     @staticmethod
