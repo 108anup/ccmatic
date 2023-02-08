@@ -178,7 +178,9 @@ class CCmatic():
                     [counter_example.eval(v.start_state_f[n])
                      for n in range(c.N)])
 
-            app_rate = counter_example.eval(cc.app_rate)
+            app_rate = cc.app_rate
+            if(isinstance(cc.app_rate, z3.ArithRef)):
+                app_rate = counter_example.eval(cc.app_rate)
             ret = "{}\n{}, alpha={}, buf_size={}{}, app_rate={}.".format(
                 df, desired_string, counter_example.eval(v.alpha),
                 buf_size, start_state_str, app_rate)
