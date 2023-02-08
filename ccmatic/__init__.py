@@ -178,12 +178,13 @@ class CCmatic():
                     [counter_example.eval(v.start_state_f[n])
                      for n in range(c.N)])
 
-            app_rate = cc.app_rate
-            if(isinstance(cc.app_rate, z3.ArithRef)):
-                app_rate = counter_example.eval(cc.app_rate)
-            ret = "{}\n{}, alpha={}, buf_size={}{}, app_rate={}.".format(
+            app_rate_str = ""
+            if(cc.app_limited):
+                app_rate_str = f", app_rate={counter_example.eval(v.app_rate)}"
+
+            ret = "{}\n{}, alpha={}, buf_size={}{}{}.".format(
                 df, desired_string, counter_example.eval(v.alpha),
-                buf_size, start_state_str, app_rate)
+                buf_size, start_state_str, app_rate_str)
             return ret
 
         def get_verifier_view(

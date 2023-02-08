@@ -49,7 +49,7 @@ class CegisConfig:
     dynamic_buffer: bool = False
 
     app_limited: bool = False
-    app_rate: Optional[Union[z3.ArithRef, float]] = None
+    app_rate: Optional[float] = None
     app_burst_factor: Optional[float] = None
 
     fix_stale__max_c: bool = False

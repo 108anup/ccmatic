@@ -368,6 +368,11 @@ def service_choice(c: ModelConfig, s: MySolver, v: Variables):
 def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
     assert c.app_limited
 
+    if(c.app_rate):
+        s.add(v.app_rate == c.app_rate)
+    else:
+        s.add(v.app_rate >= 0.1 * c.C)
+
     for n in range(c.N):
         s.add(v.A_f[n][0] <= v.app_limits[n][0])
         for t in range(1, c.T):
@@ -1561,6 +1566,7 @@ def get_cegis_vars(
 
     if(c.app_limited):
         verifier_vars.extend(flatten(v.app_limits))
+        verifier_vars.append(v.app_rate)
 
     return verifier_vars, definition_vars
 
@@ -1919,7 +1925,7 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         # at the last second.
         d.fefficient = (v.S[-1] - v.S[first-1] >=
                         (c.T-1-(first-1)-c.D)
-                        * z3_min(cc.app_rate, cc.desired_util_f * c.C))
+                        * z3_min(v.app_rate, cc.desired_util_f * c.C))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
