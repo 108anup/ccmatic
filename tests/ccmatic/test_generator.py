@@ -30,5 +30,5 @@ def test_template_strs():
 
 
 if(__name__ == "__main__"):
-    # try_except(test_tempate_execution)
+    try_except(test_tempate_execution)
     try_except(test_template_strs)
