@@ -28,6 +28,8 @@ def setup():
     cc.cca = "none"
 
     cc.use_belief_invariant = True
+    cc.app_limited = True
+    cc.app_fixed_avg_rate = True
 
     cc.desired_util_f = 0.5
     cc.desired_queue_bound_multiplier = 4
@@ -103,31 +105,47 @@ def test_beliefs_remain_consistent():
                                        for n in range(c.N)])
     _initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
                                        for n in range(c.N)])
-    initial_beliefs_consistent = z3.And(
+    initial_c_beliefs_consistent = z3.And(
         _initial_minc_consistent, _initial_maxc_consistent)
     _final_minc_consistent = z3.And([v.min_c[n][-1] <= c.C
                                     for n in range(c.N)])
     _final_maxc_consistent = z3.And([v.max_c[n][-1] >= c.C
                                     for n in range(c.N)])
-    final_beliefs_consistent = z3.And(
+    final_c_beliefs_consistent = z3.And(
         _final_minc_consistent, _final_maxc_consistent)
+
+    if(c.app_limited and c.app_fixed_avg_rate):
+        _initial_min_app_rate_consistent = z3.And([v.min_app_rate[n][0] <= v.app_rate
+                                        for n in range(c.N)])
+        _initial_max_app_rate_consistent = z3.And([v.max_app_rate[n][0] >= v.app_rate
+                                        for n in range(c.N)])
+        initial_app_rate_beliefs_consistent = z3.And(
+            _initial_min_app_rate_consistent, _initial_max_app_rate_consistent)
+        _final_min_app_rate_consistent = z3.And([v.min_app_rate[n][-1] <= v.app_rate
+                                        for n in range(c.N)])
+        _final_max_app_rate_consistent = z3.And([v.max_app_rate[n][-1] >= v.app_rate
+                                        for n in range(c.N)])
+        final_app_rate_beliefs_consistent = z3.And(
+            _final_min_app_rate_consistent, _final_max_app_rate_consistent)
 
     verifier = MySolver()
     verifier.warn_undeclared = False
     verifier.add(link.definitions)
     verifier.add(link.environment)
-    verifier.add(z3.Not(z3.Implies(initial_beliefs_consistent,
-                                   final_beliefs_consistent)))
+    verifier.add(z3.Not(z3.Implies(initial_c_beliefs_consistent,
+                                   final_c_beliefs_consistent)))
+    verifier.add(z3.Not(z3.Implies(initial_app_rate_beliefs_consistent,
+                                   final_app_rate_beliefs_consistent)))
     # r = z3.Real('r')
 
     for n in range(c.N):
         for t in range(c.T):
             # verifier.add(z3.Or(v.r_f[n][t] == r, v.r_f[n][t] == r/2))
-            # verifier.add(v.r_f[n][t] > 0)
-            # verifier.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+            verifier.add(v.r_f[n][t] > 0)
+            verifier.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
 
-            verifier.add(v.c_f[n][t] == c.C * (c.R + c.D) / 3)
-            verifier.add(v.r_f[n][t] == v.c_f[n][t]/c.R)
+            # verifier.add(v.c_f[n][t] == c.C * (c.R + c.D) / 3)
+            # verifier.add(v.r_f[n][t] == v.c_f[n][t]/c.R)
 
     sat = verifier.check()
     print(sat)
@@ -136,8 +154,10 @@ def test_beliefs_remain_consistent():
         vn = VariableNames(v)
         df = get_cex_df(model, v, vn, c)
         print(link.get_counter_example_str(model, link.verifier_vars))
-        print(model.eval(initial_beliefs_consistent))
-        print(model.eval(final_beliefs_consistent))
+        print(model.eval(initial_c_beliefs_consistent))
+        print(model.eval(final_c_beliefs_consistent))
+        print(model.eval(initial_app_rate_beliefs_consistent))
+        print(model.eval(final_app_rate_beliefs_consistent))
         plot_cex(model, df, c, v, 'tmp/cex_df.pdf')
 
         # verifier2 = MySolver()

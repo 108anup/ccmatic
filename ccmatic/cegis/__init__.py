@@ -49,8 +49,9 @@ class CegisConfig:
     dynamic_buffer: bool = False
 
     app_limited: bool = False
+    app_fixed_avg_rate: bool = False
     app_rate: Optional[float] = None
-    app_burst_factor: Optional[float] = None
+    app_burst_factor: float = 1
 
     fix_stale__max_c: bool = False
     fix_stale__min_c: bool = False

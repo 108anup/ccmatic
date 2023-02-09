@@ -139,10 +139,17 @@ class IdealLink:
                     [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
                 verifier_vars.extend(flatten(
                     [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+            verifier_vars.extend(flatten(v.start_state_f))
 
         if(c.app_limited):
             verifier_vars.extend(flatten(v.app_limits))
             verifier_vars.append(v.app_rate)
+            if(c.app_fixed_avg_rate and c.beliefs):
+                verifier_vars.extend(flatten(
+                    [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
+                definition_vars.extend(flatten(
+                    [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
+
 
         return verifier_vars, definition_vars
 

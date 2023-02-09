@@ -113,7 +113,8 @@ bytes_cvs += ['r_f']
 bytes_cvs += ['min_c', 'max_c']
 if(args.app_limited):
     # bytes_cvs.extend(['A_f', 'app_limits'])
-    bytes_cvs.append('app_outstanding')
+    # bytes_cvs.append('app_outstanding')
+    bytes_cvs.extend(['min_app_rate', 'max_app_rate'])
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
@@ -872,6 +873,7 @@ cc.dynamic_buffer = args.dynamic_buffer
 cc.buffer_size_multiplier = 1
 
 cc.app_limited = args.app_limited
+cc.app_fixed_avg_rate = True
 cc.app_rate = None  # 0.5 * cc.C
 cc.app_burst_factor = 1
 
