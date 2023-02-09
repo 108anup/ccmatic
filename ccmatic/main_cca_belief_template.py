@@ -74,7 +74,7 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = False
-USE_CWND_CAP = True
+USE_CWND_CAP = False
 
 template_type = TemplateType.IF_ELSE_CHAIN
 template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
@@ -911,7 +911,9 @@ elif(args.ideal_only):
     cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
-    cc.desired_large_loss_count_bound = 0 if NO_LARGE_LOSS else (cc.T-1)/2
+    cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
+    # We don't expect losses in steady state. Losses only happen when beliefs
+    # are changing.
     cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 - 1
     cc.desired_loss_amount_bound_alpha = (cc.T-1)/2 - 1
 
@@ -930,6 +932,7 @@ c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
 
 if(NO_LARGE_LOSS):
+    # We don't want large loss even when probing for link rate.
     d = link.d
     desired = link.desired
     desired = z3.And(desired, d.bounded_large_loss_count)
