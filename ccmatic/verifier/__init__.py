@@ -695,12 +695,17 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # We can only count qdelay when packets actually arrived.
                 # Otherwise the qdelay is stale.
 
+                sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
+                # CCAC can somehow give high utilization signals even when cwnd is low.
+                # This basically happens when no new pkts are sent due to low cwnd.
+                # To avoid underestimating max_c, we update it only when we sent new pkts.
+
                 # We assume the link is utilized if we did not recv any packets.
                 # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
                 # This causes us to never have long enough utilized window (hence we can't improve max_c).
                 # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
                 #                        z3.Or(loss, high_delay))
-                this_utilized = z3.And(z3.Or(loss, high_delay))
+                this_utilized = z3.And(z3.Or(loss, high_delay), sent_new_pkts)
                 utilized_t[st] = this_utilized
                 if(st + 1 == et):
                     utilized_cummulative[st] = this_utilized
