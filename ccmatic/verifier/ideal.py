@@ -142,6 +142,7 @@ class IdealLink:
 
         if(c.app_limited):
             verifier_vars.extend(flatten(v.app_limits))
+            verifier_vars.append(v.app_rate)
 
         return verifier_vars, definition_vars
 
