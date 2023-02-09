@@ -76,8 +76,8 @@ ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = False
 USE_CWND_CAP = False
 
-template_type = TemplateType.IF_ELSE_CHAIN
-template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+# template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
@@ -93,8 +93,9 @@ if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_expr = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
     n_expr = 3
-if(args.infinite_buffer and not args.app_limited):
-    n_expr = 2
+else:
+    if(args.infinite_buffer and not args.app_limited):
+        n_expr = 2
 n_cond = n_expr - 1
 # rhs_vars = ['min_c']
 rhs_vars = ['min_c', 'r_f']
@@ -809,6 +810,35 @@ if ('r_f' in rhs_vars and
 aitd = z3.And(*known_solution_list)
 
 
+"""
+if(min_qdel > 0):
+    r = 1/2 min_c
+else:
+    r = 2 min_c
+"""
+if (template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+    known_solution_list = [
+        cond_consts['R'][0] == 1,
+        cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+        expr_coeffs['min_c'][0] == 1/2,
+    ]
+    for cv in cond_vars:
+        known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv != 'min_qdel'):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 2 for i in range(1, n_expr)] +
+        [expr_consts[i] == 0 for i in range(n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(1, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+        for cvi in range(len(cond_vars))]
+    )
+    mimd = z3.And(*known_solution_list)
+
+
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
 #     r_f[n][t] = max(alpha, 2min_c)
@@ -859,6 +889,7 @@ known_solution = z3.And(*known_solution_list)
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
 # known_solution = aitd
+# known_solution = mimd
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
