@@ -93,7 +93,7 @@ if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_expr = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
     n_expr = 3
-if(args.infinite_buffer):
+if(args.infinite_buffer and not args.app_limited):
     n_expr = 2
 n_cond = n_expr - 1
 # rhs_vars = ['min_c']
