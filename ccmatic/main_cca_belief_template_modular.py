@@ -1,11 +1,9 @@
-import enum
-from re import search
-import sys
-import os
 import argparse
 import copy
 import logging
-from typing import Dict, List, Union
+import os
+import sys
+from typing import List, Union
 
 import z3
 
@@ -15,12 +13,13 @@ from ccac.variables import Variables
 from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
                      find_optimum_bounds)
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import (flatten, flatten_dict, get_product_ite_cc,
-                            try_except)
-from ccmatic.generator import SynthesisType, TemplateBuilder, TemplateTerm, TemplateTermType, TemplateTermUnit, TemplateType, str_on_template_execution, value_on_template_execution
+from ccmatic.common import try_except
+from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
+                               TemplateTermType, TemplateTermUnit,
+                               TemplateType)
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
-from cegis.util import Metric, get_raw_value, z3_max
+from cegis.util import Metric, z3_max
 from pyz3_utils.common import GlobalConfig
 
 logger = logging.getLogger('cca_gen')
@@ -80,9 +79,9 @@ SELF_AS_RVALUE = False
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
-# template_type = TemplateType.IF_ELSE_CHAIN
+template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -207,12 +206,14 @@ def get_template_definitions(cc: CegisConfig, c: ModelConfig, v: Variables):
     for n in range(c.N):
         for t in range(first, c.T):
             template_definitions.append(
-                v.__getattribute__(main_lhs_term)[n][t] ==
-                z3_max(v.alpha, main_tb.get_value_on_execution(cc, c, v, n, t)))
+                v.__getattribute__(main_lhs_term)[n][t]
+                == z3_max(v.alpha,
+                          main_tb.get_value_on_execution(cc, c, v, n, t)))
 
     if(synthesis_type == SynthesisType.RATE_ONLY):
+        assert first >= 1
         for n in range(c.N):
-            for t in range(c.T):
+            for t in range(first, c.T):
                 if (USE_CWND_CAP):
                     template_definitions.append(
                         v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
@@ -237,9 +238,38 @@ def get_solution_str(
 # (for debugging)
 known_solution = None
 known_solution_list = []
-known_solution = z3.And(*known_solution_list)
 
-solutions = []
+# MIMD style solution
+"""
+min_qdel > 0:
+    1/2min_c
+else:
+    2min_c
+"""
+if (n_exprs >= 2 and template_type == TemplateType.IF_ELSE_CHAIN):
+    known_solution_list = [
+        main_tb.get_cond_coeff(0, 'min_qdel') == 1,
+        main_tb.get_expr_coeff(0, 'min_c') == 1/2,
+    ]
+    for ct in main_tb.cond_terms:
+        if (ct.name != 'min_qdel'):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    for ei in range(n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name != 'min_c'):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(1, n_exprs)]
+    )
+mimd = z3.And(*known_solution_list)
+
+solutions = [mimd]
+known_solution = mimd
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
@@ -355,23 +385,6 @@ if(args.optimize):
 
     # Adversarial link
     cc.reset_desired_z3(link.v.pre)
-    # metric_util = [
-    #     Metric(cc.desired_util_f, 0.4, 1, 0.001, True)
-    # ]
-    # metric_queue = [
-    #     Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.001, False),
-    #     Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
-    # ]
-    # metric_loss = [
-    #     Metric(cc.desired_loss_count_bound, 0, 4, 0.001, False),
-    #     Metric(cc.desired_large_loss_count_bound, 0, 4, 0.001, False),
-    #     Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.001, False),
-    #     Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False)
-    # ]
-    # optimize_metrics_list = [metric_util, metric_queue]
-    # os = OptimizationStruct(link, link.get_verifier_struct(),
-    #                         metric_loss, optimize_metrics_list)
-
     metric_alpha = [
         Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.1, False),
         Metric(cc.desired_queue_bound_alpha, 0, 3, 0.1, False),
