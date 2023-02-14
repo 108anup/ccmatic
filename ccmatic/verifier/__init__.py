@@ -16,7 +16,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
-from cegis.util import get_raw_value, z3_max, z3_min
+from cegis.util import get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -373,12 +373,19 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
         for t in range(1, c.T):
             s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
 
-    if(c.app_burst_factor is not None and c.app_rate is not None):
-        burst = c.app_burst_factor * c.app_rate * 1
+    if(c.app_fixed_avg_rate):
+        # Set app rate
+        if(c.app_rate):
+            s.add(v.app_rate == c.app_rate)
+        else:
+            s.add(v.app_rate >= 0.1 * c.C)
+
+        # Enfore app rate and burst
+        burst = c.app_burst_factor * v.app_rate * 1
         # here one is the time quanta            ^^^
 
         def alpha(t):
-            return burst + c.app_rate * t
+            return burst + v.app_rate * t
 
         # From https://leboudec.github.io/netcal/
         for n in range(c.N):
@@ -386,7 +393,7 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
                 for st in range(t+1):
                     s.add(v.app_limits[n][t] <= v.app_limits[n][st] + alpha(t-st))
                 if(t >= 1):
-                    s.add(v.app_limits[n][t] >= v.app_limits[n][t-1] + c.app_rate * 1)
+                    s.add(v.app_limits[n][t] >= v.app_limits[n][t-1] + v.app_rate * 1)
 
 
 def update_bandwidth_beliefs_with_timeout(
@@ -688,12 +695,17 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # We can only count qdelay when packets actually arrived.
                 # Otherwise the qdelay is stale.
 
+                sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
+                # CCAC can somehow give high utilization signals even when cwnd is low.
+                # This basically happens when no new pkts are sent due to low cwnd.
+                # To avoid underestimating max_c, we update it only when we sent new pkts.
+
                 # We assume the link is utilized if we did not recv any packets.
                 # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
                 # This causes us to never have long enough utilized window (hence we can't improve max_c).
                 # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
                 #                        z3.Or(loss, high_delay))
-                this_utilized = z3.And(z3.Or(loss, high_delay))
+                this_utilized = z3.And(z3.Or(loss, high_delay), sent_new_pkts)
                 utilized_t[st] = this_utilized
                 if(st + 1 == et):
                     utilized_cummulative[st] = this_utilized
@@ -844,6 +856,23 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     # update_bandwidth_beliefs_with_timeout(c, s, v)
     update_bandwidth_beliefs_invalidation_and_timeout(c, s, v)
 
+    if (c.app_limited and c.app_fixed_avg_rate):
+        for n in range(c.N):
+            for et in range(1, c.T):
+                lb_list = [v.min_app_rate[n][et-1]]
+                ub_list = [v.max_app_rate[n][et-1]]
+                for st in range(et):
+                    app_pkts = v.app_limits[n][et] - v.app_limits[n][st]
+                    window = et - st
+                    measured_app_rate = app_pkts / window
+
+                    lb_list.append(measured_app_rate * window /
+                                   (window + c.app_burst_factor * 1))
+                    ub_list.append(measured_app_rate)
+
+                s.add(v.min_app_rate[n][et] == z3_max_list(lb_list))
+                s.add(v.max_app_rate[n][et] == z3_min_list(ub_list))
+
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     assert(c.beliefs)
@@ -855,7 +884,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult <= v.max_c[n][0])
         # s.add(v.min_c[n][0] >= 0)
         # s.add(v.max_c[n][0] > 0)
-        s.add(v.min_c[n][0] <= v.max_c[n][0])
+        # s.add(v.min_c[n][0] <= v.max_c[n][0])
         """
         Anytime that min_c > max_c happens, we want to see it happen within the
         trace, not b4.
@@ -876,6 +905,13 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 s.add(z3.Implies(
                     v.qdel[0][dt],
                     v.min_buffer[n][0] == max(0, dt-c.D)))
+
+    if(c.app_limited and c.app_fixed_avg_rate):
+        for n in range(c.N):
+            s.add(v.min_app_rate[n][0] >= 0)
+            s.add(v.min_app_rate[n][0] <= v.max_app_rate[n][0])
+            s.add(v.min_app_rate[n][0] <= v.app_rate)
+            s.add(v.max_app_rate[n][0] >= v.app_rate)
 
     # Part of def vars now.
     # for n in range(c.N):
@@ -1061,6 +1097,11 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
                 v.max_buffer[n][c.T-1] >= c.buf_min / c.C,
                 v.min_buffer[n][c.T-1] <= c.buf_min / c.C
             ])
+        if(c.app_limited and c.app_fixed_avg_rate):
+            final_consistent_list.extend([
+                v.max_app_rate[n][c.T-1] >= v.app_rate,
+                v.min_app_rate[n][c.T-1] <= v.app_rate
+            ])
 
     final_consistent = z3.And(*final_consistent_list)
     assert(isinstance(final_consistent, z3.BoolRef))
@@ -1096,6 +1137,11 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
                 v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
                 v.max_buffer[n][first] - v.min_buffer[n][first]
             ])
+        if(c.app_limited and c.app_fixed_avg_rate):
+            atleast_one_shrinks_list.extend([
+                v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <
+                v.max_app_rate[n][first] - v.min_app_rate[n][first]
+            ])
 
         none_expand_list.extend([
             v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <=
@@ -1105,6 +1151,11 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             none_expand_list.extend([
                 v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
                 v.max_buffer[n][first] - v.min_buffer[n][first]
+            ])
+        if(c.app_limited and c.app_fixed_avg_rate):
+            none_expand_list.extend([
+                v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <=
+                v.max_app_rate[n][first] - v.min_app_rate[n][first]
             ])
 
     none_expand = z3.And(*none_expand_list)
@@ -1561,6 +1612,12 @@ def get_cegis_vars(
 
     if(c.app_limited):
         verifier_vars.extend(flatten(v.app_limits))
+        verifier_vars.append(v.app_rate)
+        if(c.app_fixed_avg_rate and c.beliefs):
+            verifier_vars.extend(flatten(
+                [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
+            definition_vars.extend(flatten(
+                [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
 
     return verifier_vars, definition_vars
 
@@ -1634,6 +1691,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.feasible_response = cc.feasible_response
 
     c.app_limited = cc.app_limited
+    c.app_fixed_avg_rate = cc.app_fixed_avg_rate
     c.app_rate = cc.app_rate
     c.app_burst_factor = cc.app_burst_factor
 
@@ -1909,10 +1967,17 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
 
     if(c.app_limited):
-        all_app_limited = z3.And(*[
-            v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
-            for n in range(c.N)])
-        d.fefficient = z3.Or(d.fefficient, all_app_limited)
+        # all_app_limited = z3.And(*[
+        #     v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
+        #     for n in range(c.N)])
+        # d.fefficient = z3.Or(d.fefficient, all_app_limited)
+
+        # I can't expect 50% link utilization if app sends at 30% link rate. App
+        # can blast packets on the last second, so I can't expect app saturation
+        # at the last second.
+        d.fefficient = (v.S[-1] - v.S[first-1] >=
+                        (c.T-1-(first-1)-c.D)
+                        * z3_min(v.app_rate, cc.desired_util_f * c.C))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
@@ -2265,8 +2330,10 @@ def get_cex_df(
                 high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
                                             for dt in range(c.D+1)]))
                 loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
+                this_utilized = z3.And(sent_new_pkts, z3.Or(high_delay, loss))
                 utilized_t.append(get_raw_value(
-                    counter_example.eval(z3.Or(high_delay, loss))))
+                    counter_example.eval(this_utilized)))
             df[f"utilized_{n},t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):

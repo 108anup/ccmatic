@@ -73,10 +73,12 @@ USE_MAX_QDEL = False
 USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
+NO_LARGE_LOSS = False
+USE_CWND_CAP = False
 
-
-template_type = TemplateType.IF_ELSE_CHAIN
-template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+# template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -89,8 +91,11 @@ elif (cond):
 n_expr = 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_expr = 4
-if(args.infinite_buffer):
-    n_expr = 2
+elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+    n_expr = 3
+else:
+    if(args.infinite_buffer and not args.app_limited):
+        n_expr = 2
 n_cond = n_expr - 1
 # rhs_vars = ['min_c']
 rhs_vars = ['min_c', 'r_f']
@@ -109,7 +114,8 @@ bytes_cvs += ['r_f']
 bytes_cvs += ['min_c', 'max_c']
 if(args.app_limited):
     # bytes_cvs.extend(['A_f', 'app_limits'])
-    bytes_cvs.append('app_outstanding')
+    # bytes_cvs.append('app_outstanding')
+    bytes_cvs.extend(['min_app_rate', 'max_app_rate'])
 time_cvs = ['min_qdel']
 if(USE_MAX_QDEL):
     time_cvs.append('max_qdel')
@@ -151,8 +157,8 @@ search_range_cond_coeffs_time = [-1, 0, 1]
 search_range_cond_coeffs_bytes = [x for x in range(-2, 3)]
 search_range_cond_coeffs = list(
     set(search_range_cond_coeffs_bytes + search_range_cond_coeffs_time))
-# search_range_cond_consts = list(range(-2, 3))
-search_range_cond_consts = list(range(-1, 2))
+search_range_cond_consts = list(range(-2, 3))
+# search_range_cond_consts = list(range(-1, 2))
 
 domain_clauses = []
 for expr_coeff in flatten_dict(expr_coeffs):
@@ -188,11 +194,17 @@ if(len(rhs_vars) == 1):
                 # z3.And(*[expr_coeffs[ei] == 1, expr_consts[ei] == 0]),
             ]))
 
-if('r_f' in rhs_vars):
-    # Does not make sense to have both r_f and min_c on rhs.
+if(len(rhs_vars) > 1):
     for ei in range(n_expr):
+        # Exactly one of the rhs_vars need to be non zero: r_f, max_c, and min_c.
         domain_clauses.append(
-            z3.Or(expr_coeffs['min_c'][ei] == 0, expr_coeffs['r_f'][ei] == 0)
+            z3.Sum([expr_coeffs[rv][ei] != 0 for rv in rhs_vars]) == 1
+        )
+        # If the const term is non zero, then the rhs_var must have coeff 1.
+        domain_clauses.append(
+            z3.Implies(
+                expr_consts[ei] != 0,
+                z3.Sum([expr_coeffs[rv][ei] for rv in rhs_vars]) == 1)
         )
 
 # Only compare qtys with the same units.
@@ -282,12 +294,12 @@ def get_template_definitions(
                 v.r_f[n][t] == z3_max(rate, v.alpha))
 
             # Rate based CCA.
-            template_definitions.append(
-                v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000);
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.r_f[n][t] * c.R)
-            # template_definitions.append(
-            #     v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            if (USE_CWND_CAP):
+                template_definitions.append(
+                    v.c_f[n][t] == 2 * v.max_c[n][t-1] * (c.R + c.D))
+            else:
+                template_definitions.append(
+                    v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
     return template_definitions
 
 
@@ -690,12 +702,76 @@ if (+ -2min_c + 1max_c > 0):
     else:
         max(alpha,  + 2min_c[n][t-1])
 else:
-    if (0 > 0):
-        max(alpha,  + 1min_c[n][t-1])
+    if (+ 2min_c + -1max_c + -2alpha > 0):
+        max(alpha,  + 1min_c[n][t-1] + -1alpha)
     else:
         max(alpha,  + 1min_c[n][t-1])
 """
-if('r_f' in rhs_vars and 'r_f' in cond_vars):
+if ('r_f' in rhs_vars and
+    'r_f' in cond_vars and
+        template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
+    known_solution_list = [
+        cond_coeffs[0][cv_to_cvi['min_c']] == -2,
+        cond_coeffs[0][cv_to_cvi['max_c']] == 1,
+        cond_consts['R'][0] == 0,
+        cond_consts['alpha'][0] == 0,
+
+        cond_coeffs[1][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[1][cv_to_cvi['r_f']] == -1,
+        cond_consts['R'][1] == 0,
+        cond_consts['alpha'][1] == -1,
+
+        cond_coeffs[2][cv_to_cvi['min_c']] == 2,
+        cond_coeffs[2][cv_to_cvi['max_c']] == -1,
+        cond_consts['R'][2] == 0,
+        cond_consts['alpha'][2] == -2,
+
+        expr_coeffs['min_c'][0] == 0,
+        expr_coeffs['r_f'][0] == 1,
+        expr_consts[0] == 1,
+
+        expr_coeffs['min_c'][1] == 2,
+        expr_coeffs['r_f'][1] == 0,
+        expr_consts[1] == 0,
+
+        expr_coeffs['min_c'][2] == 1,
+        expr_coeffs['r_f'][2] == 0,
+        expr_consts[2] == -1
+    ]
+    for cv in cond_vars:
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_c', 'r_f']):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+        if(cv not in ['min_c', 'max_c']):
+            known_solution_list.append(
+                cond_coeffs[2][cv_to_cvi[cv]] == 0)
+        known_solution_list.extend(
+            [expr_coeffs['min_c'][i] == 1 for i in range(3, n_expr)] +
+            [expr_coeffs['r_f'][i] == 0 for i in range(3, n_expr)] +
+            [expr_consts[i] == 0 for i in range(3, n_expr)] +
+            [cond_consts['R'][i] == 0 for i in range(3, n_cond)] +
+            [cond_consts['alpha'][i] == 0 for i in range(3, n_cond)] +
+            [cond_coeffs[i][cvi] == 0 for i in range(3, n_cond)
+             for cvi in range(len(cond_vars))]
+        )
+aitd = z3.And(*known_solution_list)
+
+"""
+r_f[n][t] =
+if (+ -2min_c + 1max_c > 0):
+    if (+ -1r_f + 2min_c + -1alpha > 0):
+        max(alpha,  + 1r_f[n][t-1] + 1alpha)
+    else:
+        max(alpha,  + 2min_c[n][t-1])
+else:
+    max(alpha,  + 1min_c[n][t-1])
+"""
+if ('r_f' in rhs_vars and
+    'r_f' in cond_vars and
+        template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
     known_solution_list = [
         cond_coeffs[0][cv_to_cvi['min_c']] == -2,
         cond_coeffs[0][cv_to_cvi['max_c']] == 1,
@@ -713,7 +789,7 @@ if('r_f' in rhs_vars and 'r_f' in cond_vars):
 
         expr_coeffs['min_c'][1] == 2,
         expr_coeffs['r_f'][1] == 0,
-        expr_consts[1] == 0
+        expr_consts[1] == 0,
     ]
     for cv in cond_vars:
         if(cv not in ['min_c', 'max_c']):
@@ -732,6 +808,36 @@ if('r_f' in rhs_vars and 'r_f' in cond_vars):
              for cvi in range(len(cond_vars))]
         )
 aitd = z3.And(*known_solution_list)
+
+
+"""
+if(min_qdel > 0):
+    r = 1/2 min_c
+else:
+    r = 2 min_c
+"""
+if (template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
+    known_solution_list = [
+        cond_consts['R'][0] == 1,
+        cond_coeffs[1][cv_to_cvi['min_qdel']] == 1,
+        expr_coeffs['min_c'][0] == 1/2,
+    ]
+    for cv in cond_vars:
+        known_solution_list.append(
+                cond_coeffs[0][cv_to_cvi[cv]] == 0)
+        if(cv != 'min_qdel'):
+            known_solution_list.append(
+                cond_coeffs[1][cv_to_cvi[cv]] == 0)
+    known_solution_list.extend(
+        [expr_coeffs['min_c'][i] == 2 for i in range(1, n_expr)] +
+        [expr_consts[i] == 0 for i in range(n_expr)] +
+        [cond_consts['R'][i] == 0 for i in range(1, n_cond)] +
+        [cond_consts['alpha'][i] == 0 for i in range(n_cond)] +
+        [cond_coeffs[i][cvi] == 0 for i in range(2, n_cond)
+        for cvi in range(len(cond_vars))]
+    )
+    mimd = z3.And(*known_solution_list)
+
 
 # """
 # [01/10 22:51:36]  41: if (+ -1min_c + 1/2max_c > 0):
@@ -783,6 +889,7 @@ known_solution = z3.And(*known_solution_list)
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
 # known_solution = aitd
+# known_solution = mimd
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
@@ -797,7 +904,8 @@ cc.dynamic_buffer = args.dynamic_buffer
 cc.buffer_size_multiplier = 1
 
 cc.app_limited = args.app_limited
-cc.app_rate = 0.5 * cc.C
+cc.app_fixed_avg_rate = True
+cc.app_rate = None  # 0.5 * cc.C
 cc.app_burst_factor = 1
 
 cc.template_qdel = True
@@ -836,7 +944,9 @@ elif(args.ideal_only):
     cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
-    cc.desired_large_loss_count_bound = (cc.T-1)/2
+    cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
+    # We don't expect losses in steady state. Losses only happen when beliefs
+    # are changing.
     cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 - 1
     cc.desired_loss_amount_bound_alpha = (cc.T-1)/2 - 1
 
@@ -854,10 +964,12 @@ try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
 
-# d = link.d
-# desired = link.desired
-# desired = z3.And(desired, d.bounded_large_loss_count)
-# link.desired = desired
+if(NO_LARGE_LOSS):
+    # We don't want large loss even when probing for link rate.
+    d = link.d
+    desired = link.desired
+    desired = z3.And(desired, d.bounded_large_loss_count)
+    link.desired = desired
 
 link.setup_cegis_loop(
     search_constraints,

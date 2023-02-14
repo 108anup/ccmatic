@@ -178,9 +178,13 @@ class CCmatic():
                     [counter_example.eval(v.start_state_f[n])
                      for n in range(c.N)])
 
-            ret = "{}\n{}, alpha={}, buf_size={}{}.".format(
+            app_rate_str = ""
+            if(cc.app_limited):
+                app_rate_str = f", app_rate={counter_example.eval(v.app_rate)}"
+
+            ret = "{}\n{}, alpha={}, buf_size={}{}{}.".format(
                 df, desired_string, counter_example.eval(v.alpha),
-                buf_size, start_state_str)
+                buf_size, start_state_str, app_rate_str)
             return ret
 
         def get_verifier_view(
@@ -1360,8 +1364,8 @@ class BeliefProofs(Proofs):
 
         # self.lemma1()  # movement
         # self.deprecated_recursive_mult_gap()
-        self.lemma2_step1_recursive_minc_maxc()  # recursion
-        self.lemma2()  # movement
+        # self.lemma2_step1_recursive_minc_maxc()  # recursion
+        # self.lemma2()  # movement
         self.lemma3_1_recursive_rate_queue()  # recursion
         self.lemma3()  # movement
         self.lemma4()  # performance
