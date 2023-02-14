@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--run-log-dir', action='store', default=None)
     parser.add_argument('--use-belief-invariant-n', action='store_true')
     parser.add_argument('--ideal-only', action='store_true')
+    parser.add_argument('--no-large-loss', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -73,12 +74,12 @@ USE_MAX_QDEL = False
 USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
-NO_LARGE_LOSS = False
+NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
-SELF_AS_RVALUE = False
+SELF_AS_RVALUE = True
 
-# synthesis_type = SynthesisType.CWND_ONLY
-synthesis_type = SynthesisType.RATE_ONLY
+synthesis_type = SynthesisType.CWND_ONLY
+# synthesis_type = SynthesisType.RATE_ONLY
 template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 # template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
@@ -98,7 +99,7 @@ if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
     n_exprs = 3
 else:
-    if(args.infinite_buffer and not args.app_limited):
+    if(not args.dynamic_buffer and not args.app_limited):
         n_exprs = 2
 n_conds = n_exprs - 1
 
@@ -220,6 +221,13 @@ def get_template_definitions(cc: CegisConfig, c: ModelConfig, v: Variables):
                 else:
                     template_definitions.append(
                         v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+    elif(synthesis_type == SynthesisType.CWND_ONLY):
+        for n in range(c.N):
+            for t in range(first, c.T):
+                template_definitions.append(
+                    v.r_f[n][t] == v.c_f[n][t] / c.R)
+    else:
+        assert False
 
     return template_definitions
 
@@ -268,10 +276,72 @@ if (n_exprs >= 2 and template_type == TemplateType.IF_ELSE_CHAIN):
     )
 mimd = z3.And(*known_solution_list)
 
-solutions = [mimd]
-known_solution = mimd
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+# MIMD style solution
+"""
+2min_c
+"""
+if (n_exprs >= 1 and template_type == TemplateType.IF_ELSE_CHAIN):
+    known_solution_list = []
+    for ei in range(n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name != 'min_c'):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(n_exprs)]
+    )
+minc2 = z3.And(*known_solution_list)
+
+"""
+c_f = max alpha,
+if (+ 2max_c + -1c_f > 0):
+    + 1alpha + 1c_f
+else:
+    + 2min_c
+"""
+if (n_exprs >= 1
+    and template_type == TemplateType.IF_ELSE_CHAIN
+        and main_lhs_term == 'c_f'):
+    known_solution_list = []
+    # Cond 0
+    known_solution_list.extend([
+        main_tb.get_cond_coeff(0, 'max_c') == 2,
+        main_tb.get_cond_coeff(0, 'c_f') == -1,
+    ])
+    for ct in main_tb.cond_terms:
+        if (ct.name not in ['max_c', 'c_f']):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    # Expr 0
+    known_solution_list.extend([
+        main_tb.get_expr_coeff(0, 'alpha') == 1,
+        main_tb.get_expr_coeff(0, 'c_f') == 1,
+    ])
+    for et in main_tb.expr_terms:
+        if (et.name not in ['alpha', 'c_f']):
+            known_solution_list.append(
+                main_tb.get_expr_coeff(0, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(1, n_exprs)]
+    )
+    for ei in range(1, n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name != 'min_c'):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+ai_probe = z3.And(*known_solution_list)
+
+solutions = [mimd, minc2]
+known_solution = minc2
+known_solution = ai_probe
+search_constraints = z3.And(search_constraints, known_solution)
+assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
