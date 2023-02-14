@@ -49,6 +49,15 @@ class IdealLink:
                 #     v.L[t] == v.L[t-1]))
         # L[0] is still chosen non-deterministically in an unconstrained fashion.
 
+        if(c.buf_min is None):
+            # For multiflow, L_f is ideally non-deterministic
+            # When there is inf buffer however, L_f should be deterministic
+            for n in range(c.N):
+                for t in range(1, c.T):
+                    s.add(v.L_f[n][t] == v.L_f[n][0])
+                # There shouldn't be any detected losses as well.
+                s.add(v.Ld_f[n][0] == v.L_f[n][0])
+
     @staticmethod
     def service_defs(c: ModelConfig, s: MySolver, v: Variables):
         """
@@ -228,7 +237,7 @@ class IdealLink:
     def setup_cegis_basic(cc: CegisConfig):
         check_config(cc)
         c = setup_ccac_for_cegis(cc)
-        # c.D = 0
+        c.D = 0
         s = MySolver()
         s.warn_undeclared = False
         v = Variables(c, s, cc.name)

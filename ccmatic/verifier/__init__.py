@@ -1265,6 +1265,8 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
         for n in range(c.N):
             for t in range(1, c.T):
                 s.add(v.L_f[n][t] == v.L_f[n][0])
+            # There shouldn't be any detected losses as well.
+            s.add(v.Ld_f[n][0] == v.L_f[n][0])
 
 
 def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -2490,16 +2492,17 @@ def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpa
     xx = list(range(c.T))
     ax.plot(xx, df[get_name_for_list(vn.A_f[0])], color='blue', label='arrival')
     ax.plot(xx, df[get_name_for_list(vn.S_f[0])], color='red', label='service')
-    ubl = []
-    lbl = []
-    for t in range(c.T):
-        if(t >= c.D):
-            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t-c.D])))
-        else:
-            lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
-        ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
-    ax.plot(xx, lbl, color='black', alpha=0.5)
-    ax.plot(xx, ubl, color='black', alpha=0.5)
+    if(hasattr(v, 'W')):
+        ubl = []
+        lbl = []
+        for t in range(c.T):
+            if(t >= c.D):
+                lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t-c.D])))
+            else:
+                lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
+            ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
+        ax.plot(xx, lbl, color='black', alpha=0.5)
+        ax.plot(xx, ubl, color='black', alpha=0.5)
     ax.legend()
     ax.grid(True)
     fig.set_tight_layout(True)
