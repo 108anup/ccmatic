@@ -2330,8 +2330,10 @@ def get_cex_df(
                 high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
                                             for dt in range(c.D+1)]))
                 loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
+                this_utilized = z3.And(sent_new_pkts, z3.Or(high_delay, loss))
                 utilized_t.append(get_raw_value(
-                    counter_example.eval(z3.Or(high_delay, loss))))
+                    counter_example.eval(this_utilized)))
             df[f"utilized_{n},t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
