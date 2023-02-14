@@ -691,9 +691,10 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # Wrong:
                 # high_delay = z3.Or(*[v.qdel[st+1][dt]
                 #                      for dt in range(c.D+1, c.T)])
-                # loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
-                assert c.loss_oracle
-                loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
+                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                if(c.D == 0):
+                    assert c.loss_oracle
+                    loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
 
                 # We can only count qdelay when packets actually arrived.
                 # Otherwise the qdelay is stale.
@@ -2366,9 +2367,10 @@ def get_cex_df(
             for t in range(1, c.T):
                 high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
                                             for dt in range(c.D+1)]))
-                # loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
-                assert c.loss_oracle
-                loss = v.L_f[n][t] - v.L_f[n][t-1] > 0
+                loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                if(c.D == 0):
+                    assert c.loss_oracle
+                    loss = v.L_f[n][t] - v.L_f[n][t-1] > 0
                 sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
                 # recvd_new_pkts = v.S_f[n][t] - v.S_f[n][t-1] > 0
                 recvd_new_pkts = True

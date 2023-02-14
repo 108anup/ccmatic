@@ -1,5 +1,5 @@
 import z3
-from typing import List
+from typing import List, Literal
 from ccac.variables import VariableNames
 
 from ccmatic import CCmatic
@@ -10,17 +10,31 @@ from cegis import get_unsat_core
 from pyz3_utils.my_solver import MySolver
 
 
-def setup(T=6, buf_size=None):
+def setup(
+        ideal=False,
+        buffer: Literal["finite", "infinite", "dynamic"] = "infinite",
+        T=6, buf_size=None):
     cc = CegisConfig()
     cc.name = "adv"
     cc.synth_ss = False
-    if(buf_size is not None):
+
+    cc.buffer_size_multiplier = 1
+    if (buffer == "finite"):
         cc.infinite_buffer = False
-        cc.buffer_size_multiplier = buf_size
-    else:
+        cc.dynamic_buffer = False
+    elif (buffer == "infinite"):
         cc.infinite_buffer = True
-        cc.buffer_size_multiplier = 1
-    cc.dynamic_buffer = False
+        cc.dynamic_buffer = False
+    elif (buffer == "dynamic"):
+        cc.infinite_buffer = False
+        cc.dynamic_buffer = True
+    else:
+        assert False
+
+    if(buf_size is not None):
+        assert buffer == "finite"
+        cc.buffer_size_multiplier = buf_size
+
     cc.app_limited = False
     cc.template_qdel = True
     cc.template_queue_bound = False
@@ -49,7 +63,7 @@ def setup(T=6, buf_size=None):
         cc.desired_loss_amount_bound_multiplier = 3
         cc.desired_loss_amount_bound_alpha = 3
 
-    cc.ideal_link = False
+    cc.ideal_link = ideal
     cc.feasible_response = False
 
     link = CCmatic(cc)
@@ -100,8 +114,10 @@ def test_belief_does_not_degrade():
         import ipdb; ipdb.set_trace()
 
 
-def test_beliefs_remain_consistent():
-    cc, link = setup()
+def test_beliefs_remain_consistent(
+        ideal=True,
+        buffer: Literal["finite", "infinite", "dynamic"] = "infinite"):
+    cc, link = setup(ideal, buffer)
     c, _, v = link.c, link.s, link.v
 
     # Beliefs consistent
@@ -156,6 +172,10 @@ def test_beliefs_remain_consistent():
             # verifier.add(v.c_f[n][t] == c.C * (c.R + c.D) / 3)
             # verifier.add(v.r_f[n][t] == v.c_f[n][t]/c.R)
 
+            # # cwnd limited
+            # verifier.add(v.c_f[n][t] == c.C * (c.R + c.D) / 3)
+            # verifier.add(v.r_f[n][t] == 1000 * c.C)
+
     sat = verifier.check()
     print(sat)
     if (str(sat) == "sat"):
@@ -174,18 +194,23 @@ def test_beliefs_remain_consistent():
         # verifier2.warn_undeclared = False
         # verifier2.add(link.definitions)
         # verifier2.add(link.environment)
-        # # r = z3.Real('r')
+        # # # r = z3.Real('r')
 
         # for n in range(c.N):
         #     for t in range(c.T):
-        #         # verifier2.add(z3.Or(v.r_f[n][t] == r/2, v.r_f[n][t] == r))
-        #         verifier2.add(v.r_f[n][t] > 0)
-        #         verifier2.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+        #         verifier2.add(v.r_f[n][t] == model.eval(v.r_f[n][t]))
+        #         if(t >= 1):
+        #             verifier2.add(v.A_f[n][t] > v.A_f[n][t-1])
+        # #         # verifier2.add(z3.Or(v.r_f[n][t] == r/2, v.r_f[n][t] == r))
+        # #         verifier2.add(v.r_f[n][t] > 0)
+        # #         verifier2.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
         # verifier2.add(v.A[0] == model.eval(v.A[0]))
         # verifier2.add(v.L[0] == model.eval(v.L[0]))
 
         # for t in range(c.T):
-        #     verifier2.add(v.S[t] == model.eval(v.S[t]))
+        #     # verifier2.add(v.S[t] == model.eval(v.S[t]))
+        #     verifier2.add(v.S[t] >= model.eval(v.S[t]))
+        #     verifier2.add(v.S[t] <= 1 + model.eval(v.S[t]))
 
         # sat = verifier2.check()
         # print(sat)
@@ -194,8 +219,8 @@ def test_beliefs_remain_consistent():
         #     vn = VariableNames(v)
         #     df = get_cex_df(model, v, vn, c)
         #     print(link.get_counter_example_str(model, link.verifier_vars))
-        #     print(model.eval(initial_beliefs_consistent))
-        #     print(model.eval(final_beliefs_consistent))
+        #     print(model.eval(initial_c_beliefs_consistent))
+        #     print(model.eval(final_c_beliefs_consistent))
         #     plot_cex(model, df, c, v, 'tmp/cex_df2.pdf')
         # else:
         #     uc = get_unsat_core(verifier2)
@@ -204,7 +229,7 @@ def test_beliefs_remain_consistent():
 
 
 def test_can_learn_beliefs(f: float):
-    cc, link = setup(T=9, buf_size=1.5)
+    cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1.5)
     c, _, v = link.c, link.s, link.v
 
     verifier = MySolver()
@@ -234,5 +259,8 @@ def test_can_learn_beliefs(f: float):
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    # test_beliefs_remain_consistent()
-    test_can_learn_beliefs(2)
+    test_beliefs_remain_consistent(ideal=True, buffer="infinite")
+    test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
+    test_beliefs_remain_consistent(ideal=False, buffer="infinite")
+    test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
+    # test_can_learn_beliefs(2)
