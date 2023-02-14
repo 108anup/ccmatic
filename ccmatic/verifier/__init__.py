@@ -691,21 +691,43 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # Wrong:
                 # high_delay = z3.Or(*[v.qdel[st+1][dt]
                 #                      for dt in range(c.D+1, c.T)])
-                loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                # loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+                assert c.loss_oracle
+                loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
+
                 # We can only count qdelay when packets actually arrived.
                 # Otherwise the qdelay is stale.
+                # recvd_new_pkts = v.S_f[n][st+1] > v.S_f[n][st]
+                recvd_new_pkts = True
 
-                sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
                 # CCAC can somehow give high utilization signals even when cwnd is low.
                 # This basically happens when no new pkts are sent due to low cwnd.
                 # To avoid underestimating max_c, we update it only when we sent new pkts.
+
+                # Updated reason: A delay of high can happen when there are last
+                # few pkts left in the queue. Thus the ack rate will be low. If
+                # the CCA sent pkts R + D time ago, this qdelay can only be high
+                # if this quue is big, if the queue is small, then the recently
+                # sent pkts will show low qdelay.
+
+                # Based on this, ideally we should be checking A_f[n][st+1-D]
+                # > A_f[n][st-D]. But this works out. For ideal link D = 0, so
+                # this is fine. For jittery link, since we always look at
+                # windows >=D+1, the constraint for previous batch would ensure
+                # constraint for this batch (we either sent new packets in
+                # previous batch or caused loss, loss can only happen if we sent
+                # new pkts.). We only really care about the constraint for the
+                # last batch.
+                sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
 
                 # We assume the link is utilized if we did not recv any packets.
                 # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
                 # This causes us to never have long enough utilized window (hence we can't improve max_c).
                 # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
                 #                        z3.Or(loss, high_delay))
-                this_utilized = z3.And(z3.Or(loss, high_delay), sent_new_pkts)
+                this_utilized = z3.Or(
+                    z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                    loss)
                 utilized_t[st] = this_utilized
                 if(st + 1 == et):
                     utilized_cummulative[st] = this_utilized
@@ -732,6 +754,19 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
 
                 # UPPER
+                """
+                For ideal link, D = 0, but still we want ot measure ack rate
+                over at least windows of length 2. This is because initial
+                conditions can provide utilized signals for 1 timeunit while
+                still giving low ack rate.
+
+                # if(window - max(1, c.D) > 0):
+
+                Above issue if fixed by ensuring loss detected happens then
+                buffer must be full and also using L_f instead of Ld_f, i.e., if
+                loss happened then we must have sent pkts and service must have
+                been high. This needs to change when we do loss detection.
+                """
                 if(window - c.D > 0):
                     this_upper = z3.If(
                         utilized_cummulative[st],
@@ -2325,15 +2360,21 @@ def get_cex_df(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
 
-    if(c.calculate_qdel):
+    if (c.calculate_qdel and c.beliefs):
         for n in range(c.N):
             utilized_t = [-1]
             for t in range(1, c.T):
                 high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
                                             for dt in range(c.D+1)]))
-                loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                # loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                assert c.loss_oracle
+                loss = v.L_f[n][t] - v.L_f[n][t-1] > 0
                 sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
-                this_utilized = z3.And(sent_new_pkts, z3.Or(high_delay, loss))
+                # recvd_new_pkts = v.S_f[n][t] - v.S_f[n][t-1] > 0
+                recvd_new_pkts = True
+                this_utilized = z3.Or(
+                    z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                    loss)
                 utilized_t.append(get_raw_value(
                     counter_example.eval(this_utilized)))
             df[f"utilized_{n},t"] = utilized_t
