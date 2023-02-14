@@ -10,20 +10,24 @@ from cegis import get_unsat_core
 from pyz3_utils.my_solver import MySolver
 
 
-def setup():
+def setup(T=6, buf_size=None):
     cc = CegisConfig()
     cc.name = "adv"
     cc.synth_ss = False
-    cc.infinite_buffer = True
+    if(buf_size is not None):
+        cc.infinite_buffer = False
+        cc.buffer_size_multiplier = buf_size
+    else:
+        cc.infinite_buffer = True
+        cc.buffer_size_multiplier = 1
     cc.dynamic_buffer = False
     cc.app_limited = False
-    cc.buffer_size_multiplier = 1
     cc.template_qdel = True
     cc.template_queue_bound = False
     cc.template_fi_reset = False
     cc.template_beliefs = True
     cc.N = 1
-    cc.T = 6
+    cc.T = T
     cc.history = cc.R
     cc.cca = "none"
 
@@ -199,6 +203,36 @@ def test_beliefs_remain_consistent():
         import ipdb; ipdb.set_trace()
 
 
+def test_can_learn_beliefs(f: float):
+    cc, link = setup(T=9, buf_size=1.5)
+    c, _, v = link.c, link.s, link.v
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(v.max_c[0][c.T-1] > 2 * v.min_c[0][c.T-1])
+    verifier.add(v.min_c[0][0] == v.min_c[0][c.T-1])
+    verifier.add(v.max_c[0][0] == v.max_c[0][c.T-1])
+
+    for n in range(c.N):
+        for t in range(c.T):
+            verifier.add(v.c_f[n][t] == f * c.C * (c.R + c.D))
+            verifier.add(v.r_f[n][t] == v.c_f[n][t] / c.R)
+
+            # verifier.add(v.r_f[n][t] == f * c.C)
+            # if(t >= 1):
+            #     verifier.add(v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        import ipdb; ipdb.set_trace()
+
+
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    test_beliefs_remain_consistent()
+    # test_beliefs_remain_consistent()
+    test_can_learn_beliefs(2)
