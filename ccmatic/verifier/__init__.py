@@ -1740,6 +1740,8 @@ def setup_ccac_for_cegis(cc: CegisConfig):
     c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
     c.maxc_minc_change_mult = cc.maxc_minc_change_mult
 
+    c.send_min_alpha = cc.send_min_alpha
+
     return c
 
 

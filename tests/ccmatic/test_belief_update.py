@@ -66,6 +66,8 @@ def setup(
     cc.ideal_link = ideal
     cc.feasible_response = False
 
+    cc.send_min_alpha = True
+
     link = CCmatic(cc)
     try_except(link.setup_config_vars)
 
@@ -245,6 +247,9 @@ def test_can_learn_beliefs(f: float):
             verifier.add(v.c_f[n][t] == f * c.C * (c.R + c.D))
             verifier.add(v.r_f[n][t] == v.c_f[n][t] / c.R)
 
+            # if(t>=1):
+            #     verifier.add(v.A_f[n][t] > v.A_f[n][t-1])
+
             # verifier.add(v.r_f[n][t] == f * c.C)
             # if(t >= 1):
             #     verifier.add(v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
@@ -259,8 +264,8 @@ def test_can_learn_beliefs(f: float):
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    test_beliefs_remain_consistent(ideal=True, buffer="infinite")
-    test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
-    test_beliefs_remain_consistent(ideal=False, buffer="infinite")
-    test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
-    # test_can_learn_beliefs(2)
+    # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
+    # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
+    # test_beliefs_remain_consistent(ideal=False, buffer="infinite")
+    # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
+    test_can_learn_beliefs(2)

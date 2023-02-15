@@ -83,6 +83,8 @@ class CegisConfig:
     # feasible_response  # already has a flag
     # ideal_link   # is outside the scope of a single CC instance
 
+    send_min_alpha: bool = False
+
     DEBUG: bool = False
 
     def desire_tag(self) -> str:

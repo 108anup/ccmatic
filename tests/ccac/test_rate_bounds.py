@@ -54,7 +54,7 @@ def test_rate_bounds(
         v.r_f[n][t] == cc.C * pacing_gain
         for t in range(cc.T) for n in range(cc.N)])
     cwnd_constraint = z3.And(*[
-        v.c_f[n][t] == cwnd_gain * cc.C * (c.R + c.D)
+        v.c_f[n][t] == cwnd_gain * c.C * (c.R + c.D)
         for t in range(cc.T) for n in range(cc.N)])
     # Ensure we are only rate limited, never cwnd limited.
 

@@ -80,9 +80,9 @@ SELF_AS_RVALUE = True
 
 synthesis_type = SynthesisType.CWND_ONLY
 # synthesis_type = SynthesisType.RATE_ONLY
-template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -338,10 +338,10 @@ if (n_exprs >= 1
 ai_probe = z3.And(*known_solution_list)
 
 solutions = [mimd, minc2]
-known_solution = minc2
-known_solution = ai_probe
-search_constraints = z3.And(search_constraints, known_solution)
-assert isinstance(search_constraints, z3.BoolRef)
+# known_solution = minc2
+# known_solution = ai_probe
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -408,6 +408,8 @@ cc.feasible_response = not args.opt_feasible_n
 
 cc.ideal_link = args.ideal_only
 assert not (args.ideal_only and args.ideal)
+
+cc.send_min_alpha = True
 
 link = CCmatic(cc)
 try_except(link.setup_config_vars)
