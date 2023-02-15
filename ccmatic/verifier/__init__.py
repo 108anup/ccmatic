@@ -2412,6 +2412,12 @@ def get_cex_df(
             #     )
         df["upper_S_t"] = upper_S
 
+    if(c.N == 1):
+        df["del_A"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
+        df["del_S"] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift(1)
+        df["del_L"] = df[get_name_for_list(vn.L_f[0])] - df[get_name_for_list(vn.L_f[0])].shift(1)
+
+
     if(c.calculate_qbound):
         qdelay = []
         for t in range(c.T):

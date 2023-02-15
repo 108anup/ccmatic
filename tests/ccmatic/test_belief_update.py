@@ -7,6 +7,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import try_except
 from ccmatic.verifier import get_cex_df, plot_cex
 from cegis import get_unsat_core
+from cegis.util import Metric, optimize_var
 from pyz3_utils.my_solver import MySolver
 
 
@@ -262,10 +263,50 @@ def test_can_learn_beliefs(f: float):
         import ipdb; ipdb.set_trace()
 
 
+def test_maximum_loss_for_fixed_cwnd(f: float):
+    cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1)
+    c, _, v = link.c, link.s, link.v
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+
+    for n in range(c.N):
+        for t in range(c.T):
+            verifier.add(v.c_f[n][t] == f * c.C * c.R)
+            verifier.add(v.r_f[n][t] == v.c_f[n][t] / c.R)
+
+            # if(t>=1):
+            #     verifier.add(v.A_f[n][t] > v.A_f[n][t-1])
+
+            # verifier.add(v.r_f[n][t] == f * c.C)
+            # if(t >= 1):
+            #     verifier.add(v.c_f[n][t] == v.A_f[n][t-1] - v.S_f[n][t-1] + v.r_f[n][t] * 1000)
+
+    last_loss_amount = z3.Real('last_loss_amount')
+    verifier.add(last_loss_amount == v.L[-1] - v.L[-2])
+    # optimization_list = [
+    #     Metric(last_loss_amount, 0, 1000, 1e-3, True)
+    # ]
+    # metric = optimization_list[0]
+    # ret = optimize_var(verifier, metric.z3ExprRef, metric.lo, metric.hi, metric.eps, not metric.maximize)
+    # print(ret)
+
+    verifier.add(last_loss_amount >= f * c.C * c.R - (c.C * c.R + c.buf_min))
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        import ipdb; ipdb.set_trace()
+
+
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=False, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
-    test_can_learn_beliefs(2)
+    # test_can_learn_beliefs(2)
+    test_maximum_loss_for_fixed_cwnd(3.5)

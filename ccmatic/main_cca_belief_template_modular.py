@@ -80,9 +80,9 @@ SELF_AS_RVALUE = True
 
 synthesis_type = SynthesisType.CWND_ONLY
 # synthesis_type = SynthesisType.RATE_ONLY
-# template_type = TemplateType.IF_ELSE_CHAIN
+template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -337,11 +337,55 @@ if (n_exprs >= 1
                     main_tb.get_expr_coeff(ei, et.name) == 0)
 ai_probe = z3.And(*known_solution_list)
 
-solutions = [mimd, minc2]
+"""
+20: c_f = max alpha,
+if (+ 2min_c + -1max_c + -1alpha > 0):
+    + 2min_c
+else:
+    + 1alpha + 1c_f
+"""
+if (n_exprs >= 1
+    and template_type == TemplateType.IF_ELSE_CHAIN
+        and main_lhs_term == 'c_f'):
+    known_solution_list = []
+    # Cond 0
+    known_solution_list.extend([
+        main_tb.get_cond_coeff(0, 'min_c') == 2,
+        main_tb.get_cond_coeff(0, 'max_c') == -1,
+        main_tb.get_cond_coeff(0, 'alpha') == -1,
+    ])
+    for ct in main_tb.cond_terms:
+        if (ct.name not in ['max_c', 'min_c', 'alpha']):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    # Expr 0
+    known_solution_list.extend([
+        main_tb.get_expr_coeff(0, 'min_c') == 2,
+    ])
+    for et in main_tb.expr_terms:
+        if (et.name not in ['min_c']):
+            known_solution_list.append(
+                main_tb.get_expr_coeff(0, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'alpha') == 1 for ei in range(1, n_exprs)] +
+        [main_tb.get_expr_coeff(ei, 'c_f') == 1 for ei in range(1, n_exprs)]
+    )
+    for ei in range(1, n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name not in ['alpha', 'c_f']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+ai_until_shrink = z3.And(*known_solution_list)
+
+solutions = [mimd, minc2, ai_probe, ai_until_shrink]
 # known_solution = minc2
 # known_solution = ai_probe
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+known_solution = ai_until_shrink
+search_constraints = z3.And(search_constraints, known_solution)
+assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -384,21 +428,21 @@ if(cc.infinite_buffer):
     cc.desired_large_loss_count_bound = 0
     cc.desired_loss_amount_bound_multiplier = 0
     cc.desired_loss_amount_bound_alpha = 0
-elif(args.ideal_only):
-    cc.desired_util_f = 0.6
-    cc.desired_queue_bound_multiplier = 0
-    cc.desired_queue_bound_alpha = 4
-    cc.desired_loss_count_bound = 0
-    cc.desired_large_loss_count_bound = 0
-    cc.desired_loss_amount_bound_multiplier = 0
-    cc.desired_loss_amount_bound_alpha = 4
+# elif(args.ideal_only):
+#     cc.desired_util_f = 0.6
+#     cc.desired_queue_bound_multiplier = 0
+#     cc.desired_queue_bound_alpha = 4
+#     cc.desired_loss_count_bound = 0
+#     cc.desired_large_loss_count_bound = 0
+#     cc.desired_loss_amount_bound_multiplier = 0
+#     cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
     cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
     # We don't expect losses in steady state. Losses only happen when beliefs
     # are changing.
-    cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 - 1
-    cc.desired_loss_amount_bound_alpha = (cc.T-1)/2 - 1
+    cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 + 1
+    cc.desired_loss_amount_bound_alpha = (cc.T-1)  # (cc.T-1)/2 - 1
 
 cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
@@ -420,7 +464,9 @@ if(NO_LARGE_LOSS):
     # We don't want large loss even when probing for link rate.
     d = link.d
     desired = link.desired
-    desired = z3.And(desired, d.bounded_large_loss_count)
+    desired = z3.And(desired,
+                     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+                           d.ramp_down_queue, d.ramp_down_bq))
     link.desired = desired
 
 link.setup_cegis_loop(
