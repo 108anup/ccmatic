@@ -77,8 +77,8 @@ NO_LARGE_LOSS = False
 USE_CWND_CAP = False
 
 # template_type = TemplateType.IF_ELSE_CHAIN
-# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -888,10 +888,10 @@ known_solution = z3.And(*known_solution_list)
 # known_solution = blast_then_medblast_then_minc_negalpha_correct_units
 # known_solution = drain_then_blast_then_stable
 # known_solution = blast_then_minc_qdel
-# known_solution = aitd
+known_solution = aitd
 # known_solution = mimd
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+search_constraints = z3.And(search_constraints, known_solution)
+assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -944,11 +944,11 @@ elif(args.ideal_only):
     cc.desired_loss_amount_bound_alpha = 4
 else:
     cc.desired_loss_count_bound = (cc.T-1)/2
-    cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
+    cc.desired_large_loss_count_bound = 1   # if NO_LARGE_LOSS else (cc.T-1)/2
     # We don't expect losses in steady state. Losses only happen when beliefs
     # are changing.
     cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 - 1
-    cc.desired_loss_amount_bound_alpha = (cc.T-1)/2 - 1
+    cc.desired_loss_amount_bound_alpha = 100 # (cc.T-1)/2 - 1
 
 cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
@@ -968,7 +968,9 @@ if(NO_LARGE_LOSS):
     # We don't want large loss even when probing for link rate.
     d = link.d
     desired = link.desired
-    desired = z3.And(desired, d.bounded_large_loss_count)
+    desired = z3.And(desired,
+                     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+                           d.ramp_down_queue, d.ramp_down_bq))
     link.desired = desired
 
 link.setup_cegis_loop(
