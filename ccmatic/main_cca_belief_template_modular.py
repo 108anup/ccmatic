@@ -93,7 +93,7 @@ elif (cond):
 """
 
 
-n_exprs = 3
+n_exprs = 2
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
@@ -383,9 +383,9 @@ ai_until_shrink = z3.And(*known_solution_list)
 solutions = [mimd, minc2, ai_probe, ai_until_shrink]
 # known_solution = minc2
 # known_solution = ai_probe
-known_solution = ai_until_shrink
-search_constraints = z3.And(search_constraints, known_solution)
-assert isinstance(search_constraints, z3.BoolRef)
+# known_solution = ai_until_shrink
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
