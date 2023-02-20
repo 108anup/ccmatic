@@ -4,7 +4,7 @@
 
 BUFFER="${BUFFER:---dynamic-buffer}"
 # BUFFER=""
-OUTDIR=3leaf-app #$BUFFER #-nolargeloss$BUFFER
+OUTDIR=3leaf-app$BUFFER #-nolargeloss$BUFFER
 
 run() {
     args=$@
