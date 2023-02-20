@@ -1,3 +1,4 @@
+import argparse
 import itertools
 import logging
 from fractions import Fraction
@@ -8,33 +9,66 @@ from ccac.model import loss_detected
 from pyz3_utils.common import GlobalConfig
 
 import ccmatic.common  # Used for side effects
-from ccmatic import CCmatic
+from ccmatic import CCmatic, Proofs
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, get_product_ite
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
 
+
+def get_args():
+
+    parser = argparse.ArgumentParser(description='Belief template')
+
+    parser.add_argument('--infinite-buffer', action='store_true')
+    parser.add_argument('--finite-buffer', action='store_true')
+    parser.add_argument('--dynamic-buffer', action='store_true')
+    parser.add_argument('-T', action='store', type=int, default=9)
+    parser.add_argument('--optimize', action='store_true')
+    parser.add_argument('--proofs', action='store_true')
+    parser.add_argument('--solution', action='store', type=int, default=None)
+    parser.add_argument('--ideal-only', action='store_true')
+
+    args = parser.parse_args()
+    return args
+
+
+args = get_args()
+assert args.infinite_buffer + args.finite_buffer + args.dynamic_buffer == 1
+logger.info(args)
+
+
 cc = CegisConfig()
 # cc.DEBUG = True
+cc.name = "main"
 cc.synth_ss = False
-cc.infinite_buffer = False
-cc.dynamic_buffer = True
+cc.infinite_buffer = args.infinite_buffer
+cc.dynamic_buffer = args.dynamic_buffer
 cc.buffer_size_multiplier = 1
 cc.template_qdel = False
 cc.template_queue_bound = False
 cc.N = 1
-cc.history = 3
+cc.history = 4
 cc.cca = "paced"
+cc.T = args.T
 
-cc.desired_util_f = 0.8
-cc.desired_queue_bound_multiplier = 1/2
+cc.desired_util_f = 0.2
+cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
 cc.desired_loss_count_bound = 3
 cc.desired_loss_amount_bound_multiplier = 0
 cc.desired_loss_amount_bound_alpha = 3
 
-cc.ideal_link = True
+if(args.ideal_only):
+    cc.desired_util_f = 0.8
+    cc.desired_queue_bound_multiplier = 1/2
+    cc.desired_queue_bound_alpha = 3
+    cc.desired_loss_count_bound = 3
+    cc.desired_loss_amount_bound_multiplier = 0
+    cc.desired_loss_amount_bound_alpha = 3
+
+cc.ideal_link = args.ideal_only
 cc.feasible_response = False
 
 ccmatic = CCmatic(cc)
@@ -113,7 +147,7 @@ for n in range(c.N):
         target_cwnd = rhs
         next_cwnd = z3.If(v.c_f[n][t-1] < target_cwnd,
                           v.c_f[n][t-1] + v.alpha,
-                          v.c_f[n][t-1] - v.alpha)
+                          v.c_f[n][t-1]/2)
         template_definitions.append(
             v.c_f[n][t] == z3.If(next_cwnd >= v.alpha, next_cwnd, v.alpha))
 
@@ -162,15 +196,38 @@ known_solution_list = [
     coeffs['ack_f[n]_noloss'] == 1/2,
     consts['c_f[n]_noloss'] == 0,
 ]
-known_solution = z3.And(*known_solution_list)
+aiad_target = z3.And(*known_solution_list)
+
+known_solution_list = [
+    coeffs['c_f[n]_loss'] == 1/2,
+    coeffs['ack_f[n]_loss'] == 0,
+    consts['c_f[n]_loss'] == 0,
+
+    coeffs['c_f[n]_noloss'] == 1,
+    coeffs['ack_f[n]_noloss'] == 0,
+    consts['c_f[n]_noloss'] == 1,
+]
+aimd_reno = z3.And(*known_solution_list)
+
+known_solution = aimd_reno
 assert(isinstance(known_solution, z3.ExprRef))
 
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert(isinstance(search_constraints, z3.ExprRef))
+solutions = [aiad_target, aimd_reno]
+
+search_constraints = z3.And(search_constraints, known_solution)
+assert(isinstance(search_constraints, z3.ExprRef))
 
 ccmatic.setup_cegis_loop(
     search_constraints,
     template_definitions, generator_vars, get_solution_str)
 ccmatic.critical_generator_vars = critical_generator_vars
 # ccmatic.search_constraints = z3.And(search_constraints, known_solution)
-ccmatic.run_cegis(known_solution)
+
+if(args.optimize):
+    raise NotImplementedError
+elif(args.proofs):
+    solution = solutions[args.solution]
+    proofs = Proofs(ccmatic, solution, args.solution)
+    proofs.proofs()
+else:
+    ccmatic.run_cegis(known_solution)

@@ -407,6 +407,195 @@ class Proofs:
         self.solution = solution
         self.solution_id = solution_id
 
+    def setup_steady_variables_functions(self):
+        link = self.link
+        c, v = self.link.c, self.link.v
+        # I have only thought about single flow case for these proofs.
+        assert c.N == 1
+
+        # Steady states
+        first = link.cc.history
+        self.steady__cwnd = SteadyStateVariable(
+            "steady__cwnd",
+            v.c_f[0][first],
+            v.c_f[0][-1],
+            z3.Real("steady__cwnd__lo"),
+            z3.Real("steady__cwnd__hi"))
+        self.steady__bottle_queue = SteadyStateVariable(
+            "steady__bottle_queue",
+            (v.A[first] - v.L[first]) - (v.C0 + c.C * (first) - v.W[first]),
+            (v.A[c.T-1] - v.L[c.T-1]) - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]),
+            None,
+            z3.Real("steady__bottle_queue__hi"))
+        svs = [self.steady__cwnd, self.steady__bottle_queue]
+
+        # Movements
+        self.movement_mult__cwnd = z3.Real('movement_mult__cwnd_queue')
+        movements = [
+            self.movement_mult__cwnd,
+        ]
+
+        vs = link.get_verifier_struct()
+        def get_counter_example_str(counter_example: z3.ModelRef,
+                                    verifier_vars: List[z3.ExprRef]) -> str:
+            ret = vs.get_counter_example_str(counter_example, verifier_vars)
+            sv_strs = []
+            for sv in svs:
+                lo = sv.lo
+                hi = sv.hi
+                if(lo is not None):
+                    val = get_raw_value(counter_example.eval(lo))
+                    if(not math.isnan(val)):
+                        sv_strs.append(f"{lo.decl().name()}="
+                                       f"{val}")
+                if(hi is not None):
+                    val = get_raw_value(counter_example.eval(hi))
+                    if(not math.isnan(val)):
+                        sv_strs.append(f"{hi.decl().name()}="
+                                       f"{val}")
+            ret += "\n"
+            ret += ", ".join(sv_strs)
+            movement_strs = []
+            for movement in movements:
+                val = get_raw_value(counter_example.eval(movement))
+                if(not math.isnan(val)):
+                    movement_strs.append(f"{movement.decl().name()}="
+                                         f"{val}")
+            ret += "\n"
+            ret += ", ".join(movement_strs)
+            return ret
+
+        def debug_verifier(lemma: z3.BoolRef, extra_constraints):
+            verifier = MySolver()
+            verifier.warn_undeclared = False
+            verifier.add(link.definitions)
+            verifier.add(link.environment)
+            verifier.add(self.solution)
+            verifier.add(z3.Not(lemma))
+            verifier.add(z3.And(extra_constraints))
+            sat = verifier.check()
+            if(str(sat) == "sat"):
+                model = verifier.model()
+                logger.error("Lemma violated. Cex:\n" +
+                             get_counter_example_str(model, link.verifier_vars))
+                logger.critical("Note, the desired string in above output is based "
+                                "on cegis metrics instead of optimization metrics.")
+                import ipdb; ipdb.set_trace()
+                return model
+            else:
+                logger.info("Lemma passes")
+
+        self.vs = link.get_verifier_struct()
+        self.debug_verifier = debug_verifier
+        self.get_counter_example_str = get_counter_example_str
+
+    def setup_conditions(self):
+        # Rate/bottle_queue
+        self.initial_inside = z3.And(
+            self.steady__cwnd.init_inside(),
+            self.steady__bottle_queue.init_inside())
+        self.final_inside = z3.And(
+            self.steady__cwnd.final_inside(),
+            self.steady__bottle_queue.final_inside())
+        # self.final_improves = steady_state_variables_improve(
+        #         [self.steady__rate, self.steady__bottle_queue])
+
+    def recursive_rate_queue(self):
+        """
+        Find smallest rate/queue state that is recursive
+        """
+        link = self.link
+        c = link.c
+        recur_rate_queue = z3.Implies(
+            self.initial_inside,
+            self.final_inside)
+
+        BDP = c.C * c.R
+
+        fixed_metrics = []
+        metric_lists = [
+            [Metric(self.steady__cwnd.lo, EPS, BDP-EPS, EPS, True)],
+            [Metric(self.steady__cwnd.hi, BDP+EPS, 10 * c.C, EPS, False)],
+            [Metric(self.steady__bottle_queue.hi, EPS, 10 * c.C * (c.R + c.D), EPS, False)]
+        ]
+        os = OptimizationStruct(link, self.vs, fixed_metrics,
+                                metric_lists, recur_rate_queue, self.get_counter_example_str)
+        logger.info("Recursive state for rate, queue")
+        if(self.steady__cwnd.lo not in self.recursive or
+           self.steady__cwnd.hi not in self.recursive or
+           self.steady__bottle_queue.hi not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
+
+        ss_assignments = [
+            self.steady__cwnd.lo == self.recursive[self.steady__cwnd.lo],
+            self.steady__cwnd.hi == self.recursive[self.steady__cwnd.hi],
+            self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi]
+        ]
+        model = self.debug_verifier(recur_rate_queue, ss_assignments)
+
+    def optimum_bounds_in_ss(self):
+        """
+        If performance metrics are in steady range, then
+            performance metrics remain in steady range
+            the performance metrics satisfy desired objectives.
+        """
+        link = self.link
+        c = link.c
+
+        # Recompute desired after resetting.
+        cc_old = link.cc
+        cc = copy.copy(cc_old)
+        cc.reset_desired_z3(link.v.pre)
+        link.cc = cc
+        d, _ = link.get_desired()
+        link.cc = cc_old
+
+        # cc = link.cc
+        # cc.reset_desired_z3(link.v.pre)
+        # d, _ = link.get_desired()
+
+        BDP = c.C * c.R
+
+        lemma4 = z3.Implies(
+                    self.initial_inside,
+            z3.And(self.final_inside, d.desired_in_ss))
+        fixed_metrics = [
+            Metric(self.steady__cwnd.lo,
+                   self.recursive[self.steady__cwnd.lo], BDP-EPS, EPS, True),
+            Metric(self.steady__cwnd.hi, BDP+EPS,
+                   self.recursive[self.steady__cwnd.hi], EPS, False),
+            Metric(self.steady__bottle_queue.hi, c.C * c.R,
+                   self.recursive[self.steady__bottle_queue.hi], EPS, False),
+            Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
+            Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        ]
+        metric_lists = [
+            [Metric(cc.desired_util_f, 0.01, 1, 1e-3, True)],
+            [Metric(cc.desired_queue_bound_multiplier, 0, 16, EPS, False)],
+            [Metric(cc.desired_loss_count_bound, 0, c.T, EPS, False)],
+            [Metric(cc.desired_large_loss_count_bound, 0, c.T, EPS, False)],
+            [Metric(cc.desired_loss_amount_bound_multiplier, 0, c.T, EPS, False)],
+        ]
+        os = OptimizationStruct(link, self.vs, fixed_metrics,
+                                metric_lists, lemma4, self.get_counter_example_str)
+        logger.info("Objectives in steady state (no link rate variations)")
+        model = find_optimum_bounds(self.solution, [os])
+
+    def setup_offline_cache(self):
+        link = self.link
+        c = link.c
+
+    def proofs(self):
+        self.setup_steady_variables_functions()
+        self.setup_conditions()
+        self.setup_offline_cache()
+
+        self.recursive_rate_queue()
+        # self.optimum_bounds_in_ss()
+
+
+
 
 class BeliefProofs(Proofs):
 
