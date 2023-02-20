@@ -47,6 +47,8 @@ def setup(
     cc.cca = "none"
 
     cc.use_belief_invariant = True
+    cc.template_beliefs_use_buffer = True
+    cc.template_beliefs_use_max_buffer = False
     # cc.app_limited = True
     # cc.app_fixed_avg_rate = True
 
@@ -137,6 +139,13 @@ def test_beliefs_remain_consistent(
     final_c_beliefs_consistent = z3.And(
         _final_minc_consistent, _final_maxc_consistent)
 
+    if (c.beliefs_use_buffer):
+        assert not c.beliefs_use_max_buffer
+        _initial_min_buffer_consistent = z3.And([v.min_buffer[n][0] <= c.buf_min/c.C
+                                                 for n in range(c.N)])
+        _final_min_buffer_consistent = z3.And([v.min_buffer[n][-1] <= c.buf_min/c.C
+                                               for n in range(c.N)])
+
     if (c.app_limited and c.app_fixed_avg_rate):
         _initial_min_app_rate_consistent = z3.And(
             [v.min_app_rate[n][0] <= v.app_rate for n in range(c.N)])
@@ -161,6 +170,11 @@ def test_beliefs_remain_consistent(
         verifier.add(z3.Not(z3.Implies(
             initial_app_rate_beliefs_consistent,
             final_app_rate_beliefs_consistent)))
+    if(c.beliefs_use_buffer):
+        assert not c.beliefs_use_max_buffer
+        verifier.add(z3.Not(z3.Implies(
+            _initial_min_buffer_consistent,
+            _final_min_buffer_consistent)))
     # r = z3.Real('r')
 
     for n in range(c.N):
@@ -191,6 +205,10 @@ def test_beliefs_remain_consistent(
         if (c.app_limited and c.app_fixed_avg_rate):
             print(model.eval(initial_app_rate_beliefs_consistent))
             print(model.eval(final_app_rate_beliefs_consistent))
+        if(c.beliefs_use_buffer):
+            assert not c.beliefs_use_max_buffer
+            print(model.eval(_initial_min_buffer_consistent))
+            print(model.eval(_final_min_buffer_consistent))
         plot_cex(model, df, c, v, 'tmp/cex_df.pdf')
 
         # verifier2 = MySolver()
@@ -329,10 +347,11 @@ def test_maximum_loss_for_fixed_rate(f: float):
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
+    test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=False, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
     # test_can_learn_beliefs(2)
     # test_maximum_loss_for_fixed_cwnd(3.5)
-    test_maximum_loss_for_fixed_rate(10)
+    # test_maximum_loss_for_fixed_rate(10)

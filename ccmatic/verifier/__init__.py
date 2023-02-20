@@ -861,7 +861,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 v.max_qdel[n][et] == 1000 * c.T))
 
     # Buffer
-    if(c.buf_min is not None and c.beliefs_use_buffer):
+    if (c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             for et in range(1, c.T):
                 for dt in range(c.T):
@@ -876,17 +876,19 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                         c.T-c.D,
                         v.min_buffer[n][et-1])))
 
-                for dt in range(et+1):
+                if (c.beliefs_use_max_buffer):
+                    for dt in range(et+1):
+                        s.add(z3.Implies(
+                            z3.And(v.Ld_f[n][et] > v.Ld_f[n]
+                                   [et-1], v.qdel[et][dt]),
+                            v.max_buffer[n][et] ==
+                            z3_min(v.max_buffer[n][et-1], dt+1)))
+                    # TODO: is this the best way to handle the case when qdel > et?
                     s.add(z3.Implies(
-                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et-1], v.qdel[et][dt]),
+                        z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
+                              z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
                         v.max_buffer[n][et] ==
-                        z3_min(v.max_buffer[n][et-1], dt+1)))
-                # TODO: is this the best way to handle the case when qdel > et?
-                s.add(z3.Implies(
-                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
-                          z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
-                    v.max_buffer[n][et] ==
-                    v.max_buffer[n][et-1]))
+                        v.max_buffer[n][et-1]))
 
     # update_bandwidth_beliefs_invalidation(c, s, v)
     # update_bandwidth_beliefs_with_timeout(c, s, v)
@@ -933,9 +935,10 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     if(c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             s.add(v.min_buffer[n][0] >= 0)
-            s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
             s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
-            s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
+            if(c.beliefs_use_max_buffer):
+                s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
+                s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
             for dt in range(c.T):
                 s.add(z3.Implies(
@@ -1097,20 +1100,22 @@ def get_beliefs_improve_old(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.min_c[n][c.T-1] > v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            atleast_one_improves_list.extend([
-                v.max_buffer[n][c.T-1] < v.max_buffer[n][first],
-                v.min_buffer[n][c.T-1] > v.min_buffer[n][first]
-            ])
+            atleast_one_improves_list.append(
+                v.min_buffer[n][c.T-1] > v.min_buffer[n][first])
+            if(c.beliefs_use_max_buffer):
+                atleast_one_improves_list.append(
+                    v.max_buffer[n][c.T-1] < v.max_buffer[n][first])
 
         none_degrade_list.extend([
             v.max_c[n][c.T-1] <= v.max_c[n][first],
             v.min_c[n][c.T-1] >= v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            none_degrade_list.extend([
-                v.max_buffer[n][c.T-1] <= v.max_buffer[n][first],
-                v.min_buffer[n][c.T-1] >= v.min_buffer[n][first]
-            ])
+            none_degrade_list.append(
+                v.min_buffer[n][c.T-1] >= v.min_buffer[n][first])
+            if(c.beliefs_use_max_buffer):
+                none_degrade_list.append(
+                    v.max_buffer[n][c.T-1] <= v.max_buffer[n][first])
 
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
@@ -1129,10 +1134,11 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
             v.min_c[n][c.T-1] <= c.C
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            final_consistent_list.extend([
-                v.max_buffer[n][c.T-1] >= c.buf_min / c.C,
-                v.min_buffer[n][c.T-1] <= c.buf_min / c.C
-            ])
+            final_consistent_list.append(
+                v.min_buffer[n][c.T-1] <= c.buf_min / c.C)
+            if(c.beliefs_use_max_buffer):
+                final_consistent_list.append(
+                    v.max_buffer[n][c.T-1] >= c.buf_min / c.C)
         if(c.app_limited and c.app_fixed_avg_rate):
             final_consistent_list.extend([
                 v.max_app_rate[n][c.T-1] >= v.app_rate,
@@ -1169,10 +1175,14 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][first] - v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            atleast_one_shrinks_list.extend([
-                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
-                v.max_buffer[n][first] - v.min_buffer[n][first]
-            ])
+            if(c.beliefs_use_max_buffer):
+                atleast_one_shrinks_list.extend([
+                    v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
+                    v.max_buffer[n][first] - v.min_buffer[n][first]
+                ])
+            else:
+                atleast_one_shrinks_list.append(
+                    v.min_buffer[n][c.T-1] > v.min_buffer[n][first])
         if(c.app_limited and c.app_fixed_avg_rate):
             atleast_one_shrinks_list.extend([
                 v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <
@@ -1184,10 +1194,14 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][first] - v.min_c[n][first]
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            none_expand_list.extend([
-                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
-                v.max_buffer[n][first] - v.min_buffer[n][first]
-            ])
+            if(c.beliefs_use_max_buffer):
+                none_expand_list.extend([
+                    v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
+                    v.max_buffer[n][first] - v.min_buffer[n][first]
+                ])
+            else:
+                none_expand_list.append(
+                    v.min_buffer[n][c.T-1] >= v.min_buffer[n][first])
         if(c.app_limited and c.app_fixed_avg_rate):
             none_expand_list.extend([
                 v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <=
@@ -1643,9 +1657,14 @@ def get_cegis_vars(
             [v.min_c[:, :1], v.max_c[:, :1]]))
         if(c.buf_min is not None and c.beliefs_use_buffer):
             definition_vars.extend(flatten(
-                [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+                v.min_buffer[:, 1:]))
             verifier_vars.extend(flatten(
-                [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+                v.min_buffer[:, :1]))
+            if(c.beliefs_use_max_buffer):
+                definition_vars.extend(flatten(
+                    v.max_buffer[:, 1:]))
+                verifier_vars.extend(flatten(
+                    v.max_buffer[:, :1]))
         verifier_vars.extend(flatten(v.start_state_f))
 
     if(c.app_limited):
@@ -1735,6 +1754,7 @@ def setup_ccac_for_cegis(cc: CegisConfig):
 
     c.beliefs = cc.template_beliefs
     c.beliefs_use_buffer = cc.template_beliefs_use_buffer
+    c.beliefs_use_max_buffer = cc.template_beliefs_use_max_buffer
     c.fix_stale__min_c = cc.fix_stale__min_c
     c.fix_stale__max_c = cc.fix_stale__max_c
     c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
@@ -2330,8 +2350,11 @@ def get_cex_df(
         if(c.buf_min is not None and c.beliefs_use_buffer):
             for n in range(c.N):
                 cex_dict.update({
-                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
-                    get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
+                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n])})
+            if(c.beliefs_use_max_buffer):
+                for n in range(c.N):
+                    cex_dict.update({
+                        get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})

@@ -145,9 +145,14 @@ class IdealLink:
                 [v.min_c[:, :1], v.max_c[:, :1]]))
             if(c.buf_min is not None and c.beliefs_use_buffer):
                 definition_vars.extend(flatten(
-                    [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+                    v.min_buffer[:, 1:]))
                 verifier_vars.extend(flatten(
-                    [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+                    v.min_buffer[:, :1]))
+                if(c.beliefs_use_max_buffer):
+                    definition_vars.extend(flatten(
+                        v.max_buffer[:, 1:]))
+                    verifier_vars.extend(flatten(
+                        v.max_buffer[:, :1]))
             verifier_vars.extend(flatten(v.start_state_f))
 
         if(c.app_limited):
