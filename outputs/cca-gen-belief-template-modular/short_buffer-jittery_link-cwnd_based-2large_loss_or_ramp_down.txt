@@ -29399,3 +29399,654 @@ fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_los
 , large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=944225/65124, buf_size=200, start_state=[0].[0m
 [02/20 14:43:24]  --------------------------------------------------------------------------------
 [02/20 14:43:24]  Iteration: 1117 (371 solution, 745 counterexamples)
+[02/20 14:48:06]  Generator returned sat in 196.815961 secs.
+[02/20 14:48:13]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ -1min_qdel + 1R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 14:56:57]  Verifer returned sat in 524.332627 secs.
+[02/20 14:56:57]  sf_get_cex returned in 524.530331 secs.
+[02/20 14:56:57]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__wasted_t     queue_t  utilized_0,t  bottle_queue_t  token_queue_t   upper_S_t  qdelay_t
+0       -344.048788     389.172371       1.000000       -615.735160        0.000000                0.000000       92.003734      196.591605                1.0      -7.725476  271.686372          -1.0      200.000000      71.686372 -544.048788       2.0
+1       -333.470070     194.586185     194.586185       -444.048788        0.000000                0.000000       92.003734      196.591605                0.0      -7.725476  110.578718           0.0      110.578718       0.000000 -444.048788       1.0
+2        -54.876417     389.172371     389.172371       -420.340014       89.172371                0.000000       92.003734      196.591605                1.0      -7.725476  276.291226           1.0      200.000000      76.291226 -344.048788       2.0
+3        -44.297699     194.586185     194.586185       -247.720226       89.172371               89.172371       92.003734      196.328563                0.0      -7.725476  114.250156           1.0      110.578718       3.671437 -244.048788       1.0
+4        230.624516     389.172371     389.172371       -144.048788      174.673304               89.172371       94.337274      150.000000                1.0      -7.725476  200.000000           1.0      200.000000       0.000000 -144.048788       2.0
+5        241.203234     194.586185     194.586185       -133.221159      174.673304              174.673304       94.337274      103.609210                0.0      -7.725476  199.751089           1.0      110.578718      89.172371  -44.048788       1.0
+6        430.624516     389.172371     389.172371         55.951212      174.673304              174.673304       95.955196      103.609210                1.0      -7.725476  200.000000           1.0      200.000000       0.000000   55.951212       2.0
+7        441.203234     194.586185     194.586185        153.897696      174.673304              174.673304       96.204107      103.609210                0.0      -7.725476  112.632234           0.0      110.578718       2.053516  155.951212       1.0
+8        717.743371     389.172371     389.172371        155.951212      261.792159              174.673304       96.204107      103.609210                1.0      -7.725476  300.000000           1.0      200.000000     100.000000  255.951212       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=3, 
+, large_loss_count=3, loss_amount=420700/1607, beliefs_remain_consistent=True, beliefs_improve=True, alpha=17000/1607, buf_size=200, start_state=[0].[0m
+[02/20 14:56:57]  --------------------------------------------------------------------------------
+[02/20 14:56:57]  Iteration: 1118 (371 solution, 746 counterexamples)
+[02/20 14:58:50]  Generator returned sat in 42.731239 secs.
+[02/20 14:58:57]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ -1min_qdel + 2R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:09:16]  Verifer returned sat in 619.488256 secs.
+[02/20 15:09:16]  sf_get_cex returned in 619.682143 secs.
+[02/20 15:09:16]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__wasted_t     queue_t  utilized_0,t  bottle_queue_t  token_queue_t    upper_S_t  qdelay_t
+0        662.085985     327.180825       1.000000        414.813258        0.000000                0.000000       81.748634      126.338798                2.0      -7.725476  247.272727          -1.0      199.324391      47.948336   462.761594       3.0
+1        662.761594     163.590412     163.590412        541.152056        0.000000                0.000000       81.748634      126.338798                1.0      -7.725476  121.609538           1.0      100.000000      21.609538   562.761594       2.0
+2        868.332880     327.180825     327.180825        662.085985        5.571287                0.000000       82.424242      126.338798                2.0      -7.725476  200.675609           1.0      200.000000       0.675609   662.761594       3.0
+3        869.008489     163.590412     163.590412        744.510227        5.571287                5.571287       82.424242      126.338798                0.0      -7.725476  118.926975           1.0      100.675609      18.251366   762.761594       1.0
+4       1077.262339     327.180825     327.180825        793.829651       14.500745                5.571287       82.424242      126.338798                1.0      -7.725476  268.931942           1.0      200.000000      68.931942   862.761594       2.0
+5       1077.937947      41.212121      41.212121        960.029353       14.500745               14.500745       90.869349      126.338798                0.0      -7.725476  103.407849           1.0      100.675609       2.732240   962.761594       1.0
+6       1078.613556      82.424242      82.424242        995.836606       14.500745               14.500745       90.869349      111.250207                1.0      -7.725476   68.276205           1.0        1.351217      66.924988  1062.761594       2.0
+7       1175.185836     164.848485     164.848485       1160.009482       14.500745               14.500745       93.149528      111.250207                0.0      -6.324582    0.675609           0.0       -0.675609       1.351217  1161.360699       0.0
+8       1504.207197     329.696970     329.696970       1161.360699       42.846498               14.500745       93.149528      111.250207                0.0      -6.324582  300.000000           0.0      200.000000     100.000000  1261.360699       0.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=3, 
+, large_loss_count=3, loss_amount=28750/671, beliefs_remain_consistent=True, beliefs_improve=True, alpha=1360/2013, buf_size=200, start_state=[0].[0m
+[02/20 15:09:16]  --------------------------------------------------------------------------------
+[02/20 15:09:16]  Iteration: 1119 (371 solution, 747 counterexamples)
+[02/20 15:10:31]  Generator returned sat in 12.861378 secs.
+[02/20 15:10:37]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ 1min_qdel + 2R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:15:16]  Verifer returned unsat in 278.811903 secs.
+[02/20 15:15:16]  sf_get_cex returned in 278.968856 secs.
+[02/20 15:15:16]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ 1min_qdel + 2R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:15:16]  --------------------------------------------------------------------------------
+[02/20 15:15:16]  Iteration: 1120 (372 solution, 747 counterexamples)
+[02/20 15:16:36]  Generator returned sat in 8.221221 secs.
+[02/20 15:16:42]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ 2R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:21:54]  Verifer returned unsat in 311.898358 secs.
+[02/20 15:21:54]  sf_get_cex returned in 312.069043 secs.
+[02/20 15:21:54]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ 2R > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:21:54]  --------------------------------------------------------------------------------
+[02/20 15:21:54]  Iteration: 1121 (373 solution, 747 counterexamples)
+[02/20 15:23:18]  Generator returned sat in 12.593973 secs.
+[02/20 15:23:25]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 2max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:27:24]  Verifer returned unsat in 239.244445 secs.
+[02/20 15:27:24]  sf_get_cex returned in 239.412353 secs.
+[02/20 15:27:24]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 2max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:27:24]  --------------------------------------------------------------------------------
+[02/20 15:27:24]  Iteration: 1122 (374 solution, 747 counterexamples)
+[02/20 15:28:43]  Generator returned sat in 7.819827 secs.
+[02/20 15:28:50]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 1max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:36:18]  Verifer returned unsat in 448.448157 secs.
+[02/20 15:36:18]  sf_get_cex returned in 448.625142 secs.
+[02/20 15:36:18]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 1max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:36:18]  --------------------------------------------------------------------------------
+[02/20 15:36:18]  Iteration: 1123 (375 solution, 747 counterexamples)
+[02/20 15:37:36]  Generator returned sat in 7.040648 secs.
+[02/20 15:37:42]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:39:55]  Verifer returned unsat in 133.152153 secs.
+[02/20 15:39:55]  sf_get_cex returned in 133.342427 secs.
+[02/20 15:39:55]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:39:55]  --------------------------------------------------------------------------------
+[02/20 15:39:55]  Iteration: 1124 (376 solution, 747 counterexamples)
+[02/20 15:41:18]  Generator returned sat in 12.752458 secs.
+[02/20 15:41:24]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:48:40]  Verifer returned unsat in 435.669894 secs.
+[02/20 15:48:40]  sf_get_cex returned in 435.854113 secs.
+[02/20 15:48:40]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:48:40]  --------------------------------------------------------------------------------
+[02/20 15:48:40]  Iteration: 1125 (377 solution, 747 counterexamples)
+[02/20 15:49:49]  Generator returned sat in 6.189604 secs.
+[02/20 15:49:55]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:54:09]  Verifer returned unsat in 254.259251 secs.
+[02/20 15:54:10]  sf_get_cex returned in 254.422449 secs.
+[02/20 15:54:10]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 15:54:10]  --------------------------------------------------------------------------------
+[02/20 15:54:10]  Iteration: 1126 (378 solution, 747 counterexamples)
+[02/20 15:55:18]  Generator returned sat in 5.384049 secs.
+[02/20 15:55:24]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:01:09]  Verifer returned unsat in 345.011798 secs.
+[02/20 16:01:09]  sf_get_cex returned in 345.175786 secs.
+[02/20 16:01:09]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:01:09]  --------------------------------------------------------------------------------
+[02/20 16:01:09]  Iteration: 1127 (379 solution, 747 counterexamples)
+[02/20 16:02:26]  Generator returned sat in 6.693020 secs.
+[02/20 16:02:33]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:04:59]  Verifer returned unsat in 145.823768 secs.
+[02/20 16:04:59]  sf_get_cex returned in 145.993257 secs.
+[02/20 16:04:59]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:04:59]  --------------------------------------------------------------------------------
+[02/20 16:04:59]  Iteration: 1128 (380 solution, 747 counterexamples)
+[02/20 16:06:07]  Generator returned sat in 7.226934 secs.
+[02/20 16:06:13]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:12:46]  Verifer returned unsat in 392.998614 secs.
+[02/20 16:12:46]  sf_get_cex returned in 393.177164 secs.
+[02/20 16:12:46]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:12:46]  --------------------------------------------------------------------------------
+[02/20 16:12:46]  Iteration: 1129 (381 solution, 747 counterexamples)
+[02/20 16:14:00]  Generator returned sat in 5.219995 secs.
+[02/20 16:14:06]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:24:06]  Verifer returned unsat in 599.200934 secs.
+[02/20 16:24:06]  sf_get_cex returned in 599.369280 secs.
+[02/20 16:24:06]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:24:06]  --------------------------------------------------------------------------------
+[02/20 16:24:06]  Iteration: 1130 (382 solution, 747 counterexamples)
+[02/20 16:25:23]  Generator returned sat in 6.430830 secs.
+[02/20 16:25:30]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -2min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:31:50]  Verifer returned unsat in 380.562523 secs.
+[02/20 16:31:50]  sf_get_cex returned in 380.737967 secs.
+[02/20 16:31:50]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -2min_c + 2max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:31:50]  --------------------------------------------------------------------------------
+[02/20 16:31:50]  Iteration: 1131 (383 solution, 747 counterexamples)
+[02/20 16:33:18]  Generator returned sat in 9.983475 secs.
+[02/20 16:33:24]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:43:11]  Verifer returned unsat in 586.441658 secs.
+[02/20 16:43:11]  sf_get_cex returned in 586.623806 secs.
+[02/20 16:43:11]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:43:11]  --------------------------------------------------------------------------------
+[02/20 16:43:11]  Iteration: 1132 (384 solution, 747 counterexamples)
+[02/20 16:44:30]  Generator returned sat in 9.322278 secs.
+[02/20 16:44:36]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -2min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:53:33]  Verifer returned unsat in 536.057709 secs.
+[02/20 16:53:33]  sf_get_cex returned in 536.232322 secs.
+[02/20 16:53:33]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -2min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 16:53:33]  --------------------------------------------------------------------------------
+[02/20 16:53:33]  Iteration: 1133 (385 solution, 747 counterexamples)
+[02/20 16:54:42]  Generator returned sat in 5.446078 secs.
+[02/20 16:54:48]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:02:26]  Verifer returned unsat in 458.237129 secs.
+[02/20 17:02:26]  sf_get_cex returned in 458.509967 secs.
+[02/20 17:02:26]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:02:26]  --------------------------------------------------------------------------------
+[02/20 17:02:26]  Iteration: 1134 (386 solution, 747 counterexamples)
+[02/20 17:03:45]  Generator returned sat in 6.894218 secs.
+[02/20 17:03:52]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:09:12]  Verifer returned unsat in 320.562499 secs.
+[02/20 17:09:12]  sf_get_cex returned in 320.736122 secs.
+[02/20 17:09:12]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:09:13]  --------------------------------------------------------------------------------
+[02/20 17:09:13]  Iteration: 1135 (387 solution, 747 counterexamples)
+[02/20 17:10:20]  Generator returned sat in 5.441539 secs.
+[02/20 17:10:26]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:16:43]  Verifer returned unsat in 376.886175 secs.
+[02/20 17:16:43]  sf_get_cex returned in 377.045414 secs.
+[02/20 17:16:43]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ -1min_c + 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:16:43]  --------------------------------------------------------------------------------
+[02/20 17:16:43]  Iteration: 1136 (388 solution, 747 counterexamples)
+[02/20 17:17:54]  Generator returned sat in 5.572394 secs.
+[02/20 17:18:00]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:24:46]  Verifer returned unsat in 405.231313 secs.
+[02/20 17:24:46]  sf_get_cex returned in 405.401561 secs.
+[02/20 17:24:46]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 1max_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:24:46]  --------------------------------------------------------------------------------
+[02/20 17:24:46]  Iteration: 1137 (389 solution, 747 counterexamples)
+[02/20 17:26:07]  Generator returned sat in 12.999266 secs.
+[02/20 17:26:13]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:32:17]  Verifer returned unsat in 363.727750 secs.
+[02/20 17:32:17]  sf_get_cex returned in 363.892455 secs.
+[02/20 17:32:17]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:32:17]  --------------------------------------------------------------------------------
+[02/20 17:32:17]  Iteration: 1138 (390 solution, 747 counterexamples)
+[02/20 17:33:30]  Generator returned sat in 7.977393 secs.
+[02/20 17:33:36]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:39:45]  Verifer returned unsat in 369.009062 secs.
+[02/20 17:39:45]  sf_get_cex returned in 369.181984 secs.
+[02/20 17:39:45]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:39:46]  --------------------------------------------------------------------------------
+[02/20 17:39:46]  Iteration: 1139 (391 solution, 747 counterexamples)
+[02/20 17:41:02]  Generator returned sat in 6.855016 secs.
+[02/20 17:41:09]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:49:18]  Verifer returned unsat in 489.136407 secs.
+[02/20 17:49:18]  sf_get_cex returned in 489.312873 secs.
+[02/20 17:49:18]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:49:18]  --------------------------------------------------------------------------------
+[02/20 17:49:18]  Iteration: 1140 (392 solution, 747 counterexamples)
+[02/20 17:50:27]  Generator returned sat in 5.588265 secs.
+[02/20 17:50:34]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:56:34]  Verifer returned unsat in 359.993302 secs.
+[02/20 17:56:34]  sf_get_cex returned in 360.160371 secs.
+[02/20 17:56:34]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 2max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 17:56:34]  --------------------------------------------------------------------------------
+[02/20 17:56:34]  Iteration: 1141 (393 solution, 747 counterexamples)
+[02/20 17:57:53]  Generator returned sat in 7.487730 secs.
+[02/20 17:58:00]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 18:01:01]  Verifer returned unsat in 180.931610 secs.
+[02/20 18:01:01]  sf_get_cex returned in 181.108925 secs.
+[02/20 18:01:01]  Proved solution: 
+[1m[92mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + 1max_c + 2alpha + 2c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 18:01:01]  --------------------------------------------------------------------------------
+[02/20 18:01:01]  Iteration: 1142 (394 solution, 747 counterexamples)
+[02/20 18:02:53]  Generator returned sat in 41.745944 secs.
+[02/20 18:03:00]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -2alpha + 1c_f > 0):
+    if (+ 2min_c + -1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 18:10:10]  Verifer returned sat in 429.670066 secs.
+[02/20 18:10:10]  sf_get_cex returned in 429.871462 secs.
+[02/20 18:10:10]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__wasted_t     queue_t  utilized_0,t  bottle_queue_t  token_queue_t    upper_S_t  qdelay_t
+0      -1806.670560          79.43           1.00      -1971.000782            0.00                    0.00       78.265556      497.658222                1.0     -55.976667  164.330222          -1.0       86.311333      78.018889 -1892.981893       2.0
+1      -1805.588338         158.86         158.86      -1892.981893            0.00                    0.00       78.265556      497.658222                0.0     -44.452444   87.393556           0.0       -1.082222      88.475778 -1804.506116       1.0
+2      -1804.506116          79.43          79.43      -1804.506116            0.00                    0.00       78.265556      497.658222                0.0       0.000000    0.000000           0.0      -55.547556      55.547556 -1748.958560       0.0
+3      -1645.646116         158.86         158.86      -1657.938560            0.00                    0.00       78.347778      497.658222                0.0       0.000000   12.292444           0.0        3.312444       8.980000 -1648.958560       0.0
+4      -1340.218560         317.72         317.72      -1605.489671            8.74                    0.00       78.347778      497.658222                0.0       0.000000  256.531111           0.0      200.000000      56.531111 -1548.958560       0.0
+5      -1339.136338         158.86         158.86      -1448.958560            8.74                    8.74       88.886889      497.658222                0.0       0.000000  101.082222           1.0      101.082222       0.000000 -1448.958560       1.0
+6      -1122.498560         317.72         317.72      -1448.958560           26.46                    8.74       88.886889      497.658222                0.0       0.000000  300.000000           0.0      200.000000     100.000000 -1348.958560       1.0
+7      -1121.416338         158.86         158.86      -1248.958560           26.46                   26.46      100.000000      497.658222                0.0       0.000000  101.082222           1.0      101.082222       0.000000 -1248.958560       1.0
+8       -904.778560         317.72         317.72      -1248.876338           44.18                   26.46      100.000000      200.082222                1.0       0.000000  299.917778           1.0      200.000000      99.917778 -1148.958560       2.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=3, 
+, large_loss_count=3, loss_amount=2209/50, beliefs_remain_consistent=True, beliefs_improve=True, alpha=487/450, buf_size=200, start_state=[0].[0m
+[02/20 18:10:10]  --------------------------------------------------------------------------------
+[02/20 18:10:10]  Iteration: 1143 (394 solution, 748 counterexamples)
+[02/20 18:11:53]  Generator returned sat in 31.004872 secs.
+[02/20 18:12:00]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ -2min_c + -1alpha + 1c_f > 0):
+    if (+ 2min_c + -1max_c + 2alpha + 1c_f > 0):
+        + 1/2min_c
+    else:
+        + 1/2c_f
+else:
+    + 2c_f[0m
+[02/20 18:23:23]  Verifer returned sat in 683.339406 secs.
+[02/20 18:23:23]  sf_get_cex returned in 683.534460 secs.
+[02/20 18:23:23]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  adv__wasted_t  queue_t  utilized_0,t  bottle_queue_t  token_queue_t   upper_S_t  qdelay_t
+0       -861.235121      311.62500        1.00000      -1056.860121           0.000                   0.000         96.5000         507.125                2.0     -469.25762  195.625          -1.0         102.375         93.250 -963.610121       3.0
+1       -860.110121      155.81250      155.81250       -863.610121           0.000                   0.000         96.6250         507.125                0.0     -469.25762    3.500           0.0           3.500          0.000 -863.610121       1.0
+2       -551.985121      311.62500      311.62500       -861.235121          11.625                   0.000         96.6250         507.125                1.0     -469.25762  297.625           1.0         200.000         97.625 -763.610121       2.0
+3       -550.860121      155.81250      155.81250       -666.110121          11.625                  11.625         97.6875         197.500                0.0     -469.25762  103.625           1.0         101.125          2.500 -663.610121       1.0
+4       -342.860121      311.62500      311.62500       -663.610121          20.750                  11.625         97.6875         100.000                1.0     -469.25762  300.000           1.0         200.000        100.000 -563.610121       2.0
+5       -341.735121       48.84375       48.84375       -468.485121          20.750                  20.750         98.1875         100.000                0.0     -469.25762  106.000           1.0         101.125          4.875 -463.610121       1.0
+6       -340.610121       97.68750       97.68750       -366.235121          20.750                  20.750         99.1250         100.000                1.0     -469.25762    4.875           1.0           2.250          2.625 -363.610121       2.0
+7       -150.110121      195.37500      195.37500       -345.235121          20.750                  20.750         99.1250         100.000                0.0     -469.25762  174.375           0.0          92.750         81.625 -263.610121       0.0
+8         66.264879      390.75000      390.75000       -170.735121          29.875                  20.750         99.1250         100.000                0.0     -469.25762  207.125           0.0         200.000          7.125 -163.610121       0.0
+fefficient=True, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=False, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=3, 
+, large_loss_count=3, loss_amount=239/8, beliefs_remain_consistent=True, beliefs_improve=True, alpha=9/8, buf_size=200, start_state=[0].[0m
+[02/20 18:23:23]  --------------------------------------------------------------------------------
+[02/20 18:23:23]  Iteration: 1144 (394 solution, 749 counterexamples)
+[02/20 18:34:37]  Generator returned sat in 601.968471 secs.
+[02/20 18:34:44]  Candidate solution: 
+[1m[94mc_f = max alpha,
+if (+ 2min_c + 1alpha + -1c_f > 0):
+    if (+ -1min_c + -2max_c + -2alpha + 2c_f > 0):
+        + 1/2c_f
+    else:
+        + 2c_f
+else:
+    + 1/2min_c[0m
