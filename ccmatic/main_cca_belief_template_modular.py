@@ -78,8 +78,8 @@ NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
 SELF_AS_RVALUE = True
 
-synthesis_type = SynthesisType.CWND_ONLY
-# synthesis_type = SynthesisType.RATE_ONLY
+# synthesis_type = SynthesisType.CWND_ONLY
+synthesis_type = SynthesisType.RATE_ONLY
 template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 # template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
@@ -380,12 +380,147 @@ if (n_exprs >= 1
                     main_tb.get_expr_coeff(ei, et.name) == 0)
 ai_until_shrink = z3.And(*known_solution_list)
 
-solutions = [mimd, minc2, ai_probe, ai_until_shrink]
+"""
+r_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 2min_c
+else:
+    + 1min_c + -1alpha
+"""
+if (n_exprs >= 1
+    and template_type == TemplateType.IF_ELSE_CHAIN
+        and main_lhs_term == 'r_f'):
+    known_solution_list = []
+    # Cond 0
+    known_solution_list.extend([
+        main_tb.get_cond_coeff(0, 'min_qdel') == -1,
+        main_tb.get_cond_coeff(0, 'R') == 1,
+    ])
+    for ct in main_tb.cond_terms:
+        if (ct.name not in ['min_qdel', 'R']):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    # Expr 0
+    known_solution_list.extend([
+        main_tb.get_expr_coeff(0, 'min_c') == 2,
+    ])
+    for et in main_tb.expr_terms:
+        if (et.name not in ['min_c']):
+            known_solution_list.append(
+                main_tb.get_expr_coeff(0, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
+        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
+    )
+    for ei in range(1, n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name not in ['min_c', 'alpha']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+ideal_fast = z3.And(*known_solution_list)
+
+
+"""
+r_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1min_c + 1alpha
+else:
+    + 1min_c + -1alpha
+"""
+if (n_exprs >= 1 and
+    template_type == TemplateType.IF_ELSE_CHAIN and
+        main_lhs_term == 'r_f'):
+    known_solution_list = []
+    # Cond 0
+    known_solution_list.extend([
+        main_tb.get_cond_coeff(0, 'min_qdel') == -1,
+        main_tb.get_cond_coeff(0, 'R') == 1,
+    ])
+    for ct in main_tb.cond_terms:
+        if (ct.name not in ['min_qdel', 'R']):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    # Expr 0
+    known_solution_list.extend([
+        main_tb.get_expr_coeff(0, 'min_c') == 1,
+        main_tb.get_expr_coeff(0, 'alpha') == 1,
+    ])
+    for et in main_tb.expr_terms:
+        if (et.name not in ['min_c', 'alpha']):
+            known_solution_list.append(
+                main_tb.get_expr_coeff(0, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
+        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
+    )
+    for ei in range(1, n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name not in ['alpha', 'min_c']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+ideal_slow = z3.And(*known_solution_list)
+
+
+"""
+r_f = max alpha,
+if (+ 1max_c + -2alpha + -1r_f > 0):
+    + 1alpha + 1r_f
+else:
+    + 1min_c + -1alpha
+"""
+if (n_exprs >= 1 and
+    template_type == TemplateType.IF_ELSE_CHAIN and
+        main_lhs_term == 'r_f'):
+    known_solution_list = []
+    # Cond 0
+    known_solution_list.extend([
+        main_tb.get_cond_coeff(0, 'max_c') == 1,
+        main_tb.get_cond_coeff(0, 'alpha') == -2,
+        main_tb.get_cond_coeff(0, 'r_f') == -1,
+    ])
+    for ct in main_tb.cond_terms:
+        if (ct.name not in ['max_c', 'alpha', 'r_f']):
+            known_solution_list.append(
+                main_tb.get_cond_coeff(0, ct.name) == 0)
+    # Expr 0
+    known_solution_list.extend([
+        main_tb.get_expr_coeff(0, 'alpha') == 1,
+        main_tb.get_expr_coeff(0, 'r_f') == 1,
+    ])
+    for et in main_tb.expr_terms:
+        if (et.name not in ['alpha', 'r_f']):
+            known_solution_list.append(
+                main_tb.get_expr_coeff(0, et.name) == 0)
+    known_solution_list.extend(
+        [main_tb.get_cond_coeff(ci, ct.name) == 0
+         for ci in range(1, n_conds)
+         for ct in main_tb.cond_terms] +
+        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
+        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
+    )
+    for ei in range(1, n_exprs):
+        for et in main_tb.expr_terms:
+            if (et.name not in ['alpha', 'min_c']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(ei, et.name) == 0)
+rate_ai_probe = z3.And(*known_solution_list)
+
+
+solutions = [mimd, minc2, ai_probe, ai_until_shrink,
+             ideal_fast, ideal_slow, rate_ai_probe]
 # known_solution = minc2
 # known_solution = ai_probe
 # known_solution = ai_until_shrink
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+# known_solution = ideal_fast
+known_solution = rate_ai_probe
+search_constraints = z3.And(search_constraints, known_solution)
+assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
