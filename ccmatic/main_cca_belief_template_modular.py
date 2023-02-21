@@ -71,18 +71,19 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
-USE_BUFFER = False
+USE_BUFFER = True
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
 SELF_AS_RVALUE = True
+CONVERGENCE_BASED_ON_BUFFER = True
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
-template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -93,7 +94,7 @@ elif (cond):
 """
 
 
-n_exprs = 2
+n_exprs = 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
@@ -130,6 +131,8 @@ cond_terms = [
     TemplateTerm('max_c', TemplateTermType.VAR,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_vars_bytes),
     TemplateTerm('min_qdel', TemplateTermType.VAR, TemplateTermUnit.TIME,
+                 search_range_cond_vars_time),
+    TemplateTerm('min_buffer', TemplateTermType.VAR, TemplateTermUnit.TIME,
                  search_range_cond_vars_time),
     TemplateTerm('R', TemplateTermType.CONST,
                  TemplateTermUnit.TIME, search_range_cond_consts),
@@ -519,8 +522,8 @@ solutions = [mimd, minc2, ai_probe, ai_until_shrink,
 # known_solution = ai_until_shrink
 # known_solution = ideal_fast
 known_solution = rate_ai_probe
-search_constraints = z3.And(search_constraints, known_solution)
-assert isinstance(search_constraints, z3.BoolRef)
+# search_constraints = z3.And(search_constraints, known_solution)
+# assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -542,6 +545,7 @@ cc.template_queue_bound = False
 cc.template_fi_reset = False
 cc.template_beliefs = True
 cc.template_beliefs_use_buffer = USE_BUFFER
+cc.template_beliefs_use_max_buffer = False
 cc.N = 1
 cc.T = args.T
 cc.history = cc.R
@@ -603,6 +607,20 @@ if(NO_LARGE_LOSS):
                      z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
                            d.ramp_down_queue, d.ramp_down_bq))
     link.desired = desired
+
+if (CONVERGENCE_BASED_ON_BUFFER):
+    """
+    If buffer is large and CCA knows it,
+    we must have fast convergence.
+    """
+    assert c.N == 1
+    d = link.d
+    desired = link.desired
+    desired = z3.And(desired,
+                     z3.Implies(v.min_buffer[0][0] > 1.5 * (c.R + c.D),
+                                z3.Implies(
+                                    v.r_f[0][0] <= 10, v.r_f[0][c.T-1] >= 20)))
+
 
 link.setup_cegis_loop(
     search_constraints,
