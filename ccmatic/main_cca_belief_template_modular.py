@@ -17,10 +17,12 @@ from ccmatic.common import try_except
 from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
                                TemplateTermType, TemplateTermUnit,
                                TemplateType)
+from ccmatic.solutions.solutions_belief_template_modular import get_solutions
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
 from cegis.util import Metric, z3_max
 from pyz3_utils.common import GlobalConfig
+from pyz3_utils.my_solver import MySolver
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
@@ -42,11 +44,12 @@ def get_args():
     parser.add_argument('--fix-maxc', action='store_true')
     parser.add_argument('--optimize', action='store_true')
     parser.add_argument('--proofs', action='store_true')
-    parser.add_argument('--solution', action='store', type=int, default=None)
+    parser.add_argument('--solution', action='store', type=str, default=None)
     parser.add_argument('--run-log-dir', action='store', default=None)
     parser.add_argument('--use-belief-invariant-n', action='store_true')
     parser.add_argument('--ideal-only', action='store_true')
     parser.add_argument('--no-large-loss', action='store_true')
+    parser.add_argument('--manual-query', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -249,279 +252,7 @@ def get_solution_str(
 # (for debugging)
 known_solution = None
 known_solution_list = []
-
-# MIMD style solution
-"""
-min_qdel > 0:
-    1/2min_c
-else:
-    2min_c
-"""
-if (n_exprs >= 2 and template_type == TemplateType.IF_ELSE_CHAIN):
-    known_solution_list = [
-        main_tb.get_cond_coeff(0, 'min_qdel') == 1,
-        main_tb.get_expr_coeff(0, 'min_c') == 1/2,
-    ]
-    for ct in main_tb.cond_terms:
-        if (ct.name != 'min_qdel'):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    for ei in range(n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name != 'min_c'):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(1, n_exprs)]
-    )
-mimd = z3.And(*known_solution_list)
-
-# MIMD style solution
-"""
-2min_c
-"""
-if (n_exprs >= 1 and template_type == TemplateType.IF_ELSE_CHAIN):
-    known_solution_list = []
-    for ei in range(n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name != 'min_c'):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(n_exprs)]
-    )
-minc2 = z3.And(*known_solution_list)
-
-"""
-c_f = max alpha,
-if (+ 2max_c + -1c_f > 0):
-    + 1alpha + 1c_f
-else:
-    + 2min_c
-"""
-if (n_exprs >= 1
-    and template_type == TemplateType.IF_ELSE_CHAIN
-        and main_lhs_term == 'c_f'):
-    known_solution_list = []
-    # Cond 0
-    known_solution_list.extend([
-        main_tb.get_cond_coeff(0, 'max_c') == 2,
-        main_tb.get_cond_coeff(0, 'c_f') == -1,
-    ])
-    for ct in main_tb.cond_terms:
-        if (ct.name not in ['max_c', 'c_f']):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    # Expr 0
-    known_solution_list.extend([
-        main_tb.get_expr_coeff(0, 'alpha') == 1,
-        main_tb.get_expr_coeff(0, 'c_f') == 1,
-    ])
-    for et in main_tb.expr_terms:
-        if (et.name not in ['alpha', 'c_f']):
-            known_solution_list.append(
-                main_tb.get_expr_coeff(0, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 2 for ei in range(1, n_exprs)]
-    )
-    for ei in range(1, n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name != 'min_c'):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-ai_probe = z3.And(*known_solution_list)
-
-"""
-20: c_f = max alpha,
-if (+ 2min_c + -1max_c + -1alpha > 0):
-    + 2min_c
-else:
-    + 1alpha + 1c_f
-"""
-if (n_exprs >= 1
-    and template_type == TemplateType.IF_ELSE_CHAIN
-        and main_lhs_term == 'c_f'):
-    known_solution_list = []
-    # Cond 0
-    known_solution_list.extend([
-        main_tb.get_cond_coeff(0, 'min_c') == 2,
-        main_tb.get_cond_coeff(0, 'max_c') == -1,
-        main_tb.get_cond_coeff(0, 'alpha') == -1,
-    ])
-    for ct in main_tb.cond_terms:
-        if (ct.name not in ['max_c', 'min_c', 'alpha']):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    # Expr 0
-    known_solution_list.extend([
-        main_tb.get_expr_coeff(0, 'min_c') == 2,
-    ])
-    for et in main_tb.expr_terms:
-        if (et.name not in ['min_c']):
-            known_solution_list.append(
-                main_tb.get_expr_coeff(0, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'alpha') == 1 for ei in range(1, n_exprs)] +
-        [main_tb.get_expr_coeff(ei, 'c_f') == 1 for ei in range(1, n_exprs)]
-    )
-    for ei in range(1, n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name not in ['alpha', 'c_f']):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-ai_until_shrink = z3.And(*known_solution_list)
-
-"""
-r_f = max alpha,
-if (+ -1min_qdel + 1R > 0):
-    + 2min_c
-else:
-    + 1min_c + -1alpha
-"""
-if (n_exprs >= 1
-    and template_type == TemplateType.IF_ELSE_CHAIN
-        and main_lhs_term == 'r_f'):
-    known_solution_list = []
-    # Cond 0
-    known_solution_list.extend([
-        main_tb.get_cond_coeff(0, 'min_qdel') == -1,
-        main_tb.get_cond_coeff(0, 'R') == 1,
-    ])
-    for ct in main_tb.cond_terms:
-        if (ct.name not in ['min_qdel', 'R']):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    # Expr 0
-    known_solution_list.extend([
-        main_tb.get_expr_coeff(0, 'min_c') == 2,
-    ])
-    for et in main_tb.expr_terms:
-        if (et.name not in ['min_c']):
-            known_solution_list.append(
-                main_tb.get_expr_coeff(0, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
-        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
-    )
-    for ei in range(1, n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name not in ['min_c', 'alpha']):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-ideal_fast = z3.And(*known_solution_list)
-
-
-"""
-r_f = max alpha,
-if (+ -1min_qdel + 1R > 0):
-    + 1min_c + 1alpha
-else:
-    + 1min_c + -1alpha
-"""
-if (n_exprs >= 1 and
-    template_type == TemplateType.IF_ELSE_CHAIN and
-        main_lhs_term == 'r_f'):
-    known_solution_list = []
-    # Cond 0
-    known_solution_list.extend([
-        main_tb.get_cond_coeff(0, 'min_qdel') == -1,
-        main_tb.get_cond_coeff(0, 'R') == 1,
-    ])
-    for ct in main_tb.cond_terms:
-        if (ct.name not in ['min_qdel', 'R']):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    # Expr 0
-    known_solution_list.extend([
-        main_tb.get_expr_coeff(0, 'min_c') == 1,
-        main_tb.get_expr_coeff(0, 'alpha') == 1,
-    ])
-    for et in main_tb.expr_terms:
-        if (et.name not in ['min_c', 'alpha']):
-            known_solution_list.append(
-                main_tb.get_expr_coeff(0, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
-        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
-    )
-    for ei in range(1, n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name not in ['alpha', 'min_c']):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-ideal_slow = z3.And(*known_solution_list)
-
-
-"""
-r_f = max alpha,
-if (+ 1max_c + -2alpha + -1r_f > 0):
-    + 1alpha + 1r_f
-else:
-    + 1min_c + -1alpha
-"""
-if (n_exprs >= 1 and
-    template_type == TemplateType.IF_ELSE_CHAIN and
-        main_lhs_term == 'r_f'):
-    known_solution_list = []
-    # Cond 0
-    known_solution_list.extend([
-        main_tb.get_cond_coeff(0, 'max_c') == 1,
-        main_tb.get_cond_coeff(0, 'alpha') == -2,
-        main_tb.get_cond_coeff(0, 'r_f') == -1,
-    ])
-    for ct in main_tb.cond_terms:
-        if (ct.name not in ['max_c', 'alpha', 'r_f']):
-            known_solution_list.append(
-                main_tb.get_cond_coeff(0, ct.name) == 0)
-    # Expr 0
-    known_solution_list.extend([
-        main_tb.get_expr_coeff(0, 'alpha') == 1,
-        main_tb.get_expr_coeff(0, 'r_f') == 1,
-    ])
-    for et in main_tb.expr_terms:
-        if (et.name not in ['alpha', 'r_f']):
-            known_solution_list.append(
-                main_tb.get_expr_coeff(0, et.name) == 0)
-    known_solution_list.extend(
-        [main_tb.get_cond_coeff(ci, ct.name) == 0
-         for ci in range(1, n_conds)
-         for ct in main_tb.cond_terms] +
-        [main_tb.get_expr_coeff(ei, 'min_c') == 1 for ei in range(1, n_exprs)] +
-        [main_tb.get_expr_coeff(ei, 'alpha') == -1 for ei in range(1, n_exprs)]
-    )
-    for ei in range(1, n_exprs):
-        for et in main_tb.expr_terms:
-            if (et.name not in ['alpha', 'min_c']):
-                known_solution_list.append(
-                    main_tb.get_expr_coeff(ei, et.name) == 0)
-rate_ai_probe = z3.And(*known_solution_list)
-
-
-solutions = [mimd, minc2, ai_probe, ai_until_shrink,
-             ideal_fast, ideal_slow, rate_ai_probe]
-# known_solution = minc2
-# known_solution = ai_probe
-# known_solution = ai_until_shrink
-# known_solution = ideal_fast
-known_solution = rate_ai_probe
+solution_dict = get_solutions(main_tb, main_lhs_term)
 # search_constraints = z3.And(search_constraints, known_solution)
 # assert isinstance(search_constraints, z3.BoolRef)
 
@@ -620,6 +351,7 @@ if (CONVERGENCE_BASED_ON_BUFFER):
                      z3.Implies(v.min_buffer[0][0] > 1.5 * (c.R + c.D),
                                 z3.Implies(
                                     v.r_f[0][0] <= 10, v.r_f[0][c.T-1] >= 20)))
+    link.desired = desired
 
 
 link.setup_cegis_loop(
@@ -651,7 +383,7 @@ if(ADD_IDEAL_LINK):
 
 if(args.optimize):
     assert args.solution is not None
-    solution = solutions[args.solution]
+    solution = solution_dict[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
     # Adversarial link
@@ -695,11 +427,31 @@ if(args.optimize):
 
 elif(args.proofs):
     assert args.solution is not None
-    solution = solutions[args.solution]
+    solution = solution_dict[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
     bp = BeliefProofs(link, solution, args.solution)
     bp.proofs()
+
+elif(args.manual_query):
+    assert args.solution is not None
+    solution = solution_dict[args.solution]
+    assert isinstance(solution, z3.BoolRef)
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.environment)
+    verifier.add(link.definitions)
+    verifier.add(solution)
+    verifier.add(link.desired)
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        import ipdb; ipdb.set_trace()
+
 else:
 
     run_log_path = None
