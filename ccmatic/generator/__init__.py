@@ -477,11 +477,13 @@ class TemplateBuilder:
 
     def get_expr_coeff(self, ei: int, et_name: str):
         et = self.expr_terms_by_name[et_name]
-        return self.expr_coeffs[ei][et]
+        if(et is not None):
+            return self.expr_coeffs[ei][et]
 
     def get_cond_coeff(self, ci: int, ct_name: str):
         ct = self.cond_terms_by_name[ct_name]
-        return self.cond_coeffs[ci][ct]
+        if(ct is not None):
+            return self.cond_coeffs[ci][ct]
 
 
 class SynthesisType(enum.Enum):

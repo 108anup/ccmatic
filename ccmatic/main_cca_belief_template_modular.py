@@ -50,6 +50,7 @@ def get_args():
     parser.add_argument('--ideal-only', action='store_true')
     parser.add_argument('--no-large-loss', action='store_true')
     parser.add_argument('--manual-query', action='store_true')
+    parser.add_argument('--cegis-with-solution', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -251,10 +252,13 @@ def get_solution_str(
 # KNOWN SOLUTIONS
 # (for debugging)
 known_solution = None
-known_solution_list = []
 solution_dict = get_solutions(main_tb, main_lhs_term)
-# search_constraints = z3.And(search_constraints, known_solution)
-# assert isinstance(search_constraints, z3.BoolRef)
+if(args.cegis_with_solution):
+    assert args.solution is not None
+    assert args.solution in solution_dict
+    known_solution = solution_dict[args.solution]
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # ADVERSARIAL LINK
@@ -346,11 +350,12 @@ if (CONVERGENCE_BASED_ON_BUFFER):
     """
     assert c.N == 1
     d = link.d
+    first = link.cc.history
     desired = link.desired
     desired = z3.And(desired,
-                     z3.Implies(v.min_buffer[0][0] > 1.5 * (c.R + c.D),
+                     z3.Implies(v.min_buffer[0][0] > 2 * (c.R + c.D),
                                 z3.Implies(
-                                    v.r_f[0][0] <= 10, v.r_f[0][c.T-1] >= 20)))
+                                    v.r_f[0][first] <= 10, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
     link.desired = desired
 
 
@@ -440,10 +445,15 @@ elif(args.manual_query):
 
     verifier = MySolver()
     verifier.warn_undeclared = False
+    verifier.add(link.search_constraints)
+
+    sat = verifier.check()
+    assert str(sat) == "sat"
+
     verifier.add(link.environment)
     verifier.add(link.definitions)
     verifier.add(solution)
-    verifier.add(link.desired)
+    verifier.add(z3.Not(link.desired))
 
     sat = verifier.check()
     print(sat)
