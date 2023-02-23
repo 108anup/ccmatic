@@ -510,5 +510,5 @@ def read_assumption_records(fpath):
                 logger.warn(
                     f"Column {column} has null values."
                     "These will be replaced by False")
-        ar = ar.replace(np.nan, False)
+        ar = ar.replace(np.nan, 0)
     return ar
