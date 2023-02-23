@@ -26,6 +26,8 @@ tmux select-pane -t 1
 tmux split-window -v
 tmux split-window -v
 
+tmux select-layout tiled
+
 tmux select-pane -t 1
 run copa paced 0.1
 tmux select-pane -t 2
@@ -40,7 +42,5 @@ tmux select-pane -t 5
 run bbr paced 0.1
 tmux select-pane -t 6
 run bbr paced 0.45
-
-tmux select-layout tiled
 
 set +xe

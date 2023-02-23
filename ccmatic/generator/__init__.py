@@ -476,17 +476,114 @@ class TemplateBuilder:
         return str_on_template_execution(self.template_type, conds, exprs)
 
     def get_expr_coeff(self, ei: int, et_name: str):
-        et = self.expr_terms_by_name[et_name]
-        if(et is not None):
+        try:
+            et = self.expr_terms_by_name[et_name]
             return self.expr_coeffs[ei][et]
+        except KeyError:
+            return None
 
     def get_cond_coeff(self, ci: int, ct_name: str):
-        ct = self.cond_terms_by_name[ct_name]
-        if(ct is not None):
+        try:
+            ct = self.cond_terms_by_name[ct_name]
             return self.cond_coeffs[ci][ct]
+        except KeyError:
+            return None
 
 
 class SynthesisType(enum.Enum):
     RATE_ONLY = 1
     CWND_ONLY = 2
     BOTH_CWND_AND_RATE = 3
+
+
+def parse_term(term: str):
+    """
+    Example term:
+    '-2min_c'
+    """
+    idx = term.find(next(filter(str.isalpha, term)))
+    coeff = term[:idx]
+    ct_str = term[idx:]
+
+    return float(coeff), ct_str
+
+
+def solution_parser(solution_string: str, tb: TemplateBuilder):
+    """
+    Sample solution:
+    r_f = max alpha,
+    if (+ -2min_c + 2alpha + 1max_c > 0):
+        if (+ 2min_c + -1r_f > 0):
+            + 1r_f + 1alpha
+        else:
+            + 2min_c
+    else:
+        + 1min_c + -1alpha
+    """
+    lines = solution_string.split('\n')
+    conds: List[str] = []
+    exprs: List[str] = []
+    for line in lines:
+        trimmed = line.strip()
+        if (trimmed.startswith("if")):
+            conds.append(trimmed.replace("if (", "").replace("):", ""))
+        elif (trimmed.startswith("+")):
+            exprs.append(trimmed)
+        else:
+            pass
+
+    assert tb.n_conds >= len(conds)
+    assert tb.n_exprs >= len(exprs)
+    solution_list = []
+    for ci, cond in enumerate(conds):
+        terms = cond.replace('+ ', '').replace('> 0', '').strip().split(' ')
+        ct_set = set()
+        for term in terms:
+            coeff, ct_str = parse_term(term)
+            ct_set.add(ct_str)
+            coeff_var = tb.get_cond_coeff(ci, ct_str)
+            assert coeff_var is not None
+            solution_list.append(coeff_var == coeff)
+        for ct in tb.cond_terms:
+            if (ct.name not in ct_set):
+                coeff_var = tb.get_cond_coeff(ci, ct.name)
+                assert coeff_var is not None
+                solution_list.append(coeff_var == 0)
+
+    for ci in range(len(conds), tb.n_conds):
+        for ct in tb.cond_terms:
+            coeff_var = tb.get_cond_coeff(ci, ct.name)
+            assert coeff_var is not None
+            solution_list.append(coeff_var == 0)
+
+    for ei, expr in enumerate(exprs):
+        terms = expr.replace('+ ', '').strip().split(' ')
+        et_set = set()
+        for term in terms:
+            coeff, et_str = parse_term(term)
+            et_set.add(et_str)
+            coeff_var = tb.get_expr_coeff(ei, et_str)
+            assert coeff_var is not None
+            solution_list.append(coeff_var == coeff)
+        for et in tb.expr_terms:
+            if (et.name not in et_set):
+                coeff_var = tb.get_expr_coeff(ei, et.name)
+                assert coeff_var is not None
+                solution_list.append(coeff_var == 0)
+
+    for ei in range(len(exprs), tb.n_exprs):
+        terms = exprs[-1].replace('+ ', '').strip().split(' ')
+        et_set = set()
+        for term in terms:
+            coeff, et_str = parse_term(term)
+            et_set.add(et_str)
+            coeff_var = tb.get_expr_coeff(ei, et_str)
+            assert coeff_var is not None
+            solution_list.append(coeff_var == coeff)
+        for et in tb.expr_terms:
+            if (et.name not in et_set):
+                coeff_var = tb.get_expr_coeff(ei, et.name)
+                assert coeff_var is not None
+                solution_list.append(coeff_var == 0)
+
+    return z3.And(solution_list)

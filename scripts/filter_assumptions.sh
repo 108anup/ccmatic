@@ -1,20 +1,21 @@
 #!/bin/bash
 
 set -xe
-SUFFIX=-non_mono
-DIR=./logs/assumptions_that_fix_cca_and_include_loss$SUFFIX
-OUTDIR=./outputs/assumptions/assumptions_that_fix_cca_and_include_loss$SUFFIX
+MONO="${MONO:-}"
+DIR=./logs/assumptions_that_fix_cca$MONO
+OUTDIR=./outputs/assumptions/assumptions_that_fix_cca$MONO
+mkdir -p $OUTDIR
 
 run() {
     dut=$1
     ref=$2
     util=$3
     logpath=$DIR/$dut-ref_$ref-util$util.csv
-    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref --filter-assumptions -o $OUTDIR/$dut-ref_$ref-util$util"
+    cmd="python -m ccmatic.main_cca_assumption_incal --solution-log-path $logpath --dut $dut --util $util --ref $ref $MONO --filter-assumptions -o $OUTDIR/$dut-ref_$ref-util$util.txt"
     tmux send-keys "$cmd" Enter
 }
 
-tmux rename-window analyse-repeat$SUFFIX
+tmux rename-window analyse$MONO
 
 tmux split-window -h
 tmux split-window -v

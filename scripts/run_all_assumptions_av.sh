@@ -22,6 +22,8 @@ tmux split-window -v
 tmux select-pane -t 1
 tmux split-window -v
 
+tmux select-layout tiled
+
 tmux select-pane -t 1
 run copa 0.1
 tmux select-pane -t 2
@@ -31,7 +33,5 @@ tmux select-pane -t 3
 run bbr 0.1
 tmux select-pane -t 4
 run bbr 0.45
-
-tmux select-layout tiled
 
 set +xe

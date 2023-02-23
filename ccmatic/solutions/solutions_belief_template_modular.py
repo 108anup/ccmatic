@@ -1,6 +1,6 @@
 import z3
 
-from ccmatic.generator import TemplateBuilder, TemplateType
+from ccmatic.generator import TemplateBuilder, TemplateType, solution_parser
 
 
 def get_solutions(main_tb: TemplateBuilder,
@@ -243,6 +243,7 @@ def get_solutions(main_tb: TemplateBuilder,
     """
     if (n_exprs >= 1 and
         template_type == TemplateType.IF_ELSE_CHAIN and
+            main_tb.get_cond_coeff(0, 'r_f') is not None and
             main_lhs_term == 'r_f'):
         known_solution_list = []
         # Cond 0
@@ -471,7 +472,27 @@ def get_solutions(main_tb: TemplateBuilder,
                 if (et.name not in ['min_c']):
                     known_solution_list.append(
                         main_tb.get_expr_coeff(ei, et.name) == 0)
-        convergence_based_on_buffer_second_try = z3.And(known_solution_list)
+    convergence_based_on_buffer_second_try = z3.And(known_solution_list)
+
+    """
+    TODO: Understand why these work.
+    Ideal link, finite buffer. No large loss.
+
+    r_f = max alpha,
+    if (+ -2min_c + -2alpha + 2r_f > 0):
+        if (+ -2min_c + -1max_c > 0):
+            + 1alpha + 1r_f
+        else:
+            + 1min_c + -1alpha
+    else:
+        + 1alpha + 1r_f
+
+    139: r_f = max alpha,
+    if (+ 1min_c + -1max_c + -2alpha + 1r_f > 0):
+        + 1min_c + -1alpha
+    else:
+        + 1alpha + 1r_f
+    """
 
     solution_dict = {
         'mimd': mimd,
@@ -485,5 +506,58 @@ def get_solutions(main_tb: TemplateBuilder,
         'convergence_based_on_buffer_manual': convergence_based_on_buffer_manual,
         'convergence_based_on_buffer_second_try': convergence_based_on_buffer_second_try,
     }
+
+    if (n_exprs >= 3 and
+            template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1 and
+            main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'r_f') is not None):
+        rate_ai_probe_2minc = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 2min_c + -1max_c > 0):
+                if (+ 1min_qdel + -3R > 0):
+                    + 1min_c + -1alpha
+                else:
+                    + 1min_c
+            else:
+                if (+ 2min_c + -1r_f > 0):
+                    + 1r_f + 1alpha
+                else:
+                    + 2min_c
+            """, main_tb)
+        solution_dict['rate_ai_probe_2minc'] = rate_ai_probe_2minc
+
+    if (n_exprs >= 3 and
+            template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1 and
+            main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'r_f') is not None):
+        rate_probe_2minc = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 2min_c + -1max_c > 0):
+                if (+ 1min_qdel + -3R > 0):
+                    + 1min_c + -1alpha
+                else:
+                    + 1min_c
+            else:
+                if (+ 2min_c + -1r_f > 0):
+                    + 2min_c
+                else:
+                    + 2min_c
+            """, main_tb)
+        solution_dict['rate_probe_2minc'] = rate_probe_2minc
+
+    if (n_exprs >= 2 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_until_shrink = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -2min_c + 1max_c > 0):
+                + 2min_c
+            else:
+                + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['probe_until_shrink'] = probe_until_shrink
 
     return solution_dict
