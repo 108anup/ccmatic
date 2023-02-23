@@ -347,7 +347,7 @@ def get_solutions(main_tb: TemplateBuilder,
     """
     r_f = max alpha,
     if (+ -2min_c + 2alpha + 1max_c > 0):
-        if (+ 1min_buffer + -2R > 0):
+        if (+ 1min_buffer + -3R > 0):
             + 2min_c
         else:
             + 1min_c + 1alpha
@@ -380,7 +380,7 @@ def get_solutions(main_tb: TemplateBuilder,
         # Cond 1
         known_solution_list.extend([
             main_tb.get_cond_coeff(1, 'min_buffer') == 1,
-            main_tb.get_cond_coeff(1, 'R') == -2,
+            main_tb.get_cond_coeff(1, 'R') == -3,
         ])
         for ct in main_tb.cond_terms:
             if (ct.name not in ['min_buffer', 'R']):
@@ -409,6 +409,70 @@ def get_solutions(main_tb: TemplateBuilder,
                         main_tb.get_expr_coeff(ei, et.name) == 0)
     convergence_based_on_buffer_manual = z3.And(known_solution_list)
 
+    """
+    r_f = max alpha,
+    if (+ 1max_c + -2alpha + -1r_f > 0):
+        if (+ -1min_qdel + 1R > 0):
+            + 1min_c + 1alpha
+        else:
+            + 1/2min_c
+    else:
+        + 1/2min_c
+    """
+    if (n_exprs >= 3 and
+        template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED and
+            main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'min_buffer') is not None):
+        known_solution_list = []
+        # Cond 0
+        known_solution_list.extend([
+            main_tb.get_cond_coeff(0, 'max_c') == 1,
+            main_tb.get_cond_coeff(0, 'alpha') == -2,
+            main_tb.get_cond_coeff(0, 'r_f') == -1,
+        ])
+        for ct in main_tb.cond_terms:
+            if (ct.name not in ['max_c', 'alpha', 'r_f']):
+                known_solution_list.append(
+                    main_tb.get_cond_coeff(0, ct.name) == 0)
+        # Expr 0
+        known_solution_list.extend([
+            main_tb.get_expr_coeff(0, 'min_c') == 1,
+            main_tb.get_expr_coeff(0, 'alpha') == 1,
+        ])
+        for et in main_tb.expr_terms:
+            if (et.name not in ['min_c', 'alpha']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(0, et.name) == 0)
+        # Cond 1
+        known_solution_list.extend([
+            main_tb.get_cond_coeff(1, 'min_qdel') == -1,
+            main_tb.get_cond_coeff(1, 'R') == 1,
+        ])
+        for ct in main_tb.cond_terms:
+            if (ct.name not in ['min_qdel', 'R']):
+                known_solution_list.append(
+                    main_tb.get_cond_coeff(1, ct.name) == 0)
+        # Expr 1
+        known_solution_list.extend([
+            main_tb.get_expr_coeff(1, 'min_c') == 1/2,
+        ])
+        for et in main_tb.expr_terms:
+            if (et.name not in ['min_c']):
+                known_solution_list.append(
+                    main_tb.get_expr_coeff(1, et.name) == 0)
+        known_solution_list.extend(
+            [main_tb.get_cond_coeff(ci, ct.name) == 0
+             for ci in range(2, n_conds)
+             for ct in main_tb.cond_terms] +
+            [main_tb.get_expr_coeff(ei, 'min_c') == 1/2 for ei in range(2, n_exprs)]
+        )
+        for ei in range(2, n_exprs):
+            for et in main_tb.expr_terms:
+                if (et.name not in ['min_c']):
+                    known_solution_list.append(
+                        main_tb.get_expr_coeff(ei, et.name) == 0)
+        convergence_based_on_buffer_second_try = z3.And(known_solution_list)
+
     solution_dict = {
         'mimd': mimd,
         'minc2': minc2,
@@ -419,6 +483,7 @@ def get_solutions(main_tb: TemplateBuilder,
         'rate_ai_probe': rate_ai_probe,
         'convergence_based_on_buffer_first_try': convergence_based_on_buffer_first_try,
         'convergence_based_on_buffer_manual': convergence_based_on_buffer_manual,
+        'convergence_based_on_buffer_second_try': convergence_based_on_buffer_second_try,
     }
 
     return solution_dict

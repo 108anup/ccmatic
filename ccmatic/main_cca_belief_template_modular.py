@@ -128,7 +128,7 @@ if SELF_AS_RVALUE:
 
 search_range_cond_vars_time = (-1, 0, 1)
 search_range_cond_vars_bytes = tuple(range(-2, 3))
-search_range_cond_consts = tuple(range(-2, 3))
+search_range_cond_consts = tuple(range(-3, 4))
 cond_terms = [
     TemplateTerm('min_c', TemplateTermType.VAR,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_vars_bytes),
@@ -353,11 +353,10 @@ if (CONVERGENCE_BASED_ON_BUFFER):
     first = link.cc.history
     desired = link.desired
     desired = z3.And(desired,
-                     z3.Implies(v.min_buffer[0][0] > 2 * (c.R + c.D),
+                     z3.Implies(v.min_buffer[0][0] > 3 * (c.R + c.D),
                                 z3.Implies(
-                                    v.r_f[0][first] <= 10, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
+                                    v.r_f[0][first] <= 0.1 * c.C, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
     link.desired = desired
-
 
 link.setup_cegis_loop(
     search_constraints,
@@ -446,13 +445,19 @@ elif(args.manual_query):
     verifier = MySolver()
     verifier.warn_undeclared = False
     verifier.add(link.search_constraints)
+    verifier.add(solution)
 
     sat = verifier.check()
     assert str(sat) == "sat"
 
     verifier.add(link.environment)
     verifier.add(link.definitions)
-    verifier.add(solution)
+    # verifier.add(v.min_buffer[0][0] == 2)
+    # verifier.add(v.min_c[0][0] <= 0.05 * c.C)
+    # verifier.add(v.min_c[0][1] <= 0.05 * c.C)
+    # # verifier.add(v.A[0] - v.L[0] - v.S[0] == 0)
+    # verifier.add(v.r_f[0][1] > v.min_c[0][0])
+    # verifier.add(v.alpha == 1/100)
     verifier.add(z3.Not(link.desired))
 
     sat = verifier.check()
@@ -460,7 +465,7 @@ elif(args.manual_query):
     if(str(sat) == "sat"):
         model = verifier.model()
         print(link.get_counter_example_str(model, link.verifier_vars))
-        import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
 
 else:
 

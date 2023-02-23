@@ -943,7 +943,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
             for dt in range(c.T):
                 s.add(z3.Implies(
                     v.qdel[0][dt],
-                    v.min_buffer[n][0] == max(0, dt-c.D)))
+                    v.min_buffer[n][0] >= max(0, dt-c.D)))
 
     if(c.app_limited and c.app_fixed_avg_rate):
         for n in range(c.N):
