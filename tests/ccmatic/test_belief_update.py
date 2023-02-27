@@ -14,7 +14,7 @@ from pyz3_utils.my_solver import MySolver
 def setup(
         ideal=False,
         buffer: Literal["finite", "infinite", "dynamic"] = "infinite",
-        T=6, buf_size=None):
+        T=6, buf_size=None, C=None):
     cc = CegisConfig()
     cc.name = "adv"
     cc.synth_ss = False
@@ -45,6 +45,8 @@ def setup(
     cc.T = T
     cc.history = cc.R
     cc.cca = "none"
+    if(C is not None):
+        cc.C = C
 
     cc.use_belief_invariant = True
     cc.template_beliefs_use_buffer = True
@@ -281,6 +283,97 @@ def test_can_learn_beliefs(f: float):
         import ipdb; ipdb.set_trace()
 
 
+def test_convergence_loss_tradeoff():
+    cc, link = setup(ideal=False, buffer="dynamic", T=5)
+    c, _, v = link.c, link.s, link.v
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(v.A[0] - v.L[0] - (v.C0 + c.C * 0 - v.W[0]) <= 0)
+    verifier.add(v.C0 + c.C * 0 - v.W[0] - v.S[0] <= 0)
+    verifier.add(c.buf_min >= v.min_c[0][0] * c.D)
+    verifier.add(v.min_c[0][0] < c.C/2)
+    for n in range(c.N):
+        verifier.add(v.r_f[n][0] == v.min_c[n][0])
+        verifier.add(v.r_f[n][1] == 2*v.min_c[n][1-1] + v.alpha)
+        for t in range(2, c.T):
+            verifier.add(v.r_f[n][t] == v.min_c[n][t-1])
+        for t in range(c.T):
+            verifier.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+    verifier.add(v.min_c[0][0] == v.min_c[0][c.T-1])
+    verifier.add(v.max_c[0][c.T-1] >= 1000)
+    verifier.add(v.L[c.T-1] == v.L[0])
+    verifier.add(v.alpha * 10 < v.min_c[0][0])
+    verifier.add(v.alpha == 1)
+    # verifier.add(v.L[c.T-1] - v.L[0] > v.alpha)
+    for t in range(c.T):
+        verifier.add(v.min_qdel[0][t] == 0)
+        verifier.add(v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t]) <= v.min_c[0][0] * 2 * c.D)
+    verifier.add(v.S[c.T-1] - v.S[0] <= (v.min_c[0][0]+v.alpha) * (c.T-1))
+    verifier.add(v.S[0] == 0)
+    for t in range(1, c.T):
+        verifier.add(v.S[t] - v.S[t-1] <= (v.min_c[0][0]+v.alpha))
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        # import ipdb; ipdb.set_trace()
+
+        # Can the trace be produced by a link rate just above minc.
+        cc, link = setup(ideal=False, buffer="dynamic", T=5,
+                         C=model.eval(v.min_c[0][0]+v.alpha-1e-3).as_fraction()
+                         # C=model.eval(v.min_c[0][0]+v.alpha).as_fraction()
+                         # C=model.eval(v.min_c[0][0]+20* v.alpha).as_fraction()
+                         # C=model.eval(v.min_c[0][0]+1e-3).as_fraction()
+                         # C=100-1e-3
+                         )
+        vo = v
+        c, _, v = link.c, link.s, link.v
+
+        verifier = MySolver()
+        verifier.warn_undeclared = False
+        for t in range(c.T):
+            verifier.add(v.A[t] == model.eval(vo.A[t]))
+            verifier.add(v.S[t] == model.eval(vo.S[t]))
+            for n in range(c.N):
+                verifier.add(v.min_c[n][t] == model.eval(vo.min_c[n][t]))
+                verifier.add(v.max_c[n][t] == model.eval(vo.max_c[n][t]))
+                verifier.add(v.r_f[n][t] == model.eval(vo.r_f[n][t]))
+                verifier.add(v.c_f[n][t] == model.eval(vo.c_f[n][t]))
+
+        verifier.add(link.definitions)
+        verifier.add(link.environment)
+        verifier.add(v.A[0] - v.L[0] - (v.C0 + c.C * 0 - v.W[0]) <= 0)
+        verifier.add(v.C0 + c.C * 0 - v.W[0] - v.S[0] <= 0)
+        verifier.add(c.buf_min >= v.min_c[0][0] * c.D)
+        verifier.add(v.min_c[0][0] < c.C)
+        # for n in range(c.N):
+        #     verifier.add(v.r_f[n][0] == v.min_c[n][0])
+        #     verifier.add(v.r_f[n][1] == 3*v.min_c[n][1-1] + v.alpha)
+        #     for t in range(2, c.T):
+        #         verifier.add(v.r_f[n][t] == v.min_c[n][t-1])
+        #     for t in range(c.T):
+        #         verifier.add(v.c_f[n][t] == 10 * c.C * (c.R + c.D))
+        verifier.add(v.min_c[0][0] == v.min_c[0][c.T-1])
+        verifier.add(v.max_c[0][c.T-1] >= 1000)
+        verifier.add(v.L[c.T-1] == v.L[0])
+        verifier.add(v.alpha == 1e-3)
+
+        sat = verifier.check()
+        print(sat)
+        if(str(sat) == "sat"):
+            model = verifier.model()
+            print(link.get_counter_example_str(model, link.verifier_vars))
+        else:
+            uc = get_unsat_core(verifier)
+        import ipdb; ipdb.set_trace()
+
+
+
 def test_maximum_loss_for_fixed_cwnd(f: float):
     cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1)
     c, _, v = link.c, link.s, link.v
@@ -347,7 +440,7 @@ def test_maximum_loss_for_fixed_rate(f: float):
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
+    # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=False, buffer="infinite")
@@ -355,3 +448,4 @@ if (__name__ == "__main__"):
     # test_can_learn_beliefs(2)
     # test_maximum_loss_for_fixed_cwnd(3.5)
     # test_maximum_loss_for_fixed_rate(10)
+    test_convergence_loss_tradeoff()
