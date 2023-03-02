@@ -325,8 +325,8 @@ def test_convergence_loss_tradeoff():
 
         # Can the trace be produced by a link rate just above minc.
         cc, link = setup(ideal=False, buffer="dynamic", T=5,
-                         C=model.eval(v.min_c[0][0]+v.alpha-1e-3).as_fraction()
-                         # C=model.eval(v.min_c[0][0]+v.alpha).as_fraction()
+                         # C=model.eval(v.min_c[0][0]+v.alpha-1e-3).as_fraction()
+                         C=model.eval(v.min_c[0][0]+v.alpha).as_fraction()
                          # C=model.eval(v.min_c[0][0]+20* v.alpha).as_fraction()
                          # C=model.eval(v.min_c[0][0]+1e-3).as_fraction()
                          # C=100-1e-3
