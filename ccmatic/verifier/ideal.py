@@ -7,7 +7,7 @@ from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate_qbound_env,
+from ccmatic.verifier import (BaseLink, DesiredContainer, calculate_qbound_defs, calculate_qbound_env,
                               calculate_qdel_defs, calculate_qdel_env, check_config,
                               exceed_queue_defs, fifo_service, get_desired_in_ss, initial_beliefs,
                               last_decrease_defs, monotone_defs, monotone_env,
@@ -15,7 +15,7 @@ from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate
 from pyz3_utils.my_solver import MySolver
 
 
-class IdealLink:
+class IdealLink(BaseLink):
 
     @staticmethod
     def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -72,8 +72,8 @@ class IdealLink:
                 r2 = v.A[t] - v.L[t-1]
                 s.add(v.S[t] == z3.If(r1 < r2, r1, r2))
 
-    @staticmethod
     def get_cegis_vars(
+        self,
         cc: CegisConfig, c: ModelConfig, v: Variables
     ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
         assert c.N == 1
@@ -164,11 +164,10 @@ class IdealLink:
                 definition_vars.extend(flatten(
                     [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
 
-
         return verifier_vars, definition_vars
 
-    @staticmethod
-    def setup_ccac_definitions(c: ModelConfig, v: Variables):
+    def setup_definitions(self,
+                          c: ModelConfig, v: Variables):
         s = MySolver()
         s.warn_undeclared = False
 
@@ -195,8 +194,7 @@ class IdealLink:
         IdealLink.service_defs(c, s, v)
         return s
 
-    @staticmethod
-    def setup_ccac_environment(c, v):
+    def setup_environment(self, c: ModelConfig, v: Variables):
         s = MySolver()
         s.warn_undeclared = False
 
@@ -237,24 +235,3 @@ class IdealLink:
         if(c.app_limited):
             app_limits_env(c, s, v)
         return s
-
-    @staticmethod
-    def setup_cegis_basic(cc: CegisConfig):
-        check_config(cc)
-        c = setup_ccac_for_cegis(cc)
-        c.D = 0
-        s = MySolver()
-        s.warn_undeclared = False
-        v = Variables(c, s, cc.name)
-
-        verifier_vars, definition_vars = IdealLink.get_cegis_vars(cc, c, v)
-
-        ccac_domain = z3.And(*s.assertion_list)
-        sd = IdealLink.setup_ccac_definitions(c, v)
-        se = IdealLink.setup_ccac_environment(c, v)
-        ccac_definitions = z3.And(*sd.assertion_list)
-        environment = z3.And(*se.assertion_list)
-
-        return (c, s, v,
-                ccac_domain, ccac_definitions, environment,
-                verifier_vars, definition_vars)

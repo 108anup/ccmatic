@@ -1584,272 +1584,11 @@ def setup_ccac():
     return c, s, v
 
 
-def get_cegis_vars(
-    cc: CegisConfig, c: ModelConfig, v: Variables
-) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
-    history = cc.history
-
-    verifier_vars = flatten(
-            [v.A_f[:, :history], v.c_f[:, :history], v.r_f[:, :history], v.W,
-             v.alpha, v.C0])
-    definition_vars = flatten(
-            [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.r_f[:, history:], v.S, v.L])
-
-    if(not c.loss_oracle):
-        verifier_vars.append(v.dupacks)
-        definition_vars.extend(flatten(v.timeout_f))
-
-    if(not c.compose):
-        verifier_vars.append(v.epsilon)
-    if(c.calculate_qdel):
-        # qdel[t][dt<t] is deterministic
-        # qdel[t][dt>=t] is non-deterministic
-        verifier_vars.extend(flatten(
-            [v.qdel[t][dt] for t in range(c.T) for dt in range(t, c.T)]))
-    if(c.calculate_qbound):
-        # qbound[t][dt<=t] is deterministic
-        # qbound[t][dt>t] is non deterministic
-        verifier_vars.extend(flatten(
-            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1, c.T)]))
-        definition_vars.extend(flatten(v.exceed_queue_f))
-        definition_vars.extend(flatten(v.last_decrease_f))
-
-    if(c.calculate_qdel):
-        definition_vars.extend(flatten(
-            [v.qdel[t][dt] for t in range(c.T) for dt in range(t)]))
-    if(c.calculate_qbound):
-        definition_vars.extend(flatten(
-            [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1)]))
-
-    if(c.buf_min is None):
-        # No loss
-        verifier_vars.extend(flatten([v.L_f, v.Ld_f]))
-    elif(c.deterministic_loss):
-        # Determinisitic loss
-        assert c.loss_oracle
-        verifier_vars.extend(flatten([v.L_f[:, :1], v.Ld_f[:, :c.R]]))
-        definition_vars.extend(flatten([v.L_f[:, 1:], v.Ld_f[:, c.R:]]))
-    else:
-        # Non-determinisitic loss
-        assert c.loss_oracle
-        verifier_vars.extend(flatten([v.L_f, v.Ld_f[:, :c.R]]))
-        definition_vars.extend(flatten([v.Ld_f[:, c.R:]]))
-
-    if(isinstance(c.buf_min, z3.ExprRef)):
-        verifier_vars.append(c.buf_min)
-
-    if(cc.feasible_response):
-        verifier_vars.extend(flatten(v.S_choice))
-        definition_vars.extend(flatten(v.S_f))
-    else:
-        verifier_vars.extend(flatten(v.S_f))
-
-    if(c.mode_switch):
-        definition_vars.extend(flatten(v.mode_f[:, 1:]))
-        verifier_vars.extend(flatten(v.mode_f[:, :1]))
-
-    if(c.beliefs):
-        definition_vars.extend(flatten(
-            [v.min_c[:, 1:], v.max_c[:, 1:],
-             v.min_qdel, v.max_qdel]))
-        verifier_vars.extend(flatten(
-            [v.min_c[:, :1], v.max_c[:, :1]]))
-        if(c.buf_min is not None and c.beliefs_use_buffer):
-            definition_vars.extend(flatten(
-                v.min_buffer[:, 1:]))
-            verifier_vars.extend(flatten(
-                v.min_buffer[:, :1]))
-            if(c.beliefs_use_max_buffer):
-                definition_vars.extend(flatten(
-                    v.max_buffer[:, 1:]))
-                verifier_vars.extend(flatten(
-                    v.max_buffer[:, :1]))
-        verifier_vars.extend(flatten(v.start_state_f))
-
-    if(c.app_limited):
-        verifier_vars.extend(flatten(v.app_limits))
-        verifier_vars.append(v.app_rate)
-        if(c.app_fixed_avg_rate and c.beliefs):
-            verifier_vars.extend(flatten(
-                [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
-            definition_vars.extend(flatten(
-                [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
-
-    return verifier_vars, definition_vars
-
-
-def setup_ccac_definitions(c: ModelConfig, v: Variables):
-    s = MySolver()
-    s.warn_undeclared = False
-
-    monotone_defs(c, s, v)  # Def only. Constraint not needed.
-    initial(c, s, v)  # Either definition vars or verifier vars.
-    # Keep as definitions for convenience.
-    relate_tot(c, s, v)  # Definitions required to compute tot variables.
-    if(c.deterministic_loss):
-        loss_deterministic(c, s, v)  # Def to compute loss.
-    if(c.loss_oracle):
-        loss_oracle(c, s, v)  # Defs to compute loss detected.
-    if(c.calculate_qdel):
-        calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
-    if(c.calculate_qbound):
-        calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
-        last_decrease_defs(c, s, v)
-        exceed_queue_defs(c, s, v)
-    cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
-    if(c.cca == "paced"):
-        cca_paced(c, s, v)  # Defs to compute rate.
-    if(c.feasible_response):
-        service_choice(c, s, v)
-    if(c.beliefs):
-        update_beliefs(c, s, v)
-
-    return s
-
-
-def setup_ccac_for_cegis(cc: CegisConfig):
-    c = ModelConfig.default()
-    c.compose = True
-    c.cca = cc.cca
-    c.simplify = False
-    c.C = cc.C
-    c.T = cc.T
-    c.R = cc.R
-    c.D = cc.D
-    c.compose = cc.compose
-
-    # Add a prefix to all names so we can have multiple Variables instances
-    # in one solver
-    if cc.name is None:
-        pre = ""
-    else:
-        pre = cc.name + "__"
-
-    # Signals
-    c.loss_oracle = cc.template_loss_oracle
-
-    # environment
-    c.deterministic_loss = cc.deterministic_loss
-    if(cc.infinite_buffer):
-        c.buf_max = None
-    elif(cc.dynamic_buffer):
-        c.buf_max = z3.Real(f'{pre}buf_size')
-    else:
-        c.buf_max = cc.buffer_size_multiplier * c.C * (c.R + c.D)
-    c.buf_min = c.buf_max
-    c.N = cc.N
-
-    if(cc.template_queue_bound):
-        c.calculate_qbound = True
-    if(c.N > 1 or cc.template_qdel):
-        c.calculate_qdel = True
-    c.mode_switch = cc.template_mode_switching
-    c.feasible_response = cc.feasible_response
-
-    c.app_limited = cc.app_limited
-    c.app_fixed_avg_rate = cc.app_fixed_avg_rate
-    c.app_rate = cc.app_rate
-    c.app_burst_factor = cc.app_burst_factor
-
-    c.beliefs = cc.template_beliefs
-    c.beliefs_use_buffer = cc.template_beliefs_use_buffer
-    c.beliefs_use_max_buffer = cc.template_beliefs_use_max_buffer
-    c.fix_stale__min_c = cc.fix_stale__min_c
-    c.fix_stale__max_c = cc.fix_stale__max_c
-    c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
-    c.maxc_minc_change_mult = cc.maxc_minc_change_mult
-
-    c.send_min_alpha = cc.send_min_alpha
-
-    return c
-
-
-def check_config(cc: CegisConfig):
-    # Don't use both of them together as they will produce different values for
-    # non-deterministically chosen queing delays.
-    assert not (cc.template_queue_bound and cc.template_qdel)
-
-
-def setup_cegis_basic(cc: CegisConfig, name=None):
-    check_config(cc)
-    if(name is not None):
-        cc.name = name
-    c = setup_ccac_for_cegis(cc)
-    s = MySolver()
-    s.warn_undeclared = False
-    v = Variables(c, s, cc.name)
-
-    ccac_domain = z3.And(*s.assertion_list)
-    sd = setup_ccac_definitions(c, v)
-    se = setup_ccac_environment(c, v)
-    ccac_definitions = z3.And(*sd.assertion_list)
-    # not_too_adversarial_init_cwnd(cc, c, se, v)
-    environment = z3.And(*se.assertion_list)
-
-    verifier_vars, definition_vars = get_cegis_vars(cc, c, v)
-
-    return (c, s, v,
-            ccac_domain, ccac_definitions, environment,
-            verifier_vars, definition_vars)
-
-
 def not_too_adversarial_init_cwnd(
         cc: CegisConfig, c: ModelConfig, s: MySolver, v: Variables):
     for n in range(c.N):
         for t in range(1, cc.history):
             s.add(v.c_f[n][t] <= v.c_f[n][t-1] * 3/2)
-
-
-def setup_ccac_environment(c, v):
-    s = MySolver()
-    s.warn_undeclared = False
-    monotone_env(c, s, v)
-    service_waste(c, s, v)
-    if(not c.deterministic_loss):
-        loss_non_deterministic(c, s, v)
-    # else:
-    #     if(c.N == 1):
-    #         # If loss happens at t=0, then bottleneck queue must be full at t=0.
-    #         s.add(z3.Implies(
-    #             v.Ld_f[0][0] != v.L_f[0][0],
-    #             v.A[0] - v.L[0] - (v.C0 - v.W[0]) == c.buf_min))
-    if(not c.loss_oracle):
-        loss_detected(c, s, v)
-    if(c.calculate_qdel):
-        calculate_qdel_env(c, s, v)  # How to pick initial qdels
-        # non-deterministically.
-    if(c.calculate_qbound):
-        calculate_qbound_env(c, s, v)  # How to pick initial qbounds
-        # non-deterministically.
-    if(c.N > 1):
-        multi_flows(c, s, v)  # Flows should be serviced fairly
-        fifo_service(c, s, v)
-    epsilon_alpha(c, s, v)  # Verifier only
-
-    # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
-    # s.add(v.L_f[0][0] == 0)
-
-    # Remove periodicity, as generator overfits and produces monotonic CCAs.
-    # make_periodic(c, s, v, c.R + c.D)
-
-    # Avoid weird cases where single packet is larger than BDP.
-    s.add(v.alpha < max(0.2, (c.C * c.R)/5))  # Verifier only
-
-    # Buffer should at least have one packet
-    if(isinstance(c.buf_min, z3.ExprRef)):
-        s.add(c.buf_min > v.alpha)
-
-        # Buffer taken from discrete choices
-        # s.add(z3.Or(c.buf_min == c.C * (c.R + c.D),
-        #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
-
-    if(c.beliefs):
-        initial_beliefs(c, s, v)
-    if(c.app_limited):
-        app_limits_env(c, s, v)
-
-    return s
 
 
 def setup_ccac_full(cca="copa"):
@@ -2581,3 +2320,270 @@ def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpa
     ax.grid(True)
     fig.set_tight_layout(True)
     fig.savefig(fpath, bbox_inches='tight', pad_inches=0.01)
+
+
+class BaseLink:
+
+    @staticmethod
+    def check_config(cc: CegisConfig):
+        # Don't use both of them together as they will produce different values for
+        # non-deterministically chosen queing delays.
+        assert not (cc.template_queue_bound and cc.template_qdel)
+
+    def setup_model_config(self, cc: CegisConfig):
+        self.check_config(cc)
+        c = ModelConfig.default()
+        c.compose = True
+        c.cca = cc.cca
+        c.simplify = False
+        c.C = cc.C
+        c.T = cc.T
+        c.R = cc.R
+        c.D = cc.D
+        c.compose = cc.compose
+
+        # Add a prefix to all names so we can have multiple Variables instances
+        # in one solver
+        if cc.name is None:
+            pre = ""
+        else:
+            pre = cc.name + "__"
+
+        # Signals
+        c.loss_oracle = cc.template_loss_oracle
+
+        # environment
+        c.deterministic_loss = cc.deterministic_loss
+        if(cc.infinite_buffer):
+            c.buf_max = None
+        elif(cc.dynamic_buffer):
+            c.buf_max = z3.Real(f'{pre}buf_size')
+        else:
+            c.buf_max = cc.buffer_size_multiplier * c.C * (c.R + c.D)
+        c.buf_min = c.buf_max
+        c.N = cc.N
+
+        if(cc.template_queue_bound):
+            c.calculate_qbound = True
+        if(c.N > 1 or cc.template_qdel):
+            c.calculate_qdel = True
+        c.mode_switch = cc.template_mode_switching
+        c.feasible_response = cc.feasible_response
+
+        c.app_limited = cc.app_limited
+        c.app_fixed_avg_rate = cc.app_fixed_avg_rate
+        c.app_rate = cc.app_rate
+        c.app_burst_factor = cc.app_burst_factor
+
+        c.beliefs = cc.template_beliefs
+        c.beliefs_use_buffer = cc.template_beliefs_use_buffer
+        c.beliefs_use_max_buffer = cc.template_beliefs_use_max_buffer
+        c.fix_stale__min_c = cc.fix_stale__min_c
+        c.fix_stale__max_c = cc.fix_stale__max_c
+        c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
+        c.maxc_minc_change_mult = cc.maxc_minc_change_mult
+
+        c.send_min_alpha = cc.send_min_alpha
+
+        return c
+
+    def setup_environment(self, c: ModelConfig, v: Variables):
+        s = MySolver()
+        s.warn_undeclared = False
+
+        monotone_env(c, s, v)
+        service_waste(c, s, v)
+        if(not c.deterministic_loss):
+            loss_non_deterministic(c, s, v)
+        # else:
+        #     if(c.N == 1):
+        #         # If loss happens at t=0, then bottleneck queue must be full at t=0.
+        #         s.add(z3.Implies(
+        #             v.Ld_f[0][0] != v.L_f[0][0],
+        #             v.A[0] - v.L[0] - (v.C0 - v.W[0]) == c.buf_min))
+        if(not c.loss_oracle):
+            loss_detected(c, s, v)
+        if(c.calculate_qdel):
+            calculate_qdel_env(c, s, v)  # How to pick initial qdels
+            # non-deterministically.
+        if(c.calculate_qbound):
+            calculate_qbound_env(c, s, v)  # How to pick initial qbounds
+            # non-deterministically.
+        if(c.N > 1):
+            multi_flows(c, s, v)  # Flows should be serviced fairly
+            fifo_service(c, s, v)
+        epsilon_alpha(c, s, v)  # Verifier only
+
+        # Shouldn't be any loss at t0 otherwise cwnd is high and q is still 0.
+        # s.add(v.L_f[0][0] == 0)
+
+        # Remove periodicity, as generator overfits and produces monotonic CCAs.
+        # make_periodic(c, s, v, c.R + c.D)
+
+        # Avoid weird cases where single packet is larger than BDP.
+        s.add(v.alpha < max(0.2, (c.C * c.R)/5))  # Verifier only
+
+        # Buffer should at least have one packet
+        if(isinstance(c.buf_min, z3.ExprRef)):
+            s.add(c.buf_min > v.alpha)
+
+            # Buffer taken from discrete choices
+            # s.add(z3.Or(c.buf_min == c.C * (c.R + c.D),
+            #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
+
+        if(c.beliefs):
+            initial_beliefs(c, s, v)
+        if(c.app_limited):
+            app_limits_env(c, s, v)
+
+        return s
+
+    def setup_definitions(self, c: ModelConfig, v: Variables):
+        s = MySolver()
+        s.warn_undeclared = False
+
+        monotone_defs(c, s, v)  # Def only. Constraint not needed.
+        initial(c, s, v)  # Either definition vars or verifier vars.
+        # Keep as definitions for convenience.
+        relate_tot(c, s, v)  # Definitions required to compute tot variables.
+        if(c.deterministic_loss):
+            loss_deterministic(c, s, v)  # Def to compute loss.
+        if(c.loss_oracle):
+            loss_oracle(c, s, v)  # Defs to compute loss detected.
+        if(c.calculate_qdel):
+            calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
+        if(c.calculate_qbound):
+            calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
+            last_decrease_defs(c, s, v)
+            exceed_queue_defs(c, s, v)
+        cwnd_rate_arrival(c, s, v)  # Defs to compute arrival.
+        if(c.cca == "paced"):
+            cca_paced(c, s, v)  # Defs to compute rate.
+        if(c.feasible_response):
+            service_choice(c, s, v)
+        if(c.beliefs):
+            update_beliefs(c, s, v)
+
+        return s
+
+    def get_base_cegis_vars(self,
+        cc: CegisConfig, c: ModelConfig, v: Variables
+    ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
+        history = cc.history
+        verifier_vars = flatten(
+                [v.A_f[:, :history], v.c_f[:, :history], v.r_f[:, :history], v.W,
+                v.alpha, v.C0])
+        definition_vars = flatten(
+                [v.A_f[:, history:], v.A, v.c_f[:, history:],
+                v.r_f[:, history:], v.S, v.L])
+        return verifier_vars, definition_vars
+
+    def get_cegis_vars(
+        self,
+        cc: CegisConfig, c: ModelConfig, v: Variables
+    ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
+        history = cc.history
+        verifier_vars, definition_vars = self.get_base_cegis_vars(cc, c, v)
+
+        if(not c.loss_oracle):
+            verifier_vars.append(v.dupacks)
+            definition_vars.extend(flatten(v.timeout_f))
+
+        if(not c.compose):
+            verifier_vars.append(v.epsilon)
+        if(c.calculate_qdel):
+            # qdel[t][dt<t] is deterministic
+            # qdel[t][dt>=t] is non-deterministic
+            verifier_vars.extend(flatten(
+                [v.qdel[t][dt] for t in range(c.T) for dt in range(t, c.T)]))
+        if(c.calculate_qbound):
+            # qbound[t][dt<=t] is deterministic
+            # qbound[t][dt>t] is non deterministic
+            verifier_vars.extend(flatten(
+                [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1, c.T)]))
+            definition_vars.extend(flatten(v.exceed_queue_f))
+            definition_vars.extend(flatten(v.last_decrease_f))
+
+        if(c.calculate_qdel):
+            definition_vars.extend(flatten(
+                [v.qdel[t][dt] for t in range(c.T) for dt in range(t)]))
+        if(c.calculate_qbound):
+            definition_vars.extend(flatten(
+                [v.qbound[t][dt] for t in range(c.T) for dt in range(t+1)]))
+
+        if(c.buf_min is None):
+            # No loss
+            verifier_vars.extend(flatten([v.L_f, v.Ld_f]))
+        elif(c.deterministic_loss):
+            # Determinisitic loss
+            assert c.loss_oracle
+            verifier_vars.extend(flatten([v.L_f[:, :1], v.Ld_f[:, :c.R]]))
+            definition_vars.extend(flatten([v.L_f[:, 1:], v.Ld_f[:, c.R:]]))
+        else:
+            # Non-determinisitic loss
+            assert c.loss_oracle
+            verifier_vars.extend(flatten([v.L_f, v.Ld_f[:, :c.R]]))
+            definition_vars.extend(flatten([v.Ld_f[:, c.R:]]))
+
+        if(isinstance(c.buf_min, z3.ExprRef)):
+            verifier_vars.append(c.buf_min)
+
+        if(cc.feasible_response):
+            verifier_vars.extend(flatten(v.S_choice))
+            definition_vars.extend(flatten(v.S_f))
+        else:
+            verifier_vars.extend(flatten(v.S_f))
+
+        if(c.mode_switch):
+            definition_vars.extend(flatten(v.mode_f[:, 1:]))
+            verifier_vars.extend(flatten(v.mode_f[:, :1]))
+
+        if(c.beliefs):
+            definition_vars.extend(flatten(
+                [v.min_c[:, 1:], v.max_c[:, 1:],
+                v.min_qdel, v.max_qdel]))
+            verifier_vars.extend(flatten(
+                [v.min_c[:, :1], v.max_c[:, :1]]))
+            if(c.buf_min is not None and c.beliefs_use_buffer):
+                definition_vars.extend(flatten(
+                    v.min_buffer[:, 1:]))
+                verifier_vars.extend(flatten(
+                    v.min_buffer[:, :1]))
+                if(c.beliefs_use_max_buffer):
+                    definition_vars.extend(flatten(
+                        v.max_buffer[:, 1:]))
+                    verifier_vars.extend(flatten(
+                        v.max_buffer[:, :1]))
+            verifier_vars.extend(flatten(v.start_state_f))
+
+        if(c.app_limited):
+            verifier_vars.extend(flatten(v.app_limits))
+            verifier_vars.append(v.app_rate)
+            if(c.app_fixed_avg_rate and c.beliefs):
+                verifier_vars.extend(flatten(
+                    [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
+                definition_vars.extend(flatten(
+                    [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
+
+        return verifier_vars, definition_vars
+
+    def setup_cegis_input(self, cc: CegisConfig, name=None):
+        if(name is not None):
+            cc.name = name
+        c = self.setup_model_config(cc)
+        s = MySolver()
+        s.warn_undeclared = False
+        v = Variables(c, s, cc.name)
+
+        ccac_domain = z3.And(*s.assertion_list)
+        se = self.setup_environment(c, v)
+        sd = self.setup_definitions(c, v)
+        ccac_definitions = z3.And(*sd.assertion_list)
+        # not_too_adversarial_init_cwnd(cc, c, se, v)
+        environment = z3.And(*se.assertion_list)
+
+        verifier_vars, definition_vars = self.get_cegis_vars(cc, c, v)
+
+        return (c, s, v,
+                ccac_domain, ccac_definitions, environment,
+                verifier_vars, definition_vars)
