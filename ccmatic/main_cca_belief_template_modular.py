@@ -12,7 +12,7 @@ from ccac.config import ModelConfig
 from ccac.variables import Variables
 from ccmatic import (BeliefProofs, CCmatic, OptimizationStruct,
                      find_optimum_bounds)
-from ccmatic.cegis import CegisConfig
+from ccmatic.cegis import CegisConfig, VerifierType
 from ccmatic.common import try_except
 from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
                                TemplateTermType, TemplateTermUnit,
@@ -48,7 +48,8 @@ def get_args():
     parser.add_argument('--solution', action='store', type=str, default=None)
     parser.add_argument('--run-log-dir', action='store', default=None)
     parser.add_argument('--use-belief-invariant-n', action='store_true')
-    parser.add_argument('--ideal-only', action='store_true')
+    parser.add_argument('--verifier-type', action='store',
+                        default=VerifierType.ccac, type=VerifierType, choices=list(VerifierType))
     parser.add_argument('--no-large-loss', action='store_true')
     parser.add_argument('--manual-query', action='store_true')
     parser.add_argument('--cegis-with-solution', action='store_true')
@@ -326,8 +327,8 @@ cc.opt_pdt = not args.opt_pdt_n
 cc.opt_wce = not args.opt_wce_n
 cc.feasible_response = not args.opt_feasible_n
 
-cc.ideal_link = args.ideal_only
-assert not (args.ideal_only and args.ideal)
+cc.verifier_type = args.verifier_type
+assert not (args.verifier_type == "ideal" and args.add_ideal)
 
 cc.send_min_alpha = True
 

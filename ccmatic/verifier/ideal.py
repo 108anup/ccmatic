@@ -1,17 +1,19 @@
 from typing import List, Tuple
 
 import z3
+
 from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_oracle, multi_flows,
                         relate_tot)
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import (BaseLink, DesiredContainer, calculate_qbound_defs, calculate_qbound_env,
-                              calculate_qdel_defs, calculate_qdel_env, check_config,
-                              exceed_queue_defs, fifo_service, get_desired_in_ss, initial_beliefs,
+from ccmatic.verifier import (BaseLink, app_limits_env, calculate_qbound_defs,
+                              calculate_qbound_env, calculate_qdel_defs,
+                              calculate_qdel_env, exceed_queue_defs,
+                              fifo_service, initial_beliefs,
                               last_decrease_defs, monotone_defs, monotone_env,
-                              setup_ccac_for_cegis, update_beliefs, app_limits_env)
+                              update_beliefs)
 from pyz3_utils.my_solver import MySolver
 
 

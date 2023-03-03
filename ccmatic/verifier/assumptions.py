@@ -1,16 +1,12 @@
-from typing import List, Tuple
 import numpy as np
 import z3
 from ccac.cca_aimd import cca_aimd
-from ccac.cca_bbr import cca_bbr
-from ccac.cca_copa import cca_copa
 from ccac.config import ModelConfig
 from ccac.model import cca_const, cca_paced
 from ccac.utils import make_periodic
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import setup_ccac_for_cegis
 from ccmatic.verifier.ideal import IdealLink
 from cegis.util import z3_max
 from pyz3_utils.my_solver import MySolver
@@ -175,10 +171,9 @@ class AssumptionVerifier(IdealLink):
     Since all vars are verifier vars, all definitions become environment.
     """
 
-    @staticmethod
-    def setup_cegis_basic(cc: CegisConfig):
+    def setup_cegis_input(self, cc: CegisConfig):
         (c, s, v, ccac_domain, ccac_definitions, environment,
-         verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
+         verifier_vars, definition_vars) = super().setup_cegis_input(cc)
 
         # Since the assumption depends on waste. Need to specify
         # deterministic choice of waste that the assumption must allow.

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import enum
 from typing import Union, List, Optional
 
 import z3
@@ -9,6 +10,15 @@ from cegis import Cegis, remove_solution
 @dataclass
 class CegisMetaData:
     critical_generator_vars: Optional[List[z3.ExprRef]]
+
+
+class VerifierType(enum.Enum):
+    ideal = "ideal"
+    ccac = "ccac"
+    assumption_verifier = "assumption_verifier"
+    cbrdelay = "cbrdelay"
+    tbf = "tbf"
+    tbfdelay = "tbfdelay"
 
 
 class CegisConfig:
@@ -42,7 +52,7 @@ class CegisConfig:
     rate_or_window: str = 'default'
     # choices: ['default', 'rate', 'window']
 
-    ideal_link: bool = False
+    verifier_type: VerifierType = VerifierType.ccac
 
     # environment
     infinite_buffer: bool = False

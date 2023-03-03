@@ -2476,6 +2476,13 @@ class BaseLink:
         definition_vars = flatten(
                 [v.A_f[:, history:], v.A, v.c_f[:, history:],
                 v.r_f[:, history:], v.S, v.L])
+
+        if(cc.feasible_response):
+            verifier_vars.extend(flatten(v.S_choice))
+            definition_vars.extend(flatten(v.S_f))
+        else:
+            verifier_vars.extend(flatten(v.S_f))
+
         return verifier_vars, definition_vars
 
     def get_cegis_vars(
@@ -2527,12 +2534,6 @@ class BaseLink:
 
         if(isinstance(c.buf_min, z3.ExprRef)):
             verifier_vars.append(c.buf_min)
-
-        if(cc.feasible_response):
-            verifier_vars.extend(flatten(v.S_choice))
-            definition_vars.extend(flatten(v.S_f))
-        else:
-            verifier_vars.extend(flatten(v.S_f))
 
         if(c.mode_switch):
             definition_vars.extend(flatten(v.mode_f[:, 1:]))

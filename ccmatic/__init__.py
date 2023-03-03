@@ -1,32 +1,44 @@
-import math
-import pandas as pd
 import copy
-from dataclasses import dataclass
 import functools
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+import math
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
+import pandas as pd
 import z3
-from ccac.variables import VariableNames
 
-from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
+from ccac.variables import VariableNames
+from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData, VerifierType
 from ccmatic.common import flatten, get_renamed_vars, try_except
-from ccmatic.verifier import (SteadyStateVariable, get_belief_invariant, get_cex_df, get_desired_necessary,
-                              get_desired_ss_invariant, get_gen_cex_df,
-                              run_verifier_incomplete, setup_cegis_basic)
+from ccmatic.verifier import (BaseLink, SteadyStateVariable,
+                              get_belief_invariant, get_cex_df,
+                              get_desired_necessary, get_desired_ss_invariant,
+                              get_gen_cex_df, run_verifier_incomplete)
 from ccmatic.verifier.assumptions import AssumptionVerifier
+from ccmatic.verifier.cbr_delay import CBRDelayLink
 from ccmatic.verifier.ideal import IdealLink
-from cegis import NAME_TEMPLATE, get_unsat_core
+from ccmatic.verifier.tbf import TBFLink
+from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import Metric, fix_metrics, get_raw_value, optimize_multi_var, z3_max_list, z3_min, z3_min_list
+from cegis.util import (Metric, fix_metrics, get_raw_value, optimize_multi_var,
+                        z3_min)
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
-
 
 logger = logging.getLogger('ccmatic')
 GlobalConfig().default_logger_setup(logger)
 
 EPS = 1e-1
+
+VERIFIER_DICT: Dict[VerifierType, Type[BaseLink]] = {
+    VerifierType.ccac: BaseLink,
+    VerifierType.ideal: IdealLink,
+    VerifierType.assumption_verifier: AssumptionVerifier,
+    VerifierType.cbrdelay: CBRDelayLink,
+    VerifierType.tbf: TBFLink,
+    # VerifierType.tbfdelay: TBFDelayLink,
+}
 
 
 class CCmatic():
@@ -108,18 +120,10 @@ class CCmatic():
 
     def setup_config_vars(self):
         cc = self.cc
-        if(cc.assumption_verifier):
-            (c, s, v,
-             ccac_domain, ccac_definitions, environment,
-             verifier_vars, definition_vars) = AssumptionVerifier.setup_cegis_basic(cc)
-        elif(cc.ideal_link):
-            (c, s, v,
-             ccac_domain, ccac_definitions, environment,
-             verifier_vars, definition_vars) = IdealLink.setup_cegis_basic(cc)
-        else:
-            (c, s, v,
-             ccac_domain, ccac_definitions, environment,
-             verifier_vars, definition_vars) = setup_cegis_basic(cc)
+        Link: Type[BaseLink] = VERIFIER_DICT[cc.verifier_type]
+        (c, s, v,
+         ccac_domain, ccac_definitions, environment,
+         verifier_vars, definition_vars) = Link().setup_cegis_input(cc)
 
         self.c = c
         self.s = s

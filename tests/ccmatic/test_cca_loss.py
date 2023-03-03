@@ -16,7 +16,7 @@ from ccmatic.common import flatten
 from ccmatic.verifier import (desired_high_util_low_loss, get_cegis_vars,
                               get_cex_df, get_gen_cex_df,
                               run_verifier_incomplete, setup_ccac,
-                              setup_ccac_definitions, setup_ccac_environment)
+                              setup_definitions, setup_environment)
 from tests import setup_logger_file
 
 
@@ -51,8 +51,8 @@ def test_cca_loss(buf_size, n_losses, util_frac):
     c.buf_max = buf_size * c.C * (c.R + c.D)
     c.buf_min = c.buf_max
     ccac_domain = z3.And(*s.assertion_list)
-    sd = setup_ccac_definitions(c, v)
-    se = setup_ccac_environment(c, v)
+    sd = setup_definitions(c, v)
+    se = setup_environment(c, v)
     ccac_definitions = z3.And(*sd.assertion_list)
     environment = z3.And(*se.assertion_list)
     verifier_vars, definition_vars = get_cegis_vars(c, v, history)

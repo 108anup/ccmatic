@@ -5,7 +5,7 @@ from ccac.model import cca_paced, cwnd_rate_arrival, initial, loss_oracle, relat
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import BaseLink, calculate_qbound_defs, calculate_qdel_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs
+from ccmatic.verifier import BaseLink, calculate_qbound_defs, calculate_qdel_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs, update_beliefs
 from cegis.util import z3_min
 from pyz3_utils.my_solver import MySolver
 
@@ -42,19 +42,20 @@ class TBFLink(BaseLink):
         # TODO: verify this.
 
     @staticmethod
-    def service_defs(c: ModelConfig, s: MySolver, v: Variables):
+    def service_const(c: ModelConfig, s: MySolver, v: Variables):
         """
+        These need to be env constraints as S = Sum(S_f) and S_f are non-deterministically chosen.
+        When c.N = 1, then these can be used as definitions.
+
         We stop service only when tokens are 0 or arrival is 0
         """
         for t in range(c.T):
             s.add(v.S[t] == z3_min(v.A[t] - v.L[t], v.C0 + c.C * t - v.W[t]))
 
-        # Not removing service environment constraint. Above should always satisfy those.
-        # TODO: verify this.
-
     @staticmethod
     def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
-        raise NotImplementedError
+        update_beliefs(c, s, v)
+        # raise NotImplementedError
 
     def setup_definitions(self, c: ModelConfig, v: Variables):
         s = MySolver()
@@ -81,7 +82,8 @@ class TBFLink(BaseLink):
         if(c.beliefs):
             self.update_beliefs(c, s, v)
         self.waste_defs(c, s, v)
-        self.service_defs(c, s, v)
+        assert c.N == 1
+        self.service_const(c, s, v)
 
         return s
 
@@ -95,5 +97,6 @@ class TBFLink(BaseLink):
              v.alpha, v.C0])
         definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:],
-             v.r_f[:, history:], v.S, v.L, v.W[1:]])
+             v.r_f[:, history:], v.S, v.L, v.W[1:], v.S_f])
+        assert not cc.feasible_response
         return verifier_vars, definition_vars

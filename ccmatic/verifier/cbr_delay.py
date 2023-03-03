@@ -5,7 +5,7 @@ from ccac.model import cca_paced, cwnd_rate_arrival, initial, loss_oracle, relat
 from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import BaseLink, calculate_qbound_defs, calculate_qdel_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs
+from ccmatic.verifier import BaseLink, calculate_qbound_defs, calculate_qdel_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs, update_beliefs
 from pyz3_utils.my_solver import MySolver
 
 from typing import Tuple, List
@@ -42,7 +42,8 @@ class CBRDelayLink(BaseLink):
 
     @staticmethod
     def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
-        raise NotImplementedError
+        update_beliefs(c, s, v)
+        # raise NotImplementedError
 
     def setup_definitions(self, c: ModelConfig, v: Variables):
         s = MySolver()
@@ -83,4 +84,11 @@ class CBRDelayLink(BaseLink):
         definition_vars = flatten(
             [v.A_f[:, history:], v.A, v.c_f[:, history:],
              v.r_f[:, history:], v.S, v.L, v.W[1:]])
+
+        if(cc.feasible_response):
+            verifier_vars.extend(flatten(v.S_choice))
+            definition_vars.extend(flatten(v.S_f))
+        else:
+            verifier_vars.extend(flatten(v.S_f))
+
         return verifier_vars, definition_vars
