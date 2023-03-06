@@ -2314,9 +2314,10 @@ def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpa
             else:
                 lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
             ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
-        ax.plot(xx, lbl, color='black', alpha=0.5)
-        ax.plot(xx, ubl, color='black', alpha=0.5)
+        ax.plot(xx, lbl, color='black', alpha=0.5, ls='--')
+        ax.plot(xx, ubl, color='black', alpha=0.5, ls='--')
     ax.legend()
+    ax.set_ylim(bottom=float(m.eval(v.S[0]).as_fraction()))
     ax.grid(True)
     fig.set_tight_layout(True)
     fig.savefig(fpath, bbox_inches='tight', pad_inches=0.01)
