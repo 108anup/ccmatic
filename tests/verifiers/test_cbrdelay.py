@@ -40,7 +40,7 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
     # cc.template_beliefs = True
     cc.N = 1
     cc.T = T
-    cc.history = 2 * cc.R
+    cc.history = 1
     cc.cca = cca
 
     cc.desired_util_f = 0.5
@@ -91,32 +91,40 @@ def test_cbrdelay_basic():
     # verifier.add(z3.Not(link.desired))
     cca_definitions = get_cca_definition(c, v)
     verifier.add(cca_definitions)
-    # verifier.add(get_periodic_constraints_ccac(cc, c, v))
-
-    # Periodic
-    for t in range(cc.history):
-        last = c.T+t-cc.history
-        for n in range(c.N):
-            verifier.add(v.c_f[n][t] == v.c_f[n][last])
-            verifier.add(v.r_f[n][t] == v.r_f[n][last])
-        verifier.add(v.A[t]-v.L[t]-v.S[t] == v.A[last]-v.L[last]-v.S[last])
-        verifier.add(v.C0 + c.C * t - v.W[t] - (v.A[t] - v.L[t]) == v.C0 + c.C * last - v.W[last] - (v.A[last] - v.L[last]))
-
     verifier.add(v.L[0] == 0)
-    verifier.add(v.S[-1] - v.S[0] < 0.1 * c.C * c.T)
 
+    # # Periodic
+    # verifier.add(get_periodic_constraints_ccac(cc, c, v))
+    # for t in range(cc.history):
+    #     last = c.T+t-cc.history
+    #     for n in range(c.N):
+    #         verifier.add(v.c_f[n][t] == v.c_f[n][last])
+    #         verifier.add(v.r_f[n][t] == v.r_f[n][last])
+    #     verifier.add(v.A[t]-v.L[t]-v.S[t] == v.A[last]-v.L[last]-v.S[last])
+    #     verifier.add(v.C0 + c.C * t - v.W[t] - (v.A[t] - v.L[t]) == v.C0 + c.C * last - v.W[last] - (v.A[last] - v.L[last]))
+
+    # Not cwnd limited
     # assert c.N == 1
-    # # Not cwnd limited
     # for t in range(c.R, c.T):
     #     verifier.add(v.S[t-c.R]+v.c_f[0][t] > v.A[t])
 
+    # Max rate
     assert c.N == 1
     max_rate = [0]
     for t in range(c.R, c.T):
         max_rate.append(z3_max(
             max_rate[-1], (v.S[t] - v.S[t-c.R])/c.R
         ))
-    verifier.add(max_rate[c.R] == max_rate[-1])
+    # verifier.add(max_rate[c.R] == max_rate[-1])
+
+    high_util = v.S[-1] - v.S[cc.history-1] >= 0.1 * c.C * (c.T-1 - (cc.history-1) + c.D)
+    ramp_up_max_rate = max_rate[-1] > max_rate[cc.history]
+    ramp_up_queue = v.A[-1]-v.L[-1]-v.S[-1] > v.A[cc.history]-v.L[cc.history]-v.S[cc.history]
+    # ramp_up_rate = v.r_f[0][-1] > v.r_f[0][cc.history]
+    # ramp_up_rate = False
+    # ramp_up_bq = v.A[-1]-v.L[-1]-v.S[-1] > v.A[cc.history]-v.L[cc.history]-v.S[cc.history]
+    desired = z3.Or(high_util, ramp_up_max_rate, ramp_up_queue)
+    verifier.add(z3.Not(desired))
 
     sat = verifier.check()
     print(sat)
@@ -186,6 +194,6 @@ def bbr_low_util(timeout=10):
 
 
 if(__name__ == "__main__"):
-    # test_cbrdelay_basic()
-    test_never_negative_bq()
+    test_cbrdelay_basic()
+    # test_never_negative_bq()
     # bbr_low_util()
