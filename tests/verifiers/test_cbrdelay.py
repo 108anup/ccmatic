@@ -37,7 +37,7 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
     cc.template_qdel = True
     cc.template_queue_bound = False
     cc.template_fi_reset = False
-    # cc.template_beliefs = True
+    cc.template_beliefs = True
     cc.N = 1
     cc.T = T
     cc.history = 1
@@ -58,7 +58,7 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
         cc.desired_loss_amount_bound_alpha = 3
 
     cc.feasible_response = False
-    # cc.send_min_alpha = True
+    cc.send_min_alpha = True
 
     link = CCmatic(cc)
     try_except(link.setup_config_vars)
@@ -78,6 +78,74 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
     print(f"{cc.name}: {cc.desire_tag()}")
 
     return cc, link
+
+
+def test_beliefs_remain_consistent():
+    cc, link = setup(buffer="dynamic", cca="none", T=10)
+    c, _, v = link.c, link.s, link.v
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+
+    """
+    minc is consistent iff loss or delay did not happen when we sent
+    minc * (T + D + quanta) packets in T time.
+
+    C * T + Buffer >= minc * (T + D + quanta)
+    AND
+    C * T + C * (D + quanta) >= minc * (T + D + quanta)
+
+    We get:
+    1. For all T, C * T + Buffer >= minc * (T + D + quanta)
+    AND
+    2. C >= minc
+
+    For 1, putting T = quanta suffices.
+    T is multiple of quanta, as T increases,
+    the inequality becomes easier to satisfy.
+    We get 1. C * quanta + Buffer >= minc * (quanta + D + quanta)
+    """
+
+    assert c.buf_min is not None
+    initial_minc_lambda_consistent = z3.And([z3.And(
+        c.C * 1 + c.buf_min >= v.min_c_lambda[n][0] * (1+c.D+1),
+        v.min_c_lambda[n][0] <= c.C) for n in range(c.N)])
+
+    final_minc_lambda_consistent = z3.And([z3.And(
+        c.C * 1 + c.buf_min >= v.min_c_lambda[n][-1] * (1+c.D+1),
+        v.min_c_lambda[n][-1] <= c.C) for n in range(c.N)])
+
+    # verifier.add(v.alpha > 0.1)
+
+    verifier.add(z3.Not(z3.Implies(
+        initial_minc_lambda_consistent, final_minc_lambda_consistent)))
+
+    # _initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
+    #                                    for n in range(c.N)])
+    # _initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
+    #                                    for n in range(c.N)])
+    # initial_c_beliefs_consistent = z3.And(
+    #     _initial_minc_consistent, _initial_maxc_consistent)
+    # _final_minc_consistent = z3.And([v.min_c[n][-1] <= c.C
+    #                                 for n in range(c.N)])
+    # _final_maxc_consistent = z3.And([v.max_c[n][-1] >= c.C
+    #                                 for n in range(c.N)])
+    # final_c_beliefs_consistent = z3.And(
+    #     _final_minc_consistent, _final_maxc_consistent)
+
+    # verifier.add(z3.Not(z3.Implies(initial_c_beliefs_consistent,
+    #                                final_c_beliefs_consistent)))
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        print(model.eval(initial_minc_lambda_consistent))
+        print(model.eval(final_minc_lambda_consistent))
+        import ipdb; ipdb.set_trace()
 
 
 def test_cbrdelay_basic():
@@ -194,6 +262,34 @@ def bbr_low_util(timeout=10):
 
 
 if(__name__ == "__main__"):
-    test_cbrdelay_basic()
+    # test_cbrdelay_basic()
     # test_never_negative_bq()
     # bbr_low_util()
+    try_except(test_beliefs_remain_consistent)
+
+
+# SCRAP
+# # Old
+# """
+# consistent if:
+# C >= minc and buffer >= minc * (D+quanta)
+# OR
+# minc <= C * (quanta) / (quanta + (D+quanta))
+# """
+
+# assert c.buf_min is not None
+# initial_minc_lambda_consistent = z3.And(
+#     [z3.Or(
+#         z3.And(
+#             v.min_c_lambda[n][0] <= c.C,
+#             c.buf_min >= v.min_c_lambda[n][0] * (c.D+1)),
+#         v.min_c_lambda[n][0] <= c.C * 1 / (1 + (c.D+1)))
+#         for n in range(c.N)])
+
+# final_minc_lambda_consistent = z3.And(
+#     [z3.Or(
+#         z3.And(
+#             v.min_c_lambda[n][-1] <= c.C,
+#             c.buf_min >= v.min_c_lambda[n][-1] * (c.D+1)),
+#         v.min_c_lambda[n][-1] <= c.C * 1 / (1 + (c.D+1)))
+#         for n in range(c.N)])

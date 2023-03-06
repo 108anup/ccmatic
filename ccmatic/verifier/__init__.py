@@ -2082,6 +2082,7 @@ def get_cex_df(
         for n in range(c.N):
             cex_dict.update({
                 get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
+                get_name_for_list(vn.min_c_lambda[n]): _get_model_value(v.min_c_lambda[n]),
                 get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
                 # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
@@ -2540,12 +2541,14 @@ class BaseLink:
             definition_vars.extend(flatten(v.mode_f[:, 1:]))
             verifier_vars.extend(flatten(v.mode_f[:, :1]))
 
-        if(c.beliefs):
+        if (c.beliefs):
             definition_vars.extend(flatten(
                 [v.min_c[:, 1:], v.max_c[:, 1:],
-                v.min_qdel, v.max_qdel]))
+                 v.min_c_lambda[:, 1:],
+                 v.min_qdel, v.max_qdel]))
             verifier_vars.extend(flatten(
-                [v.min_c[:, :1], v.max_c[:, :1]]))
+                [v.min_c[:, :1], v.max_c[:, :1],
+                 v.min_c_lambda[:, :1]]))
             if(c.buf_min is not None and c.beliefs_use_buffer):
                 definition_vars.extend(flatten(
                     v.min_buffer[:, 1:]))
