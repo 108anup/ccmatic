@@ -129,6 +129,30 @@ def test_cbrdelay_basic():
         import ipdb; ipdb.set_trace()
 
 
+def test_never_negative_bq():
+    cc, link = setup(cca="none", T=10)
+    c, _, v = link.c, link.s, link.v
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+
+    neg_bq_list = []
+    for t in range(c.T):
+        neg_bq_list.append((v.A[t] - v.L[t]) - (v.C0 + c.C * t - v.W[t]) < 0)
+    verifier.add(z3.Or(neg_bq_list))
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        print([model.eval((v.A[t] - v.L[t]) - (v.C0 + c.C * t - v.W[t])) for t in range(c.T)])
+        import ipdb; ipdb.set_trace()
+    assert (str(sat) == "unsat")
+
+
 def bbr_low_util(timeout=10):
     '''Finds an example trace where BBR has < 10% utilization. It can be made
     arbitrarily small, since BBR can get arbitrarily small throughput in our
@@ -162,5 +186,6 @@ def bbr_low_util(timeout=10):
 
 
 if(__name__ == "__main__"):
-    test_cbrdelay_basic()
+    # test_cbrdelay_basic()
+    test_never_negative_bq()
     # bbr_low_util()
