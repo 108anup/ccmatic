@@ -10,6 +10,7 @@ from ccmatic.cegis import CegisConfig, VerifierType
 from ccmatic.common import try_except
 from ccmatic.verifier import get_cex_df, get_periodic_constraints, plot_cex
 from ccmatic.verifier.assumptions import get_cca_definition, get_periodic_constraints_ccac
+from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis import Cegis
 from cegis.util import z3_max
 from pyz3_utils.my_solver import MySolver
@@ -83,6 +84,8 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
 def test_beliefs_remain_consistent():
     cc, link = setup(buffer="dynamic", cca="none", T=10)
     c, _, v = link.c, link.s, link.v
+    assert isinstance(v, CBRDelayLink.LinkVariables)
+    assert isinstance(c, CBRDelayLink.LinkModelConfig)
 
     verifier = MySolver()
     verifier.warn_undeclared = False

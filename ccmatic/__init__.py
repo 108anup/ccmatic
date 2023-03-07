@@ -133,6 +133,7 @@ class CCmatic():
         self.environment = environment
         self.verifier_vars = verifier_vars
         self.definition_vars = definition_vars
+        self.Link = Link
 
         d, desired = self.get_desired()
         self.d = d

@@ -2333,6 +2333,12 @@ def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpa
 
 class BaseLink:
 
+    class LinkVariables(Variables):
+        pass
+
+    class LinkModelConfig(ModelConfig):
+        pass
+
     @staticmethod
     def check_config(cc: CegisConfig):
         # Don't use both of them together as they will produce different values for
@@ -2341,7 +2347,7 @@ class BaseLink:
 
     def setup_model_config(self, cc: CegisConfig):
         self.check_config(cc)
-        c = ModelConfig.default()
+        c = self.LinkModelConfig.default()
         c.compose = True
         c.cca = cc.cca
         c.simplify = False
@@ -2551,11 +2557,9 @@ class BaseLink:
         if (c.beliefs):
             definition_vars.extend(flatten(
                 [v.min_c[:, 1:], v.max_c[:, 1:],
-                 v.min_c_lambda[:, 1:],
                  v.min_qdel, v.max_qdel]))
             verifier_vars.extend(flatten(
-                [v.min_c[:, :1], v.max_c[:, :1],
-                 v.min_c_lambda[:, :1]]))
+                [v.min_c[:, :1], v.max_c[:, :1]]))
             if(c.buf_min is not None and c.beliefs_use_buffer):
                 definition_vars.extend(flatten(
                     v.min_buffer[:, 1:]))
@@ -2585,7 +2589,7 @@ class BaseLink:
         c = self.setup_model_config(cc)
         s = MySolver()
         s.warn_undeclared = False
-        v = Variables(c, s, cc.name)
+        v = self.LinkVariables(c, s, cc.name)
 
         ccac_domain = z3.And(*s.assertion_list)
         se = self.setup_environment(c, v)
