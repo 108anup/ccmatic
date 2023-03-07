@@ -373,7 +373,6 @@ def test_convergence_loss_tradeoff():
         import ipdb; ipdb.set_trace()
 
 
-
 def test_maximum_loss_for_fixed_cwnd(f: float):
     cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1)
     c, _, v = link.c, link.s, link.v

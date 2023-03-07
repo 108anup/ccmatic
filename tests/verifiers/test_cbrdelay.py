@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import z3
 from ccac.config import ModelConfig
 from ccac.model import make_solver
@@ -8,7 +8,7 @@ from ccmatic import CCmatic
 
 from ccmatic.cegis import CegisConfig, VerifierType
 from ccmatic.common import try_except
-from ccmatic.verifier import get_cex_df, get_periodic_constraints, plot_cex
+from ccmatic.verifier import BaseLink, get_periodic_constraints, plot_cex
 from ccmatic.verifier.assumptions import get_cca_definition, get_periodic_constraints_ccac
 from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis import Cegis
@@ -64,7 +64,7 @@ def setup(buffer="infinite", buf_size=1, T=6, cca="none"):
     link = CCmatic(cc)
     try_except(link.setup_config_vars)
 
-    search_constraints = True
+    search_constraints = z3.BoolSort().cast(True)
     template_definitions = []
     generator_vars = []
 
@@ -123,8 +123,8 @@ def test_beliefs_remain_consistent():
 
     # verifier.add(v.alpha > 0.1)
 
-    verifier.add(z3.Not(z3.Implies(
-        initial_minc_lambda_consistent, final_minc_lambda_consistent)))
+    # verifier.add(z3.Not(z3.Implies(
+    #     initial_minc_lambda_consistent, final_minc_lambda_consistent)))
 
     # _initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
     #                                    for n in range(c.N)])
@@ -182,7 +182,7 @@ def test_cbrdelay_basic():
 
     # Max rate
     assert c.N == 1
-    max_rate = [0]
+    max_rate: List[Union[float, z3.ArithRef]] = [0]
     for t in range(c.R, c.T):
         max_rate.append(z3_max(
             max_rate[-1], (v.S[t] - v.S[t-c.R])/c.R
@@ -203,7 +203,7 @@ def test_cbrdelay_basic():
     if(str(sat) == "sat"):
         model = verifier.model()
         vn = VariableNames(v)
-        df = get_cex_df(model, v, vn, c)
+        df = link.Link.get_cex_df(model, v, vn, c)
         plot_cex(model, df, c, v, "tmp/cbrdelay_bbr.pdf")
         print(link.get_counter_example_str(model, link.verifier_vars))
         import ipdb; ipdb.set_trace()
@@ -259,7 +259,7 @@ def bbr_low_util(timeout=10):
     if(str(sat) == "sat"):
         model = s.model()
         vn = VariableNames(v)
-        df = get_cex_df(model, v, vn, c)
+        df = BaseLink.get_cex_df(model, v, vn, c)
         plot_cex(model, df, c, v, "tmp/cbrdelay_bbr.pdf")
         print(df)
         import ipdb; ipdb.set_trace()

@@ -167,11 +167,12 @@ class CCmatic():
         c = self.c
         cc = self.cc
         d = self.d
+        Link = self.Link
 
         def get_counter_example_str(
                 counter_example: z3.ModelRef,
                 verifier_vars: List[z3.ExprRef]) -> str:
-            df = get_cex_df(counter_example, v, vn, c)
+            df = Link.get_cex_df(counter_example, v, vn, c)
             desired_string = d.to_string(cc, c, counter_example)
             buf_size = c.buf_min
             if(cc.dynamic_buffer):

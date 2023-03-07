@@ -16,7 +16,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
-from cegis.util import get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
+from cegis.util import get_model_value_list, get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -2055,11 +2055,8 @@ def get_cex_df(
     vn: VariableNames, c: ModelConfig
 ) -> pd.DataFrame:
     def _get_model_value(l):
-        ret = []
-        for vvar in l:
-            val = get_raw_value(counter_example.eval(vvar))
-            ret.append(val)
-        return ret
+        return get_model_value_list(counter_example, l)
+
     cex_dict = {
         # get_name_for_list(vn.A): _get_model_value(v.A),
         # get_name_for_list(vn.S): _get_model_value(v.S),
@@ -2082,7 +2079,6 @@ def get_cex_df(
         for n in range(c.N):
             cex_dict.update({
                 get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
-                get_name_for_list(vn.min_c_lambda[n]): _get_model_value(v.min_c_lambda[n]),
                 get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
                 # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
@@ -2603,3 +2599,10 @@ class BaseLink:
         return (c, s, v,
                 ccac_domain, ccac_definitions, environment,
                 verifier_vars, definition_vars)
+
+    @staticmethod
+    def get_cex_df(
+        counter_example: z3.ModelRef, v: Variables,
+        vn: VariableNames, c: ModelConfig
+    ) -> pd.DataFrame:
+        return get_cex_df(counter_example, v, vn, c)

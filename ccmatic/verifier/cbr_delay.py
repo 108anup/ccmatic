@@ -1,13 +1,14 @@
+import pandas as pd
 import numpy as np
 import z3
 
 from ccac.config import ModelConfig
 from ccac.model import cca_paced, cwnd_rate_arrival, initial, loss_oracle, relate_tot
-from ccac.variables import Variables
+from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten
+from ccmatic.common import flatten, get_name_for_list
 from ccmatic.verifier import BaseLink, calculate_qbound_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs, update_beliefs
-from cegis.util import z3_max
+from cegis.util import get_model_value_list, z3_max
 from pyz3_utils.my_solver import MySolver
 
 from typing import Optional, Tuple, List
@@ -287,3 +288,22 @@ class CBRDelayLink(BaseLink):
             verifier_vars.extend(flatten(
                 v.min_c_lambda[:, :1]))
         return verifier_vars, definition_vars
+
+    @staticmethod
+    def get_cex_df(
+        counter_example: z3.ModelRef, v: Variables,
+        vn: VariableNames, c: ModelConfig
+    ) -> pd.DataFrame:
+        assert isinstance(v, CBRDelayLink.LinkVariables)
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
+        df = BaseLink.get_cex_df(counter_example, v, vn, c)
+
+        def _get_model_value(l):
+            return get_model_value_list(counter_example, l)
+
+        if (c.beliefs):
+            for n in range(c.N):
+                df[get_name_for_list(vn.min_c_lambda[n])] = _get_model_value(v.min_c_lambda[n])
+
+        return df.astype(float)
