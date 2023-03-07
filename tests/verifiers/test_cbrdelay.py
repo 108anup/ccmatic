@@ -109,13 +109,14 @@ def test_beliefs_remain_consistent():
     """
 
     assert c.buf_min is not None
+    MI = c.minc_lambda_measurement_interval
     initial_minc_lambda_consistent = z3.And([z3.And(
-        c.C * 1 + c.buf_min >= v.min_c_lambda[n][0] * (1+c.D+1),
-        v.min_c_lambda[n][0] <= c.C) for n in range(c.N)])
+        c.C * MI + c.buf_min >= v.min_c_lambda[n][0] * (MI+c.D+1),
+        v.min_c_lambda[n][0] < c.C) for n in range(c.N)])
 
     final_minc_lambda_consistent = z3.And([z3.And(
-        c.C * 1 + c.buf_min >= v.min_c_lambda[n][-1] * (1+c.D+1),
-        v.min_c_lambda[n][-1] <= c.C) for n in range(c.N)])
+        c.C * MI + c.buf_min >= v.min_c_lambda[n][-1] * (MI+c.D+1),
+        v.min_c_lambda[n][-1] < c.C) for n in range(c.N)])
 
     # verifier.add(v.alpha > 0.1)
 

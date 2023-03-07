@@ -2176,10 +2176,17 @@ def get_cex_df(
         df["upper_S_t"] = upper_S
 
     if(c.N == 1):
-        df["del_A"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
-        df["del_S"] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift(1)
-        df["del_L"] = df[get_name_for_list(vn.L_f[0])] - df[get_name_for_list(vn.L_f[0])].shift(1)
+        df["del_A_f"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
+        df["del_S_f"] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift(1)
+        df["del_L_f"] = df[get_name_for_list(vn.L_f[0])] - df[get_name_for_list(vn.L_f[0])].shift(1)
 
+        # max_minc = [0]
+        # for t in range(1, c.T):
+        #     this_minc = 0
+        #     for st in range(0, t):
+        #         this_minc = max(this_minc, np.sum(df[f"del_A_f"][st+1:t+1])/(t-st + c.D + 1))
+        #     max_minc.append(this_minc)
+        # df['max_minc'] = max_minc
 
     if(c.calculate_qbound):
         qdelay = []

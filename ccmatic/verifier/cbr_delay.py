@@ -46,15 +46,19 @@ def update_min_c_lambda(c: ModelConfig, s: MySolver, v: Variables):
             base_minc = v.min_c_lambda[n][t-1]
             overall_minc = base_minc
             # RTT >= 1 at the very least, and so max et is t-1.
+            # min et is 1.
             for et in range(t-1, 0, -1):
                 # We only use this et if et = t-RTT(t)
                 # et = t-RTT(t) iff A[et] <= S[t] and A[et+1] > S[t]
                 correct_et = z3.And(
                     v.A_f[n][et] <= v.S_f[n][t],
                     v.A_f[n][et+1] > v.S_f[n][t])
-                for st in range(et-1, -1, -1):
+                # for st in range(et-1, -1, -1):
+                for st in [et-c.minc_lambda_measurement_interval]:
                     window = et - st
                     assert window > 0
+                    assert et >= 0
+                    assert st >= 0
 
                     # measured_c = (v.A_f[n][et] - v.A_f[n][st]) / window
                     # this_lower = measured_c * window / (window + c.D)
@@ -77,6 +81,98 @@ def update_min_c_lambda(c: ModelConfig, s: MySolver, v: Variables):
 
 
 class CBRDelayLink(BaseLink):
+
+    @staticmethod
+    def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
+        """
+        Queuing delay at time t: Non propagation delay experienced by the first
+        byte that is acked between (t-1, t].
+
+        qdel[t][dt] means that the qdelay of the first byte is in range [dt,
+        dt+1).
+
+        Note, ideally it should be (dt-1, dt+1) (due to discretization of time,
+        error in time is 1 and so error in time interval is 2). We are in a
+        sense restricting some continuous traces. But since we check all traces,
+        the cts traces we restrict at t, might work at t-1. Unclear. TODO:
+        Verify this...
+        """
+
+        """
+        qdel[t][dt>=t] is non-deterministic
+        qdel[t=0][dt] is non-deterministic
+        qdel[t][dt<t] is deterministic
+
+               dt
+             0 1 2 3
+           ----------
+          0| n n n n
+        t 1| d n n n
+          2| d d n n
+          3| d d d n
+        """
+
+        for t in range(1, c.T):
+            for dt in range(t):
+                s.add(
+                    v.qdel[t][dt] ==
+                    z3.If(v.S[t] != v.S[t-1],
+                          z3.And(v.A[t-dt] - v.L[t-dt] > v.S[t-1],
+                                 v.A[t-dt-1] - v.L[t-dt-1] <= v.S[t-1]),
+                          v.qdel[t-1][dt]))
+
+    @staticmethod
+    def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
+        """
+        This funciton is exactly same constraints as regular qdelay.
+        So we don't use this function at all.
+        """
+        raise NotImplementedError
+
+        # The qdel dt values mark non-overlapping time intervals, so only one of
+        # them can be true at a time t.
+        for t in range(c.T):
+            s.add(z3.Sum(*v.qdel[t]) <= 1)
+
+        # qdelay is only measured when new pkts are received. Otherwise, by
+        # convention we don't change the qdelay value.
+        for t in range(1, c.T):
+            for dt in range(t, c.T):
+                s.add(z3.Implies(v.S[t] == v.S[t-1],
+                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
+
+        # qdelay cannot increase too quickly. Say, I got pkts at time t1 and t2,
+        # where t2 > t1, since pkts are serviced in FIFO, the send tstamp of pkt
+        # arrived at t2 must be later than that of pkt recvd at t1. Thus the RTT
+        # of pkt at t2 can be atmost t2-t1 more than pkt at t1.
+        # If qdel[t1][dt1] is true then all of qdel[t2>t1][dt2>dt1+t2-t1] must
+        # be False and for all t2>t1, at least one of qdel[t2][dt2<=dt1+t2-t1]
+        # must be True.
+        for t1 in range(c.T-1):
+            for dt1 in range(c.T):
+                t2 = t1+1
+                # dt2 starts from dt1+1+1
+                s.add(z3.Implies(
+                    v.qdel[t1][dt1],
+                    z3.And(*[z3.Not(v.qdel[t2][dt2])
+                            for dt2 in range(dt1+1+1, c.T)])
+                ))
+                s.add(z3.Implies(
+                    v.qdel[t1][dt1],
+                    z3.Or(*[v.qdel[t2][dt2] for dt2 in range(min(c.T, dt1+1+1))])
+                ))
+
+        # qdelay cannot be more than max_delay = buffer/C + D.
+        # This means that one of qdel[t][dt<=max_delay] must be true. This also
+        # means that all of qdel[t][dt>max_delay] are false.
+        if (c.buf_min is not None):
+            max_delay = c.buf_min/c.C + c.D
+            for t in range(c.T):
+                some_qdel_is_true = (1 == z3.Sum(
+                    *[z3.If(dt <= max_delay, v.qdel[t][dt], False)
+                      for dt in range(c.T)]))
+                # if max_delay is very high, then all qdel can be false.
+                s.add(z3.Implies(max_delay < c.T, some_qdel_is_true))
 
     @staticmethod
     def waste_defs(c: ModelConfig, s: MySolver, v: Variables):
@@ -123,7 +219,8 @@ class CBRDelayLink(BaseLink):
         if(c.loss_oracle):
             loss_oracle(c, s, v)  # Defs to compute loss detected.
         if(c.calculate_qdel):
-            calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
+            # calculate_qdel_defs(c, s, v)  # Defs to compute qdel.
+            self.calculate_qdel_defs(c, s, v)
         if(c.calculate_qbound):
             calculate_qbound_defs(c, s, v)  # Defs to compute qbound.
             last_decrease_defs(c, s, v)
