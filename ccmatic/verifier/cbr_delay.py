@@ -1,35 +1,79 @@
-import pandas as pd
+from typing import List, Optional, Tuple
+
 import numpy as np
+import pandas as pd
 import z3
 
 from ccac.config import ModelConfig
-from ccac.model import cca_paced, cwnd_rate_arrival, initial, loss_oracle, relate_tot
+from ccac.model import (cca_paced, cwnd_rate_arrival, initial, loss_oracle,
+                        relate_tot)
 from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten, get_name_for_list
-from ccmatic.verifier import BaseLink, calculate_qbound_defs, exceed_queue_defs, last_decrease_defs, loss_deterministic, monotone_defs, update_beliefs
+from ccmatic.verifier import (BaseLink, calculate_qbound_defs,
+                              exceed_queue_defs, last_decrease_defs,
+                              loss_deterministic, monotone_defs,
+                              update_beliefs)
 from cegis.util import get_model_value_list, z3_max
 from pyz3_utils.my_solver import MySolver
-
-from typing import Optional, Tuple, List
 
 
 class CBRDelayLink(BaseLink):
 
     class LinkVariables(Variables):
 
+        def bq(self, t: int):
+            assert t >= 0 and t <= self.c.T-1
+            return self.A[t] - self.L[t] - (self.C0 + self.c.C * t - self.W[t])
+
         def __init__(self, c: ModelConfig, s: MySolver,
                      name: Optional[str] = None):
             super().__init__(c, s, name)
+            self.c = c
             pre = self.pre
 
-            self.min_c_lambda = np.array([[
-                s.Real(f"{pre}min_c_lambda_{n},{t}")
-                for t in range(c.T)]
-                for n in range(c.N)])
+            if (c.beliefs):
+                self.min_c_lambda = np.array([[
+                    s.Real(f"{pre}min_c_lambda_{n},{t}")
+                    for t in range(c.T)]
+                    for n in range(c.N)])
+
+                # bytes in the bottleneck queue just after the latest byte
+                # acked, assuming the link rate is min_c_lambda.
+                # computed based on inflight
+                self.bq_belief1 = np.array([[
+                    s.Real(f"{pre}bq_belief1_{n},{t}")
+                    for t in range(c.T)]
+                    for n in range(c.N)])
+
+                # computed based on net arrivals and expected departures.
+                self.bq_belief2 = np.array([[
+                    s.Real(f"{pre}bq_belief2_{n},{t}")
+                    for t in range(c.T)]
+                    for n in range(c.N)])
 
     class LinkModelConfig(ModelConfig):
         minc_lambda_measurement_interval: float = 1
+
+    @staticmethod
+    def update_bq_belief(c: ModelConfig, s: MySolver, v: Variables):
+        assert isinstance(v, CBRDelayLink.LinkVariables)
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
+        for n in range(c.N):
+            for t in range(c.T):
+                inflight = v.A_f[n][t] - v.Ld_f[n][t] - v.S_f[n][t]
+                s.add(v.bq_belief1[n][t] == inflight)
+                # s.add(v.bq_belief1[n][t] == z3_max(
+                #     0, inflight - v.min_c_lambda[n][t] * c.D))
+
+        for n in range(c.N):
+            for t in range(1, c.T):
+                sent = ((v.A_f[n][t] - v.Ld_f[n][t]) -
+                        (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
+                delivered = v.min_c_lambda[n][t] * 1
+                s.add(v.bq_belief2[n][t] == z3_max(
+                    0, v.bq_belief2[n][t-1] + sent - delivered))
 
     @staticmethod
     def update_min_c_lambda(c: ModelConfig, s: MySolver, v: Variables):
@@ -62,10 +106,12 @@ class CBRDelayLink(BaseLink):
                         under_utilized_cummulative[st] = z3.Not(this_utilized)
                     else:
                         # assert utilized_cummulative[st+1] is not None
-                        # utilized_cummulative[st] = z3.And(utilized_cummulative[st+1], this_utilized)
+                        # utilized_cummulative[st] =
+                        # z3.And(utilized_cummulative[st+1], this_utilized)
                         assert under_utilized_cummulative[st+1] is not None
                         under_utilized_cummulative[st] = z3.And(
-                            under_utilized_cummulative[st+1], z3.Not(this_utilized))
+                            under_utilized_cummulative[st+1],
+                            z3.Not(this_utilized))
 
                 base_minc = v.min_c_lambda[n][t-1]
                 overall_minc = base_minc
@@ -226,6 +272,7 @@ class CBRDelayLink(BaseLink):
     def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         update_beliefs(c, s, v)
         CBRDelayLink.update_min_c_lambda(c, s, v)
+        CBRDelayLink.update_bq_belief(c, s, v)
 
     def setup_definitions(self, c: ModelConfig, v: Variables):
         s = MySolver()
@@ -283,10 +330,14 @@ class CBRDelayLink(BaseLink):
         verifier_vars, definition_vars = super().get_cegis_vars(cc, c, v)
         assert isinstance(v, self.LinkVariables)
         if (c.beliefs):
-            definition_vars.extend(flatten(
-                v.min_c_lambda[:, 1:]))
-            verifier_vars.extend(flatten(
-                v.min_c_lambda[:, :1]))
+            definition_vars.extend(flatten([
+                v.min_c_lambda[:, 1:],
+                v.bq_belief1, v.bq_belief2[:, 1:]
+            ]))
+            verifier_vars.extend(flatten([
+                v.min_c_lambda[:, :1],
+                v.bq_belief2[:, :1]
+            ]))
         return verifier_vars, definition_vars
 
     @staticmethod
@@ -305,5 +356,7 @@ class CBRDelayLink(BaseLink):
         if (c.beliefs):
             for n in range(c.N):
                 df[get_name_for_list(vn.min_c_lambda[n])] = _get_model_value(v.min_c_lambda[n])
+                df[get_name_for_list(vn.bq_belief1[n])] = _get_model_value(v.bq_belief1[n])
+                df[get_name_for_list(vn.bq_belief2[n])] = _get_model_value(v.bq_belief2[n])
 
         return df.astype(float)

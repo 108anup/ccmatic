@@ -121,26 +121,28 @@ def test_beliefs_remain_consistent():
         c.C * MI + c.buf_min >= v.min_c_lambda[n][-1] * (MI+c.D+1),
         v.min_c_lambda[n][-1] < c.C) for n in range(c.N)])
 
-    # verifier.add(v.alpha > 0.1)
+    # TODO: check why with bq_belief1, when we subtract minc_lambda, final
+    # belief is still consistent.
 
+    bq_belief = v.bq_belief2
+    initial_bq_consistent = z3.And([
+        bq_belief[n][0] >= v.bq(0)
+        for n in range(c.N)])
+    final_bq_consistent = z3.And([
+        bq_belief[n][-1] >= v.bq(c.T-1)
+        for n in range(c.N)])
+
+    # verifier.add(v.alpha > 0.1)
     # verifier.add(z3.Not(z3.Implies(
     #     initial_minc_lambda_consistent, final_minc_lambda_consistent)))
+    # verifier.add(z3.Not(z3.Implies(
+    #     initial_bq_consistent, final_bq_consistent)))
 
-    # _initial_minc_consistent = z3.And([v.min_c[n][0] <= c.C
-    #                                    for n in range(c.N)])
-    # _initial_maxc_consistent = z3.And([v.max_c[n][0] >= c.C
-    #                                    for n in range(c.N)])
-    # initial_c_beliefs_consistent = z3.And(
-    #     _initial_minc_consistent, _initial_maxc_consistent)
-    # _final_minc_consistent = z3.And([v.min_c[n][-1] <= c.C
-    #                                 for n in range(c.N)])
-    # _final_maxc_consistent = z3.And([v.max_c[n][-1] >= c.C
-    #                                 for n in range(c.N)])
-    # final_c_beliefs_consistent = z3.And(
-    #     _final_minc_consistent, _final_maxc_consistent)
+    verifier.add(initial_minc_lambda_consistent)
+    verifier.add(initial_bq_consistent)
 
-    # verifier.add(z3.Not(z3.Implies(initial_c_beliefs_consistent,
-    #                                final_c_beliefs_consistent)))
+    for n in range(c.N):
+        verifier.add(v.min_c_lambda[n][0] > 0)
 
     sat = verifier.check()
     print(sat)
@@ -149,6 +151,8 @@ def test_beliefs_remain_consistent():
         print(link.get_counter_example_str(model, link.verifier_vars))
         print(model.eval(initial_minc_lambda_consistent))
         print(model.eval(final_minc_lambda_consistent))
+        print(model.eval(initial_bq_consistent))
+        print(model.eval(final_bq_consistent))
         import ipdb; ipdb.set_trace()
 
 
