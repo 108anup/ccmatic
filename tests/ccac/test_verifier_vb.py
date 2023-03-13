@@ -4,8 +4,8 @@ import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
-                              setup_cegis_basic)
+from ccmatic.verifier import (get_cex_df, setup_cegis_basic)
+from ccmatic import get_desired_necessary
 from ccmatic.verifier.ideal import IdealLink
 from cegis.util import Metric, fix_metrics, optimize_multi_var, write_solver
 from pyz3_utils.common import GlobalConfig

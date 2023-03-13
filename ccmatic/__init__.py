@@ -12,9 +12,10 @@ from ccac.variables import VariableNames
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData, VerifierType
 from ccmatic.common import flatten, get_renamed_vars, try_except
 from ccmatic.verifier import (BaseLink, SteadyStateVariable,
-                              get_belief_invariant, get_cex_df,
-                              get_desired_necessary, get_desired_ss_invariant,
+                              get_cex_df,
                               get_gen_cex_df, run_verifier_incomplete)
+from ccmatic.verifier.desired import get_belief_invariant, \
+    get_desired_necessary, get_desired_ss_invariant
 from ccmatic.verifier.assumptions import AssumptionVerifier
 from ccmatic.verifier.cbr_delay import CBRDelayLink
 from ccmatic.verifier.ideal import IdealLink

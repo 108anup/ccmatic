@@ -5,8 +5,9 @@ import logging
 import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
-from ccmatic.verifier import (get_cex_df, get_desired_necessary, get_periodic_constraints,
+from ccmatic.verifier import (get_cex_df, get_periodic_constraints,
                               setup_cegis_basic)
+from ccmatic import get_desired_necessary
 from ccmatic.verifier.assumptions import get_cca_definition
 from cegis.util import Metric, optimize_multi_var
 from pyz3_utils.common import GlobalConfig

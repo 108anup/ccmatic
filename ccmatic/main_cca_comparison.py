@@ -3,8 +3,8 @@ import logging
 import pandas as pd
 import z3
 from ccmatic.cegis import CegisConfig
-from ccmatic.verifier import (get_cex_df, get_desired_necessary,
-                              setup_cegis_basic)
+from ccmatic.verifier import (get_cex_df, setup_cegis_basic)
+from ccmatic import get_desired_necessary
 from cegis.util import Metric, optimize_multi_var
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver

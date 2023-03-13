@@ -14,8 +14,9 @@ from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData
 from ccmatic.common import (flatten, get_product_ite, get_renamed_vars,
                             get_val_list)
 
-from .verifier import (get_cex_df, get_desired_necessary, get_desired_ss_invariant, get_gen_cex_df,
+from .verifier import (get_cex_df, get_gen_cex_df,
                        run_verifier_incomplete, setup_cegis_basic)
+from . import get_desired_necessary, get_desired_ss_invariant
 
 logger = logging.getLogger('cca_gen')
 GlobalConfig().default_logger_setup(logger)
