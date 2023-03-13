@@ -88,8 +88,8 @@ CONVERGENCE_BASED_ON_BUFFER = False
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
 # template_type = TemplateType.IF_ELSE_CHAIN
-template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -259,18 +259,6 @@ def get_solution_str(
 
 
 # ----------------------------------------------------------------
-# KNOWN SOLUTIONS
-# (for debugging)
-known_solution = None
-solution_dict = get_solutions(main_tb, main_lhs_term)
-if(args.cegis_with_solution):
-    assert args.solution is not None
-    assert args.solution in solution_dict
-    known_solution = solution_dict[args.solution]
-    search_constraints = z3.And(search_constraints, known_solution)
-    assert isinstance(search_constraints, z3.BoolRef)
-
-# ----------------------------------------------------------------
 # ADVERSARIAL LINK
 cc = CegisConfig()
 # cc.DEBUG = True
@@ -394,7 +382,20 @@ if(ADD_IDEAL_LINK):
     ideal_link.critical_generator_vars = critical_generator_vars
     logger.info("Ideal: " + cc_ideal.desire_tag())
 
+# ----------------------------------------------------------------
+# KNOWN SOLUTIONS
+# (for debugging)
+known_solution = None
+solution_dict = get_solutions(cc, main_tb, main_lhs_term)
+if(args.cegis_with_solution):
+    assert args.solution is not None
+    assert args.solution in solution_dict
+    known_solution = solution_dict[args.solution]
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert isinstance(search_constraints, z3.BoolRef)
 
+# ----------------------------------------------------------------
+# RUN
 if(args.optimize):
     assert args.solution is not None
     solution = solution_dict[args.solution]

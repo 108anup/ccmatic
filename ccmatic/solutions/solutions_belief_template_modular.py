@@ -1,15 +1,27 @@
 import z3
+from ccmatic.cegis import CegisConfig, VerifierType
 
 from ccmatic.generator import TemplateBuilder, TemplateType, solution_parser
 
 
-def get_solutions(main_tb: TemplateBuilder,
-                  main_lhs_term: str):
+def get_solutions_cbr_delay(main_tb: TemplateBuilder,
+                            main_lhs_term: str):
+    n_exprs = main_tb.n_exprs
+    n_conds = main_tb.n_conds
+    template_type = main_tb.template_type
+
+    solution_dict = {}
+    return solution_dict
+
+
+def get_solutions_ccac(main_tb: TemplateBuilder,
+                       main_lhs_term: str):
     n_exprs = main_tb.n_exprs
     n_conds = main_tb.n_conds
     template_type = main_tb.template_type
 
     known_solution_list = []
+
 
     # MIMD style solution
     """
@@ -561,3 +573,11 @@ def get_solutions(main_tb: TemplateBuilder,
         solution_dict['probe_until_shrink'] = probe_until_shrink
 
     return solution_dict
+
+
+def get_solutions(cc: CegisConfig, main_tb: TemplateBuilder,
+                  main_lhs_term: str):
+    if(cc.verifier_type == VerifierType.cbrdelay):
+        return get_solutions_cbr_delay(main_tb, main_lhs_term)
+    else:
+        return get_solutions_ccac(main_tb, main_lhs_term)

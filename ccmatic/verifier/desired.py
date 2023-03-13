@@ -4,13 +4,13 @@ from typing import Optional, List
 
 from ccac.config import ModelConfig
 from ccac.variables import Variables
-from ccmatic import SteadyStateVariable, CegisConfig, CBRDelayLink
-from ccmatic.verifier import logger
+from ccmatic.cegis import CegisConfig
+from ccmatic.verifier import logger, SteadyStateVariable
+from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis import rename_vars
 from cegis.util import z3_min
 
 
-# TODO Move all desired things here.
 @dataclass
 class DesiredContainer:
     desired_necessary: Optional[z3.BoolRef] = None

@@ -14,8 +14,6 @@ from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
-from ccmatic.verifier.cbr_delay import CBRDelayLink
-from ccmatic.verifier.desired import DesiredContainer
 from cegis import NAME_TEMPLATE
 from cegis.util import get_model_value_list, get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.binary_search import BinarySearch
