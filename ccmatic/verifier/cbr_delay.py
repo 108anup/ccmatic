@@ -69,8 +69,9 @@ class CBRDelayLink(BaseLink):
 
         for n in range(c.N):
             for t in range(1, c.T):
-                sent = ((v.A_f[n][t] - v.Ld_f[n][t]) -
-                        (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
+                # sent = ((v.A_f[n][t] - v.Ld_f[n][t]) -
+                #         (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
+                sent = v.A_f[n][t] - v.A_f[n][t-1]
                 delivered = v.min_c_lambda[n][t] * 1
                 s.add(v.bq_belief2[n][t] == z3_max(
                     0, v.bq_belief2[n][t-1] + sent - delivered))
@@ -274,6 +275,24 @@ class CBRDelayLink(BaseLink):
         CBRDelayLink.update_min_c_lambda(c, s, v)
         CBRDelayLink.update_bq_belief(c, s, v)
 
+    @staticmethod
+    def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
+        assert isinstance(v, CBRDelayLink.LinkVariables)
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
+        MI = c.minc_lambda_measurement_interval
+        initial_minc_lambda_consistent = z3.And([z3.And(
+            c.C * MI + c.buf_min >= v.min_c_lambda[n][0] * (MI+c.D+1),
+            v.min_c_lambda[n][0] < c.C) for n in range(c.N)])
+
+        bq_belief = v.bq_belief2
+        initial_bq_consistent = z3.And([
+            bq_belief[n][0] >= v.bq(0)
+            for n in range(c.N)])
+
+        s.add(initial_minc_lambda_consistent)
+        s.add(initial_bq_consistent)
+
     def setup_definitions(self, c: ModelConfig, v: Variables):
         s = MySolver()
         s.warn_undeclared = False
@@ -301,6 +320,12 @@ class CBRDelayLink(BaseLink):
             self.update_beliefs(c, s, v)
         self.waste_defs(c, s, v)
 
+        return s
+
+    def setup_environment(self, c: ModelConfig, v: Variables):
+        s = super().setup_environment(c, v)
+        if(c.beliefs):
+            CBRDelayLink.initial_beliefs(c, s, v)
         return s
 
     def get_base_cegis_vars(

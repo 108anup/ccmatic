@@ -15,6 +15,7 @@ from ccac.variables import VariableNames, Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
+from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
 from cegis.util import get_model_value_list, get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.binary_search import BinarySearch
@@ -1133,17 +1134,32 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
             v.max_c[n][c.T-1] >= c.C,
             v.min_c[n][c.T-1] <= c.C
         ])
-        if(c.buf_min is not None and c.beliefs_use_buffer):
+        if (c.buf_min is not None and c.beliefs_use_buffer):
             final_consistent_list.append(
                 v.min_buffer[n][c.T-1] <= c.buf_min / c.C)
-            if(c.beliefs_use_max_buffer):
+            if (c.beliefs_use_max_buffer):
                 final_consistent_list.append(
                     v.max_buffer[n][c.T-1] >= c.buf_min / c.C)
-        if(c.app_limited and c.app_fixed_avg_rate):
+        if (c.app_limited and c.app_fixed_avg_rate):
             final_consistent_list.extend([
                 v.max_app_rate[n][c.T-1] >= v.app_rate,
                 v.min_app_rate[n][c.T-1] <= v.app_rate
             ])
+
+        if (isinstance(v, CBRDelayLink.LinkVariables)):
+            assert isinstance(c, CBRDelayLink.LinkModelConfig)
+            MI = c.minc_lambda_measurement_interval
+            final_minc_lambda_consistent = z3.And([z3.And(
+                c.C * MI + c.buf_min >= v.min_c_lambda[n][-1] * (MI+c.D+1),
+                v.min_c_lambda[n][-1] < c.C) for n in range(c.N)])
+            final_consistent_list.append(final_minc_lambda_consistent)
+
+            bq_belief = v.bq_belief2
+            final_bq_consistent = z3.And([
+                bq_belief[n][-1] >= v.bq(c.T-1)
+                for n in range(c.N)])
+            final_consistent_list.append(final_bq_consistent)
+
 
     final_consistent = z3.And(*final_consistent_list)
     assert(isinstance(final_consistent, z3.BoolRef))
@@ -1188,6 +1204,9 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
                 v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <
                 v.max_app_rate[n][first] - v.min_app_rate[n][first]
             ])
+        if(isinstance(v, CBRDelayLink.LinkVariables)):
+            atleast_one_shrinks_list.append(
+                v.min_c_lambda[n][c.T-1] > v.min_c_lambda[n][first])
 
         none_expand_list.extend([
             v.max_c[n][c.T-1] - v.min_c[n][c.T-1] <=
@@ -1207,6 +1226,10 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
                 v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <=
                 v.max_app_rate[n][first] - v.min_app_rate[n][first]
             ])
+        if(isinstance(v, CBRDelayLink.LinkVariables)):
+            none_expand_list.append(
+                v.min_c_lambda[n][c.T-1] >= v.min_c_lambda[n][first])
+
 
     none_expand = z3.And(*none_expand_list)
     atleast_one_shrinks = z3.Or(*atleast_one_shrinks_list)

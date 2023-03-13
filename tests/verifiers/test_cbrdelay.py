@@ -135,11 +135,12 @@ def test_beliefs_remain_consistent():
     # verifier.add(v.alpha > 0.1)
     # verifier.add(z3.Not(z3.Implies(
     #     initial_minc_lambda_consistent, final_minc_lambda_consistent)))
-    # verifier.add(z3.Not(z3.Implies(
-    #     initial_bq_consistent, final_bq_consistent)))
+    verifier.add(z3.Not(z3.Implies(
+        initial_bq_consistent, final_bq_consistent)))
 
-    verifier.add(initial_minc_lambda_consistent)
-    verifier.add(initial_bq_consistent)
+    # verifier.add(initial_minc_lambda_consistent)
+    # verifier.add(initial_bq_consistent)
+    # verifier.add(z3.Not(final_bq_consistent))
 
     for n in range(c.N):
         verifier.add(v.min_c_lambda[n][0] > 0)

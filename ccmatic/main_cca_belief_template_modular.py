@@ -112,17 +112,24 @@ n_conds = n_exprs - 1
 
 
 main_lhs_term = "r_f"
-if(synthesis_type == SynthesisType.CWND_ONLY):
+if (synthesis_type == SynthesisType.CWND_ONLY):
     main_lhs_term = "c_f"
 
-search_range_expr_vars = (0, 1/2, 1, 2)
+search_range_expr_vars = (0, 1/2, 1, 2, 3)
 search_range_expr_consts = (-1, 0, 1)
 expr_terms = [
-    TemplateTerm('min_c', TemplateTermType.VAR,
-                 TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars),
     TemplateTerm('alpha', TemplateTermType.CONST,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts)
 ]
+if (args.verifier_type == VerifierType.cbrdelay):
+    expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
+                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+    expr_terms.append(TemplateTerm('bq_belief2', TemplateTermType.VAR,
+                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts))
+else:
+    expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
+                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+
 if SELF_AS_RVALUE:
     expr_terms.append(
         TemplateTerm(main_lhs_term, TemplateTermType.VAR,
