@@ -1230,50 +1230,6 @@ def get_periodic_constraints(cc: CegisConfig, c: ModelConfig, v: Variables):
     return z3.And(*periodic)
 
 
-def get_steady_state_definitions(
-        cc: CegisConfig, c: ModelConfig, v: Variables,
-        d: DesiredContainer):
-    assert d.steady_state_variables
-    assertions = []
-
-    # # Initial in SS implies Final in SS
-    # for sv in steady_state_variables:
-    #     assertions.append(z3.Implies(
-    #         z3.And(sv.initial >= sv.lo, sv.initial <= sv.hi),
-    #         z3.And(sv.final >= sv.lo, sv.final <= sv.hi)))
-
-    # At least one outside
-    #     IMPLIES
-    #         none should degrade AND
-    #         atleast one that is outside must move towards inside
-    d.atleast_one_outside = z3.Or(
-        *[sv.init_outside() for sv in d.steady_state_variables])
-    d.none_degrade = z3.And(*[sv.does_not_degrage()
-                              for sv in d.steady_state_variables])
-    d.atleast_one_moves_inside = \
-        z3.Or(*[z3.And(sv.init_outside(), sv.strictly_improves())
-                for sv in d.steady_state_variables])
-    assertions.append(z3.Implies(
-        d.atleast_one_outside,
-        z3.And(
-            d.none_degrade,
-            d.atleast_one_moves_inside)))
-
-    # All inside
-    #    IMPLIES
-    #         All remain inside
-    d.init_inside = z3.And(*[sv.init_inside() for sv in d.steady_state_variables])
-    d.final_inside = z3.And(*[sv.final_inside() for sv in d.steady_state_variables])
-    assertions.append(z3.Implies(
-        d.init_inside,
-        d.final_inside
-    ))
-
-    ret = z3.And(*assertions)
-    assert isinstance(ret, z3.BoolRef)
-    return ret
-
-
 def maximize_gap(
     c: ModelConfig, v: Variables, ctx: z3.Context, verifier: MySolver
 ) -> Tuple[z3.CheckSatResult, Optional[z3.ModelRef]]:
