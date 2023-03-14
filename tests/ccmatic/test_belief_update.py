@@ -3,16 +3,17 @@ from typing import List, Literal
 from ccac.variables import VariableNames
 
 from ccmatic import CCmatic
-from ccmatic.cegis import CegisConfig
+from ccmatic import verifier
+from ccmatic.cegis import CegisConfig, VerifierType
 from ccmatic.common import try_except
 from ccmatic.verifier import get_cex_df, plot_cex
 from cegis import get_unsat_core
-from cegis.util import Metric, optimize_var
+from cegis.util import Metric, optimize_var, z3_max
 from pyz3_utils.my_solver import MySolver
 
 
 def setup(
-        ideal=False,
+        verifier_type: VerifierType = VerifierType.ccac,
         buffer: Literal["finite", "infinite", "dynamic"] = "infinite",
         T=6, buf_size=None, C=None):
     cc = CegisConfig()
@@ -48,6 +49,8 @@ def setup(
     if(C is not None):
         cc.C = C
 
+    cc.verifier_type = verifier_type
+
     cc.use_belief_invariant = True
     cc.template_beliefs_use_buffer = True
     cc.template_beliefs_use_max_buffer = False
@@ -63,12 +66,11 @@ def setup(
         cc.desired_loss_amount_bound_multiplier = 0
         cc.desired_loss_amount_bound_alpha = 0
     else:
-        cc.desired_loss_count_bound = 3
-        cc.desired_large_loss_count_bound = 3
-        cc.desired_loss_amount_bound_multiplier = 3
-        cc.desired_loss_amount_bound_alpha = 3
+        cc.desired_loss_count_bound = (cc.T-1)/2
+        cc.desired_large_loss_count_bound = 0
+        cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 + 1
+        cc.desired_loss_amount_bound_alpha = (cc.T-1)  # (cc.T-1)/2 - 1
 
-    cc.ideal_link = ideal
     cc.feasible_response = False
 
     cc.send_min_alpha = True
@@ -122,9 +124,9 @@ def test_belief_does_not_degrade():
 
 
 def test_beliefs_remain_consistent(
-        ideal=True,
+        verifier_type=VerifierType.ideal,
         buffer: Literal["finite", "infinite", "dynamic"] = "infinite"):
-    cc, link = setup(ideal, buffer)
+    cc, link = setup(verifier_type, buffer)
     c, _, v = link.c, link.s, link.v
 
     # Beliefs consistent
@@ -252,7 +254,7 @@ def test_beliefs_remain_consistent(
 
 
 def test_can_learn_beliefs(f: float):
-    cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1.5)
+    cc, link = setup(buffer="finite", T=9, buf_size=1.5)
     c, _, v = link.c, link.s, link.v
 
     verifier = MySolver()
@@ -284,7 +286,7 @@ def test_can_learn_beliefs(f: float):
 
 
 def test_convergence_loss_tradeoff():
-    cc, link = setup(ideal=False, buffer="dynamic", T=5)
+    cc, link = setup(buffer="dynamic", T=5)
     c, _, v = link.c, link.s, link.v
 
     verifier = MySolver()
@@ -324,7 +326,7 @@ def test_convergence_loss_tradeoff():
         # import ipdb; ipdb.set_trace()
 
         # Can the trace be produced by a link rate just above minc.
-        cc, link = setup(ideal=False, buffer="dynamic", T=5,
+        cc, link = setup(buffer="dynamic", T=5,
                          # C=model.eval(v.min_c[0][0]+v.alpha-1e-3).as_fraction()
                          C=model.eval(v.min_c[0][0]+v.alpha).as_fraction()
                          # C=model.eval(v.min_c[0][0]+20* v.alpha).as_fraction()
@@ -374,7 +376,7 @@ def test_convergence_loss_tradeoff():
 
 
 def test_maximum_loss_for_fixed_cwnd(f: float):
-    cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1)
+    cc, link = setup(buffer="finite", T=9, buf_size=1)
     c, _, v = link.c, link.s, link.v
 
     verifier = MySolver()
@@ -384,7 +386,7 @@ def test_maximum_loss_for_fixed_cwnd(f: float):
 
     for n in range(c.N):
         for t in range(c.T):
-            verifier.add(v.c_f[n][t] == f * c.C * c.R)
+            verifier.add(v.c_f[n][t] == f * c.C * c.R + v.alpha)
             verifier.add(v.r_f[n][t] == v.c_f[n][t] / c.R)
 
     last_loss_amount = z3.Real('last_loss_amount')
@@ -396,7 +398,11 @@ def test_maximum_loss_for_fixed_cwnd(f: float):
     # ret = optimize_var(verifier, metric.z3ExprRef, metric.lo, metric.hi, metric.eps, not metric.maximize)
     # print(ret)
 
-    verifier.add(last_loss_amount >= f * c.C * c.R - (c.C * c.R + c.buf_min))
+    verifier.add(v.min_qdel[0][-1] == 0)
+    # verifier.add(v.L[-2] == v.L[0])
+    # verifier.add(last_loss_amount >= v.alpha)
+    # verifier.add(last_loss_amount >= f * c.C * c.R - (c.C * c.R + c.buf_min))
+    # verifier.add(last_loss_amount >= 0.1 * c.C * c.R)
     sat = verifier.check()
     print(sat)
     if(str(sat) == "sat"):
@@ -406,7 +412,7 @@ def test_maximum_loss_for_fixed_cwnd(f: float):
 
 
 def test_maximum_loss_for_fixed_rate(f: float):
-    cc, link = setup(ideal=False, buffer="finite", T=9, buf_size=1)
+    cc, link = setup(buffer="finite", T=9, buf_size=1)
     c, _, v = link.c, link.s, link.v
 
     verifier = MySolver()
@@ -437,14 +443,52 @@ def test_maximum_loss_for_fixed_rate(f: float):
     #     import ipdb; ipdb.set_trace()
 
 
+def test_aimd():
+    cc, link = setup(buffer="finite", T=9, buf_size=1)
+    c, _, v = link.c, link.s, link.v
+
+    d = link.d
+    desired = link.desired
+    desired = z3.And(desired,
+                     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+                           d.ramp_down_queue, d.ramp_down_bq))
+    link.desired = desired
+
+    verifier = MySolver()
+    verifier.warn_undeclared = False
+    verifier.add(link.definitions)
+    verifier.add(link.environment)
+    verifier.add(z3.Not(link.desired))
+
+    for n in range(c.N):
+        for t in range(c.T):
+            verifier.add(v.r_f[n][t] == v.c_f[n][t] / c.R)
+
+            if(t > 0):
+                old_cwnd = v.c_f[n][t-1]
+                decreased_before = z3.Or([v.c_f[n][t1] < v.c_f[n][t1-1] for t1 in range(2, t)])
+                can_decrease = z3.Or(v.min_qdel[n][t-c.R] > 0, v.Ld_f[n][t] > v.Ld_f[n][t-1])
+                decrease_condition = z3.And(can_decrease, z3.Not(decreased_before))
+                next_cwnd = z3.If(decrease_condition, 2/3 * old_cwnd, old_cwnd + v.alpha)
+                verifier.add(v.c_f[n][t] == z3_max(v.alpha, next_cwnd))
+
+    sat = verifier.check()
+    print(sat)
+    if(str(sat) == "sat"):
+        model = verifier.model()
+        print(link.get_counter_example_str(model, link.verifier_vars))
+        import ipdb; ipdb.set_trace()
+
+
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
+    # test_beliefs_remain_consistent(buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
-    # test_beliefs_remain_consistent(ideal=False, buffer="infinite")
-    # test_beliefs_remain_consistent(ideal=False, buffer="dynamic")
+    # test_beliefs_remain_consistent(buffer="infinite")
+    # test_beliefs_remain_consistent(buffer="dynamic")
     # test_can_learn_beliefs(2)
-    # test_maximum_loss_for_fixed_cwnd(3.5)
+    # test_maximum_loss_for_fixed_cwnd(3)
     # test_maximum_loss_for_fixed_rate(10)
-    test_convergence_loss_tradeoff()
+    # test_convergence_loss_tradeoff()
+    test_aimd()
