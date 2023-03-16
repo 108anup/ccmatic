@@ -52,7 +52,7 @@ def setup(
     cc.verifier_type = verifier_type
 
     cc.use_belief_invariant = True
-    cc.template_beliefs_use_buffer = True
+    cc.template_beliefs_use_buffer = False
     cc.template_beliefs_use_max_buffer = False
     # cc.app_limited = True
     # cc.app_fixed_avg_rate = True
@@ -251,9 +251,9 @@ def test_beliefs_remain_consistent(
         #     uc = get_unsat_core(verifier2)
 
         import ipdb; ipdb.set_trace()
-    else:
-        uc = get_unsat_core(verifier)
-        import ipdb; ipdb.set_trace()
+    # else:
+    #     uc = get_unsat_core(verifier)
+    #     import ipdb; ipdb.set_trace()
 
 
 def test_can_learn_beliefs(f: float):
@@ -485,7 +485,7 @@ def test_aimd():
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
-    test_beliefs_remain_consistent(verifier_type=VerifierType.ccac, buffer="dynamic")
+    test_beliefs_remain_consistent(verifier_type=VerifierType.cbrdelay, buffer="dynamic")
     # test_beliefs_remain_consistent(buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
