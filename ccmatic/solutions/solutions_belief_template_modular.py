@@ -11,6 +11,23 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
     template_type = main_tb.template_type
 
     solution_dict = {}
+
+    if (n_exprs >= 3 and
+        template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED and
+        main_lhs_term == 'r_f'):
+        drain_probe = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1max_c + -1min_c + 2alpha > 0):
+                if (+ 1bq_belief2 > 0):
+                    + 1alpha
+                else:
+                    + 2min_c_lambda + 1alpha
+            else:
+                + 1min_c_lambda + -1alpha
+            """, main_tb)
+        solution_dict['drain_probe'] = drain_probe
+
     return solution_dict
 
 

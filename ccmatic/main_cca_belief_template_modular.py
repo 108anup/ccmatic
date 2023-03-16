@@ -43,16 +43,17 @@ def get_args():
     parser.add_argument('--app-limited', action='store_true')
     parser.add_argument('--fix-minc', action='store_true')
     parser.add_argument('--fix-maxc', action='store_true')
-    parser.add_argument('--optimize', action='store_true')
-    parser.add_argument('--proofs', action='store_true')
-    parser.add_argument('--solution', action='store', type=str, default=None)
-    parser.add_argument('--run-log-dir', action='store', default=None)
     parser.add_argument('--use-belief-invariant-n', action='store_true')
     parser.add_argument('--verifier-type', action='store',
                         default=VerifierType.ccac, type=VerifierType, choices=list(VerifierType))
     parser.add_argument('--no-large-loss', action='store_true')
+
+    parser.add_argument('--run-log-dir', action='store', default=None)
+    parser.add_argument('--solution', action='store', type=str, default=None)
     parser.add_argument('--manual-query', action='store_true')
     parser.add_argument('--cegis-with-solution', action='store_true')
+    parser.add_argument('--optimize', action='store_true')
+    parser.add_argument('--proofs', action='store_true')
 
     # optimizations test
     parser.add_argument('--opt-cegis-n', action='store_true')
@@ -149,6 +150,8 @@ cond_terms = [
                  TemplateTermUnit.TIME, search_range_cond_consts),
     TemplateTerm('alpha', TemplateTermType.CONST,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts),
+    TemplateTerm('bq_belief2', TemplateTermType.VAR,
+                 TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts)
 ]
 if (USE_BUFFER and args.dynamic_buffer):
     cond_terms.append(TemplateTerm('min_buffer', TemplateTermType.VAR, TemplateTermUnit.TIME,
@@ -356,6 +359,20 @@ if (CONVERGENCE_BASED_ON_BUFFER):
                                     v.r_f[0][first] <= 0.1 * c.C, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
     link.desired = desired
 
+# ----------------------------------------------------------------
+# KNOWN SOLUTIONS
+# (for debugging)
+known_solution = None
+solution_dict = get_solutions(cc, main_tb, main_lhs_term)
+if(args.cegis_with_solution):
+    assert args.solution is not None
+    assert args.solution in solution_dict
+    known_solution = solution_dict[args.solution]
+    search_constraints = z3.And(search_constraints, known_solution)
+    assert isinstance(search_constraints, z3.BoolRef)
+
+# ----------------------------------------------------------------
+# SETUP LINK
 link.setup_cegis_loop(
     search_constraints,
     template_definitions, generator_vars, get_solution_str)
@@ -381,18 +398,6 @@ if(ADD_IDEAL_LINK):
         template_definitions, generator_vars, get_solution_str)
     ideal_link.critical_generator_vars = critical_generator_vars
     logger.info("Ideal: " + cc_ideal.desire_tag())
-
-# ----------------------------------------------------------------
-# KNOWN SOLUTIONS
-# (for debugging)
-known_solution = None
-solution_dict = get_solutions(cc, main_tb, main_lhs_term)
-if(args.cegis_with_solution):
-    assert args.solution is not None
-    assert args.solution in solution_dict
-    known_solution = solution_dict[args.solution]
-    search_constraints = z3.And(search_constraints, known_solution)
-    assert isinstance(search_constraints, z3.BoolRef)
 
 # ----------------------------------------------------------------
 # RUN
@@ -460,6 +465,7 @@ elif(args.manual_query):
 
     sat = verifier.check()
     if(str(sat) != "sat"):
+        logger.error("Solution not in search space")
         uc = get_unsat_core(verifier)
         import ipdb; ipdb.set_trace()
 

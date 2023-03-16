@@ -8,7 +8,7 @@ from ccac.config import ModelConfig
 from ccac.variables import Variables
 
 from ccmatic.cegis import CegisConfig
-from ccmatic.common import flatten_dict, get_product_ite_cc
+from ccmatic.common import flatten_dict, get_product_ite_cc, try_except, try_except_wrapper
 from cegis.util import get_raw_value
 
 
@@ -508,6 +508,7 @@ def parse_term(term: str):
     return float(coeff), ct_str
 
 
+@try_except_wrapper
 def solution_parser(solution_string: str, tb: TemplateBuilder):
     """
     Sample solution:

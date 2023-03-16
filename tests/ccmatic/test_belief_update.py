@@ -251,6 +251,9 @@ def test_beliefs_remain_consistent(
         #     uc = get_unsat_core(verifier2)
 
         import ipdb; ipdb.set_trace()
+    else:
+        uc = get_unsat_core(verifier)
+        import ipdb; ipdb.set_trace()
 
 
 def test_can_learn_beliefs(f: float):
@@ -482,6 +485,7 @@ def test_aimd():
 
 if (__name__ == "__main__"):
     # test_belief_does_not_degrade()
+    test_beliefs_remain_consistent(verifier_type=VerifierType.ccac, buffer="dynamic")
     # test_beliefs_remain_consistent(buffer="dynamic")
     # test_beliefs_remain_consistent(ideal=True, buffer="infinite")
     # test_beliefs_remain_consistent(ideal=True, buffer="dynamic")
@@ -491,4 +495,4 @@ if (__name__ == "__main__"):
     # test_maximum_loss_for_fixed_cwnd(3)
     # test_maximum_loss_for_fixed_rate(10)
     # test_convergence_loss_tradeoff()
-    test_aimd()
+    # test_aimd()

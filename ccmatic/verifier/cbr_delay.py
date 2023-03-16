@@ -14,7 +14,7 @@ from ccmatic.verifier import (BaseLink, calculate_qbound_defs,
                               exceed_queue_defs, last_decrease_defs,
                               loss_deterministic, monotone_defs,
                               update_beliefs)
-from cegis.util import get_model_value_list, z3_max
+from cegis.util import get_model_value_list, z3_max, z3_min
 from pyz3_utils.my_solver import MySolver
 
 
@@ -73,8 +73,9 @@ class CBRDelayLink(BaseLink):
                 #         (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
                 sent = v.A_f[n][t] - v.A_f[n][t-1]
                 delivered = v.min_c_lambda[n][t] * 1
-                s.add(v.bq_belief2[n][t] == z3_max(
-                    0, v.bq_belief2[n][t-1] + sent - delivered))
+                bq2 = z3_max(0, v.bq_belief2[n][t-1] + sent - delivered)
+                # bq2 cqnnot be more than inflight
+                s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
 
     @staticmethod
     def update_min_c_lambda(c: ModelConfig, s: MySolver, v: Variables):
@@ -283,7 +284,8 @@ class CBRDelayLink(BaseLink):
         MI = c.minc_lambda_measurement_interval
         initial_minc_lambda_consistent = z3.And([z3.And(
             c.C * MI + c.buf_min >= v.min_c_lambda[n][0] * (MI+c.D+1),
-            v.min_c_lambda[n][0] < c.C) for n in range(c.N)])
+            v.min_c_lambda[n][0] < c.C,
+            v.min_c_lambda[n][0] >= v.alpha) for n in range(c.N)])
 
         bq_belief = v.bq_belief2
         initial_bq_consistent = z3.And([
