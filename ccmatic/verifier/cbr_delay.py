@@ -124,11 +124,13 @@ class CBRDelayLink(BaseLink):
                 # RTT >= 1 at the very least, and so max et is t-1.
                 # min et is 1.
                 for et in range(t-1, 0, -1):
-                    # We only use this et if et = t-RTT(t)
-                    # et = t-RTT(t) iff A[et] <= S[t] and A[et+1] > S[t]
+                    # We only use this et if et = t-RTT(t) et = t-RTT(t) iff
+                    # A[et]-L[et] <= S[t] and A[et+1]-L[et+1] > S[t].
+                    # While CCA cannot see L_f, it can see sequence numbers
+                    # that can be used to compute rtts.
                     correct_et = z3.And(
-                        v.A_f[n][et] <= v.S_f[n][t],
-                        v.A_f[n][et+1] > v.S_f[n][t])
+                        v.A_f[n][et] - v.L_f[n][et] <= v.S_f[n][t],
+                        v.A_f[n][et+1] - v.L_f[n][et] > v.S_f[n][t])
                     # for st in range(et-1, -1, -1):
                     for st in [et-c.minc_lambda_measurement_interval]:
                         window = et - st
@@ -340,6 +342,17 @@ class CBRDelayLink(BaseLink):
     ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
         verifier_vars, definition_vars = super().get_cegis_vars(cc, c, v)
         assert isinstance(v, self.LinkVariables)
+        if (c.calculate_qdel):
+            # first_qdel[t][dt<t] is deterministic
+            # first_qdel[t][dt>=t] is non-deterministic
+            definition_vars.extend(flatten(
+                [v.first_qdel[t][dt]
+                 for t in range(c.T)
+                 for dt in range(t)]))
+            verifier_vars.extend(flatten(
+                [v.first_qdel[t][dt]
+                 for t in range(c.T)
+                 for dt in range(t, c.T)]))
         if (c.beliefs):
             definition_vars.extend(flatten([
                 v.min_c_lambda[:, 1:],
@@ -369,5 +382,19 @@ class CBRDelayLink(BaseLink):
                 df[get_name_for_list(vn.min_c_lambda[n])] = _get_model_value(v.min_c_lambda[n])
                 df[get_name_for_list(vn.bq_belief1[n])] = _get_model_value(v.bq_belief1[n])
                 df[get_name_for_list(vn.bq_belief2[n])] = _get_model_value(v.bq_belief2[n])
+
+        if(c.calculate_qdel):
+            qdelay = []
+            for t in range(c.T):
+                this_value = c.T
+                for dt in range(c.T):
+                    value = counter_example.eval(v.first_qdel[t][dt])
+                    bool_value = bool(value)
+                    if(bool_value):
+                        this_value = min(this_value, dt)
+                        break
+                qdelay.append(this_value)
+            assert len(qdelay) == c.T
+            df["first_qdelay_t"] = np.array(qdelay).astype(float)
 
         return df.astype(float)

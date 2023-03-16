@@ -19,10 +19,10 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
             """
             r_f = max alpha,
             if (+ 1max_c + -1min_c + 2alpha > 0):
-                if (+ 1bq_belief2 > 0):
+                if (+ 1bq_belief2 + -1alpha > 0):
                     + 1alpha
                 else:
-                    + 2min_c_lambda + 1alpha
+                    + 3min_c_lambda + 1alpha
             else:
                 + 1min_c_lambda + -1alpha
             """, main_tb)
