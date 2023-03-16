@@ -83,7 +83,7 @@ USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
-SELF_AS_RVALUE = True
+SELF_AS_RVALUE = False
 CONVERGENCE_BASED_ON_BUFFER = False
 
 # synthesis_type = SynthesisType.CWND_ONLY

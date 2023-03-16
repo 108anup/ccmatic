@@ -96,7 +96,7 @@ class CBRDelayLink(BaseLink):
                 under_utilized_cummulative = [None for _ in range(t)]
                 for st in range(t-1, -1, -1):
                     high_delay = z3.Not(z3.Or(*[v.first_qdel[st+1][dt]
-                                                for dt in range(c.D+1)]))
+                                                for dt in range(c.D+1+1)]))
                     loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
                     if (c.D == 0):
                         assert c.loss_oracle
@@ -121,16 +121,22 @@ class CBRDelayLink(BaseLink):
 
                 base_minc = v.min_c_lambda[n][t-1]
                 overall_minc = base_minc
-                # RTT >= 1 at the very least, and so max et is t-1.
+                # OLD: RTT >= 1 at the very least, and so max et is t-1.
+                # ^^ A[t] = S[t] corresponds to RTT of Rm. RTT >= Rm, so max et
+                # is actually t.
                 # min et is 1.
-                for et in range(t-1, 0, -1):
-                    # We only use this et if et = t-RTT(t) et = t-RTT(t) iff
-                    # A[et]-L[et] <= S[t] and A[et+1]-L[et+1] > S[t].
-                    # While CCA cannot see L_f, it can see sequence numbers
-                    # that can be used to compute rtts.
+                for et in range(t, 0, -1):
+                    # OLD: We only use this et if et = t-RTT(t). et = t-RTT(t)
+                    # iff A[et]-L[et] <= S[t] and A[et+1]-L[et+1] > S[t].
+                    # ^^ We use this as long as et <= t-RTT(t).
+
+                    # Note, while CCA cannot see L_f, it can see sequence
+                    # numbers that can be used to compute rtts.
+                    # correct_et = z3.And(
+                    #     v.A_f[n][et] - v.L_f[n][et] <= v.S_f[n][t],
+                    #     v.A_f[n][et+1] - v.L_f[n][et] > v.S_f[n][t])
                     correct_et = z3.And(
-                        v.A_f[n][et] - v.L_f[n][et] <= v.S_f[n][t],
-                        v.A_f[n][et+1] - v.L_f[n][et] > v.S_f[n][t])
+                        v.A_f[n][et] - v.L_f[n][et] <= v.S_f[n][t])
                     # for st in range(et-1, -1, -1):
                     for st in [et-c.minc_lambda_measurement_interval]:
                         window = et - st
@@ -286,7 +292,7 @@ class CBRDelayLink(BaseLink):
         MI = c.minc_lambda_measurement_interval
         initial_minc_lambda_consistent = z3.And([z3.And(
             c.C * MI + c.buf_min >= v.min_c_lambda[n][0] * (MI+c.D+1),
-            v.min_c_lambda[n][0] < c.C,
+            v.min_c_lambda[n][0] <= c.C,
             v.min_c_lambda[n][0] >= v.alpha) for n in range(c.N)])
 
         bq_belief = v.bq_belief2
