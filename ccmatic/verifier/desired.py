@@ -282,9 +282,14 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
 
         if (isinstance(v, CBRDelayLink.LinkVariables)):
             assert isinstance(c, CBRDelayLink.LinkModelConfig)
+            buffer = c.buf_min
+            if(c.buf_min is None):
+                # basicallly acts as infinity
+                buffer = 10 * c.C * (c.R + c.D)
+
             MI = c.minc_lambda_measurement_interval
             final_minc_lambda_consistent = z3.And([z3.And(
-                c.C * MI + c.buf_min >= v.min_c_lambda[n][-1] * (MI+c.D+1),
+                c.C * MI + buffer >= v.min_c_lambda[n][-1] * (MI+c.D+1),
                 v.min_c_lambda[n][-1] <= c.C,
                 v.min_c_lambda[n][-1] >= v.alpha) for n in range(c.N)])
             final_consistent_list.append(final_minc_lambda_consistent)

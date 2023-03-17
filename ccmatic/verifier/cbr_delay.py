@@ -289,9 +289,14 @@ class CBRDelayLink(BaseLink):
         assert isinstance(v, CBRDelayLink.LinkVariables)
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
 
+        buffer = c.buf_min
+        if(c.buf_min is None):
+            # basicallly acts as infinity
+            buffer = 10 * c.C * (c.R + c.D)
+
         MI = c.minc_lambda_measurement_interval
         initial_minc_lambda_consistent = z3.And([z3.And(
-            c.C * MI + c.buf_min >= v.min_c_lambda[n][0] * (MI+c.D+1),
+            c.C * MI + buffer >= v.min_c_lambda[n][0] * (MI+c.D+1),
             v.min_c_lambda[n][0] <= c.C,
             v.min_c_lambda[n][0] >= v.alpha) for n in range(c.N)])
 

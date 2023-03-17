@@ -88,9 +88,9 @@ CONVERGENCE_BASED_ON_BUFFER = False
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
-# template_type = TemplateType.IF_ELSE_CHAIN
+template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -106,9 +106,9 @@ if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
     n_exprs = 3
-else:
-    if(not args.dynamic_buffer and not args.app_limited):
-        n_exprs = 2
+# else:
+#     if(not args.dynamic_buffer and not args.app_limited):
+#         n_exprs = 2
 n_conds = n_exprs - 1
 
 
@@ -125,8 +125,12 @@ expr_terms = [
 if (args.verifier_type == VerifierType.cbrdelay):
     expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
-    expr_terms.append(TemplateTerm('bq_belief2', TemplateTermType.VAR,
-                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts))
+    if(not args.infinite_buffer):
+        expr_terms.append(TemplateTerm('bq_belief2', TemplateTermType.VAR,
+                                       TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts))
+    else:
+        expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
+                                       TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
 else:
     expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
@@ -150,9 +154,11 @@ cond_terms = [
                  TemplateTermUnit.TIME, search_range_cond_consts),
     TemplateTerm('alpha', TemplateTermType.CONST,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts),
-    TemplateTerm('bq_belief2', TemplateTermType.VAR,
-                 TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts)
 ]
+if (args.verifier_type == VerifierType.cbrdelay and not args.infinite_buffer):
+    cond_terms.append(
+        TemplateTerm('bq_belief2', TemplateTermType.VAR,
+                     TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts))
 if (USE_BUFFER and args.dynamic_buffer):
     cond_terms.append(TemplateTerm('min_buffer', TemplateTermType.VAR, TemplateTermUnit.TIME,
                                    search_range_cond_vars_time))
@@ -312,7 +318,7 @@ if(cc.infinite_buffer):
 #     cc.desired_loss_amount_bound_multiplier = 0
 #     cc.desired_loss_amount_bound_alpha = 4
 else:
-    cc.desired_loss_count_bound = (cc.T-1)/2
+    cc.desired_loss_count_bound = (cc.T-1)/2 + 1
     cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
     # We don't expect losses in steady state. Losses only happen when beliefs
     # are changing.

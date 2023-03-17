@@ -929,6 +929,21 @@ class BeliefProofs(Proofs):
 
             self.recursive[self.movement_mult__minc_maxc] = 1.2
 
+            # recursive mult gap did not terminate...
+
+            """
+            [02/06 13:21:16]     adv__Desired__util_f
+            0                  0.64
+            [02/11 06:24:09]     adv__Desired__queue_bound_multiplier
+            0                                   1.7
+            [02/11 08:37:33]     adv__Desired__loss_count_bound
+            0                             0.0
+            [02/11 11:04:20]     adv__Desired__large_loss_count_bound
+            0                                   0.0
+            [02/11 11:45:53]     adv__Desired__loss_amount_bound
+            0                              0.0
+            """
+
         # blast_then_medblast_then_minc_negalpha_correct_units_lower_loss
         if(self.solution_id == 8):
             pass
