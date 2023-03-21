@@ -14,19 +14,61 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
     if (n_exprs >= 3 and
         template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED and
-        main_lhs_term == 'r_f'):
-        drain_probe = solution_parser(
+            main_lhs_term == 'r_f'):
+        drain_probe_steady = solution_parser(
             """
             r_f = max alpha,
-            if (+ 1max_c + -1min_c + 2alpha > 0):
+            if (+ 1max_c + -2min_c + 2alpha > 0):
                 if (+ 1bq_belief2 + -1alpha > 0):
                     + 1alpha
                 else:
                     + 3min_c_lambda + 1alpha
             else:
-                + 1min_c_lambda + -1alpha
+                + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['drain_probe_steady'] = drain_probe_steady
+
+    if (n_exprs >= 2 and
+        template_type == TemplateType.IF_ELSE_CHAIN and
+        main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'bq_belief2') is not None):
+        drain_probe = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1bq_belief2 + -1alpha > 0):
+                + 1alpha
+            else:
+                + 3min_c_lambda + 1alpha
             """, main_tb)
         solution_dict['drain_probe'] = drain_probe
+
+    if (n_exprs >= 2 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_until_shrink = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -2min_c + 1max_c + 2alpha > 0):
+                + 2min_c
+            else:
+                + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['probe_until_shrink'] = probe_until_shrink
+
+    if (n_exprs >= 3 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        two_probes = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 2min_c + -1.5max_c + -1alpha > 0):
+                + 1min_c + -1alpha
+            elif (+ -2min_c + 1max_c > 0):
+                + 2min_c
+            else:
+                + 1min_c
+            """, main_tb)
+        solution_dict['two_probes'] = two_probes
 
     return solution_dict
 

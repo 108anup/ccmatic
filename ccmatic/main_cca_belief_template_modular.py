@@ -18,6 +18,7 @@ from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
                                TemplateTermType, TemplateTermUnit,
                                TemplateType, solution_parser)
 from ccmatic.solutions.solutions_belief_template_modular import get_solutions
+from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis import get_unsat_core
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
@@ -78,7 +79,7 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
-USE_BUFFER = True
+USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
@@ -483,6 +484,13 @@ elif(args.manual_query):
     # # verifier.add(v.A[0] - v.L[0] - v.S[0] == 0)
     # verifier.add(v.r_f[0][1] > v.min_c[0][0])
     # verifier.add(v.alpha == 1/100)
+
+    # assert isinstance(v, CBRDelayLink.LinkVariables)
+    # verifier.add(v.alpha == 1)
+    # verifier.add(v.min_c_lambda[0][0] == 5 * v.alpha)
+    # verifier.add(v.min_c[0][0] == 0.8 * c.C)
+    # verifier.add(v.max_c[0][0] == 1.2 * c.C)
+
     verifier.add(z3.Not(link.desired))
 
     sat = verifier.check()

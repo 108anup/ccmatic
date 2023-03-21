@@ -528,6 +528,8 @@ def solution_parser(solution_string: str, tb: TemplateBuilder):
         trimmed = line.strip()
         if (trimmed.startswith("if")):
             conds.append(trimmed.replace("if (", "").replace("):", ""))
+        elif (trimmed.startswith("elif")):
+            conds.append(trimmed.replace("elif (", "").replace("):", ""))
         elif (trimmed.startswith("+")):
             exprs.append(trimmed)
         else:
