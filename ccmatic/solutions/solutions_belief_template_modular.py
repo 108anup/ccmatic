@@ -43,6 +43,24 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
         solution_dict['drain_probe'] = drain_probe
 
     if (n_exprs >= 2 and
+        template_type == TemplateType.IF_ELSE_CHAIN and
+        main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'bq_belief2') is not None):
+        # This does not pass the verifier. Can perhaps only gaurantee lower
+        # utilization. Because minc_lambda can be farther away from minc with
+        # MI=1. CCA ends up sending at minc_lambda/2 for longer time than if
+        # the CCA sent at 0.
+        slow_drain_probe = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1bq_belief2 + -1alpha > 0):
+                + 0.5min_c_lambda
+            else:
+                + 3min_c_lambda + 1alpha
+            """, main_tb)
+        solution_dict['slow_drain_probe'] = slow_drain_probe
+
+    if (n_exprs >= 2 and
             template_type == TemplateType.IF_ELSE_CHAIN and
             main_lhs_term == 'r_f'):
         probe_until_shrink = solution_parser(

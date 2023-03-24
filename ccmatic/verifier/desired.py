@@ -282,24 +282,8 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
 
         if (isinstance(v, CBRDelayLink.LinkVariables)):
             assert isinstance(c, CBRDelayLink.LinkModelConfig)
-            buffer = c.buf_min
-            if(c.buf_min is None):
-                # basicallly acts as infinity
-                buffer = 10 * c.C * (c.R + c.D)
-
-            MI = c.minc_lambda_measurement_interval
-            final_minc_lambda_consistent = z3.And([z3.And(
-                c.C * MI + buffer >= v.min_c_lambda[n][-1] * (MI+c.D+1),
-                v.min_c_lambda[n][-1] <= c.C,
-                v.min_c_lambda[n][-1] >= v.alpha) for n in range(c.N)])
-            final_consistent_list.append(final_minc_lambda_consistent)
-
-            bq_belief = v.bq_belief2
-            final_bq_consistent = z3.And([
-                bq_belief[n][-1] >= v.bq(c.T-1)
-                for n in range(c.N)])
-            final_consistent_list.append(final_bq_consistent)
-
+            final_consistent_list.append(v.final_minc_lambda_consistent)
+            final_consistent_list.append(v.final_bq_consistent)
 
     final_consistent = z3.And(*final_consistent_list)
     assert(isinstance(final_consistent, z3.BoolRef))
@@ -445,6 +429,27 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
                           invariant)
         assert isinstance(invariant, z3.BoolRef)
         d.desired_belief_invariant = invariant
+
+    if(isinstance(v, CBRDelayLink.LinkVariables)):
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
+        if(c.fix_stale__min_c_lambda):
+            invariant = z3.If(
+                z3.Not(v.initial_minc_lambda_consistent),
+                z3.Or(v.stale_minc_lambda_improves,
+                      v.final_minc_lambda_consistent, d.desired_in_ss),
+                invariant)
+            assert isinstance(invariant, z3.BoolRef)
+            d.desired_belief_invariant = invariant
+
+        if(c.fix_stale__bq_belief):
+            invariant = z3.If(
+                z3.Not(v.initial_bq_consistent),
+                z3.Or(v.stale_bq_belief_improves,
+                      v.final_bq_consistent, d.desired_in_ss),
+                invariant)
+            assert isinstance(invariant, z3.BoolRef)
+            d.desired_belief_invariant = invariant
 
     return d
 

@@ -25,6 +25,47 @@ class CBRDelayLink(BaseLink):
             assert t >= 0 and t <= self.c.T-1
             return self.A[t] - self.L[t] - (self.C0 + self.c.C * t - self.W[t])
 
+        def derived_expressions(self):
+            c = self.c
+            assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
+            if(c.beliefs):
+                buffer = c.buf_min
+                if(c.buf_min is None):
+                    # basicallly acts as infinity
+                    buffer = 10 * c.C * (c.R + c.D)
+
+                # Belief consistency
+                # min_c_lambda
+                MI = c.minc_lambda_measurement_interval
+                self.initial_minc_lambda_consistent = z3.And([z3.And(
+                    c.C * MI + buffer >= self.min_c_lambda[n][0] * (MI+c.D+1),
+                    self.min_c_lambda[n][0] <= c.C,
+                    self.min_c_lambda[n][0] >= self.alpha) for n in range(c.N)])
+
+                self.final_minc_lambda_consistent = z3.And([z3.And(
+                    c.C * MI + buffer >= self.min_c_lambda[n][-1] * (MI+c.D+1),
+                    self.min_c_lambda[n][-1] <= c.C,
+                    self.min_c_lambda[n][-1] >= self.alpha) for n in range(c.N)])
+
+                # bq_belief
+                bq_belief = self.bq_belief2
+                self.initial_bq_consistent = z3.And([
+                    bq_belief[n][0] >= self.bq(0)
+                    for n in range(c.N)])
+
+                bq_belief = self.bq_belief2
+                self.final_bq_consistent = z3.And([
+                    bq_belief[n][-1] >= self.bq(c.T-1)
+                    for n in range(c.N)])
+
+                self.stale_minc_lambda_improves = z3.And(
+                    [self.min_c_lambda[n][-1] < self.min_c_lambda[n][0]
+                     for n in range(c.N)])
+                self.stale_bq_belief_improves = z3.And(
+                    [bq_belief[n][-1] < bq_belief[n][0]
+                     for n in range(c.N)])
+
         def __init__(self, c: ModelConfig, s: MySolver,
                      name: Optional[str] = None):
             super().__init__(c, s, name)
@@ -41,6 +82,11 @@ class CBRDelayLink(BaseLink):
                     s.Real(f"{pre}min_c_lambda_{n},{t}")
                     for t in range(c.T)]
                     for n in range(c.N)])
+                self.recomputed_min_c_lambda = np.array([[
+                    s.Real(f"{pre}recomputed_min_c_lambda_{n},{t}")
+                    for t in range(c.T)]
+                    for n in range(c.N)])
+
 
                 # bytes in the bottleneck queue just after the latest byte
                 # acked, assuming the link rate is min_c_lambda.
@@ -56,8 +102,12 @@ class CBRDelayLink(BaseLink):
                     for t in range(c.T)]
                     for n in range(c.N)])
 
+            self.derived_expressions()
+
     class LinkModelConfig(ModelConfig):
         minc_lambda_measurement_interval: float = 1
+        fix_stale__min_c_lambda: bool = False
+        fix_stale__bq_belief: bool = False
 
     @staticmethod
     def update_bq_belief(c: ModelConfig, s: MySolver, v: Variables):
@@ -73,13 +123,33 @@ class CBRDelayLink(BaseLink):
 
         for n in range(c.N):
             for t in range(1, c.T):
+                delivery_rate = v.min_c_lambda[n][t]
+
+                if(c.fix_stale__bq_belief and t == c.T-1):
+                    delivery_rate = v.recomputed_min_c_lambda[n][t]
+
                 # sent = ((v.A_f[n][t] - v.Ld_f[n][t]) -
                 #         (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
                 sent = v.A_f[n][t] - v.A_f[n][t-1]
-                delivered = v.min_c_lambda[n][t] * 1
+                delivered = delivery_rate * 1
                 bq2 = z3_max(0, v.bq_belief2[n][t-1] + sent - delivered)
-                # bq2 cqnnot be more than inflight
+                # bq2 cannot be more than inflight
                 s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
+
+        # for n in range(c.N):
+        #     for t in range(1, c.T):
+        #         delivery_rate = v.min_c_lambda[n][t]
+
+        #         if(c.fix_stale__bq_belief and t == c.T-1):
+        #             delivery_rate = v.recomputed_min_c_lambda[n][t]
+
+        #         # Below is wrong as delivered will be upper bounded by sent +
+        #         # queue in each cycle.
+        #         sent = v.A_f[n][t] - v.A_f[n][0]
+        #         delivered = delivery_rate * t
+        #         bq2 = z3_max(0, v.bq_belief2[n][0] + sent - delivered)
+        #         # bq2 cannot be more than inflight
+        #         s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
 
     @staticmethod
     def update_min_c_lambda(c: ModelConfig, s: MySolver, v: Variables):
@@ -121,6 +191,7 @@ class CBRDelayLink(BaseLink):
 
                 base_minc = v.min_c_lambda[n][t-1]
                 overall_minc = base_minc
+                recomputed_minc = 0
                 # OLD: RTT >= 1 at the very least, and so max et is t-1.
                 # ^^ A[t] = S[t] corresponds to RTT of Rm. RTT >= Rm, so max et
                 # is actually t.
@@ -159,8 +230,16 @@ class CBRDelayLink(BaseLink):
                             z3.And(correct_et, under_utilized_cummulative[st]),
                             this_lower, 0)
                         overall_minc = z3_max(overall_minc, filtered_lower)
+                        recomputed_minc = z3_max(recomputed_minc, filtered_lower)
 
-                s.add(v.min_c_lambda[n][t] == overall_minc)
+                timeout_min_c_lambda = False
+                if(c.fix_stale__min_c_lambda):
+                    timeout_allowed = (t == c.T-1)
+                    timeout_min_c_lambda = timeout_allowed
+
+                s.add(v.min_c_lambda[n][t] ==
+                      z3.If(timeout_min_c_lambda, recomputed_minc, overall_minc))
+                s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
                 # s.add(v.min_c_lambda[n][t] == z3_max(overall_minc, v.min_c[n][t]))
 
     @staticmethod
@@ -283,30 +362,16 @@ class CBRDelayLink(BaseLink):
         # Not removing waste environment constraint. Above should always satisfy those.
         # TODO: verify this.
 
-
     @staticmethod
     def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         assert isinstance(v, CBRDelayLink.LinkVariables)
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
 
-        buffer = c.buf_min
-        if(c.buf_min is None):
-            # basicallly acts as infinity
-            buffer = 10 * c.C * (c.R + c.D)
+        if (not c.fix_stale__min_c_lambda):
+            s.add(v.initial_minc_lambda_consistent)
 
-        MI = c.minc_lambda_measurement_interval
-        initial_minc_lambda_consistent = z3.And([z3.And(
-            c.C * MI + buffer >= v.min_c_lambda[n][0] * (MI+c.D+1),
-            v.min_c_lambda[n][0] <= c.C,
-            v.min_c_lambda[n][0] >= v.alpha) for n in range(c.N)])
-
-        bq_belief = v.bq_belief2
-        initial_bq_consistent = z3.And([
-            bq_belief[n][0] >= v.bq(0)
-            for n in range(c.N)])
-
-        s.add(initial_minc_lambda_consistent)
-        s.add(initial_bq_consistent)
+        if (not c.fix_stale__bq_belief):
+            s.add(v.initial_bq_consistent)
 
     def setup_definitions(self, c: ModelConfig, v: Variables):
         s = super().setup_definitions(c, v)
