@@ -36,32 +36,44 @@ class CBRDelayLink(BaseLink):
                     buffer = 10 * c.C * (c.R + c.D)
 
                 # Belief consistency
-                # min_c_lambda
+                # min_c_lambda (valid, consistent, improves)
+                self.initial_minc_lambda_valid = z3.And([
+                    self.min_c_lambda[n][0] >= self.alpha
+                    for n in range(c.N)
+                ])
+                self.final_minc_lambda_valid = z3.And([
+                    self.min_c_lambda[n][-1] >= self.alpha
+                    for n in range(c.N)
+                ])
+
                 MI = c.minc_lambda_measurement_interval
                 self.initial_minc_lambda_consistent = z3.And([z3.And(
                     c.C * MI + buffer >= self.min_c_lambda[n][0] * (MI+c.D+1),
-                    self.min_c_lambda[n][0] <= c.C,
-                    self.min_c_lambda[n][0] >= self.alpha) for n in range(c.N)])
-
+                    self.min_c_lambda[n][0] <= c.C) for n in range(c.N)])
                 self.final_minc_lambda_consistent = z3.And([z3.And(
                     c.C * MI + buffer >= self.min_c_lambda[n][-1] * (MI+c.D+1),
-                    self.min_c_lambda[n][-1] <= c.C,
-                    self.min_c_lambda[n][-1] >= self.alpha) for n in range(c.N)])
-
-                # bq_belief
-                bq_belief = self.bq_belief2
-                self.initial_bq_consistent = z3.And([
-                    bq_belief[n][0] >= self.bq(0)
-                    for n in range(c.N)])
-
-                bq_belief = self.bq_belief2
-                self.final_bq_consistent = z3.And([
-                    bq_belief[n][-1] >= self.bq(c.T-1)
-                    for n in range(c.N)])
+                    self.min_c_lambda[n][-1] <= c.C) for n in range(c.N)])
 
                 self.stale_minc_lambda_improves = z3.And(
                     [self.min_c_lambda[n][-1] < self.min_c_lambda[n][0]
                      for n in range(c.N)])
+
+                # bq_belief (valid, consistent, improves)
+                bq_belief = self.bq_belief2
+                self.initial_bq_valid = z3.And([
+                    bq_belief[n][0] >= 0
+                    for n in range(c.N)])
+                self.final_bq_valid = z3.And([
+                    bq_belief[n][-1] >= 0
+                    for n in range(c.N)])
+
+                self.initial_bq_consistent = z3.And([
+                    bq_belief[n][0] >= self.bq(0)
+                    for n in range(c.N)])
+                self.final_bq_consistent = z3.And([
+                    bq_belief[n][-1] >= self.bq(c.T-1)
+                    for n in range(c.N)])
+
                 self.stale_bq_belief_improves = z3.And(
                     [bq_belief[n][-1] < bq_belief[n][0]
                      for n in range(c.N)])
@@ -159,6 +171,8 @@ class CBRDelayLink(BaseLink):
         # Update min_c_lambda, i.e., belief of min_c using sending rate instead
         # of ack rate.
         for n in range(c.N):
+            v.recomputed_min_c_lambda[n][0] = v.alpha
+
             for t in range(1, c.T):
 
                 utilized_t = [None for _ in range(t)]
@@ -191,7 +205,7 @@ class CBRDelayLink(BaseLink):
 
                 base_minc = v.min_c_lambda[n][t-1]
                 overall_minc = base_minc
-                recomputed_minc = 0
+                recomputed_minc = v.recomputed_min_c_lambda[n][t-1]
                 # OLD: RTT >= 1 at the very least, and so max et is t-1.
                 # ^^ A[t] = S[t] corresponds to RTT of Rm. RTT >= Rm, so max et
                 # is actually t.
@@ -233,13 +247,17 @@ class CBRDelayLink(BaseLink):
                         recomputed_minc = z3_max(recomputed_minc, filtered_lower)
 
                 timeout_min_c_lambda = False
+                # first = 0
+                # minc_lambda_changed = overall_minc > v.min_c_lambda[n][first]
                 if(c.fix_stale__min_c_lambda):
                     timeout_allowed = (t == c.T-1)
+                    # timeout_min_c_lambda = z3.And(
+                    #     timeout_allowed, z3.Not(minc_lambda_changed))
                     timeout_min_c_lambda = timeout_allowed
 
+                s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
                 s.add(v.min_c_lambda[n][t] ==
                       z3.If(timeout_min_c_lambda, recomputed_minc, overall_minc))
-                s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
                 # s.add(v.min_c_lambda[n][t] == z3_max(overall_minc, v.min_c[n][t]))
 
     @staticmethod
@@ -367,9 +385,11 @@ class CBRDelayLink(BaseLink):
         assert isinstance(v, CBRDelayLink.LinkVariables)
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
 
+        s.add(v.initial_minc_lambda_valid)
         if (not c.fix_stale__min_c_lambda):
             s.add(v.initial_minc_lambda_consistent)
 
+        s.add(v.initial_bq_valid)
         if (not c.fix_stale__bq_belief):
             s.add(v.initial_bq_consistent)
 
@@ -432,7 +452,8 @@ class CBRDelayLink(BaseLink):
         if (c.beliefs):
             definition_vars.extend(flatten([
                 v.min_c_lambda[:, 1:],
-                v.bq_belief1, v.bq_belief2[:, 1:]
+                v.bq_belief1, v.bq_belief2[:, 1:],
+                v.recomputed_min_c_lambda
             ]))
             verifier_vars.extend(flatten([
                 v.min_c_lambda[:, :1],

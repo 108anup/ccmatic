@@ -45,6 +45,7 @@ class CegisConfig:
     desired_large_loss_count_bound: Union[float, z3.ArithRef] = 0
     desired_loss_amount_bound_multiplier: Union[float, z3.ArithRef]
     desired_loss_amount_bound_alpha: Union[float, z3.ArithRef] = 0
+    desired_no_large_loss: bool = False
 
     desired_fast_decrease: bool = False
     desired_fast_increase: bool = False

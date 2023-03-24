@@ -302,6 +302,7 @@ cc.min_maxc_minc_gap_mult = (10+1)/(10-1)
 cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
+cc.desired_no_large_loss = args.no_large_loss
 cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
@@ -342,14 +343,14 @@ try_except(link.setup_config_vars)
 c, _, v = link.c, link.s, link.v
 template_definitions = get_template_definitions(cc, c, v)
 
-if(NO_LARGE_LOSS):
-    # We don't want large loss even when probing for link rate.
-    d = link.d
-    desired = link.desired
-    desired = z3.And(desired,
-                     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
-                           d.ramp_down_queue, d.ramp_down_bq))
-    link.desired = desired
+# if(NO_LARGE_LOSS):
+#     # We don't want large loss even when probing for link rate.
+#     d = link.d
+#     desired = link.desired
+#     desired = z3.And(desired,
+#                      z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+#                            d.ramp_down_queue, d.ramp_down_bq))
+#     link.desired = desired
 
 if (CONVERGENCE_BASED_ON_BUFFER):
     """

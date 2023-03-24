@@ -376,6 +376,14 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
     assert isinstance(invariant, z3.BoolRef)
     d.desired_belief_invariant = invariant
 
+    if (cc.desired_no_large_loss):
+        # We don't want large loss even when potentially probing (improving beliefs)
+        invariant = z3.And(invariant,
+                           z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+                                 d.ramp_down_queue, d.ramp_down_bq))
+        assert isinstance(invariant, z3.BoolRef)
+        d.desired_belief_invariant = invariant
+
     # if(c.fix_stale__max_c):
     #     # TODO: Can’t remove non degrade. CCA might improve X and degrade Y, and
     #     # then improve Y and degrade X. This loop may keep repeating and desired
@@ -450,6 +458,10 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
                 invariant)
             assert isinstance(invariant, z3.BoolRef)
             d.desired_belief_invariant = invariant
+
+        invariant = z3.And(invariant, v.final_minc_lambda_valid, v.final_bq_valid)
+        assert isinstance(invariant, z3.BoolRef)
+        d.desired_belief_invariant = invariant
 
     return d
 
