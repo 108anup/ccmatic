@@ -75,7 +75,7 @@ class CBRDelayLink(BaseLink):
                     for n in range(c.N)])
 
                 self.stale_bq_belief_improves = z3.And(
-                    [bq_belief[n][-1] < bq_belief[n][0]
+                    [bq_belief[n][-1] > bq_belief[n][0]
                      for n in range(c.N)])
 
         def __init__(self, c: ModelConfig, s: MySolver,
@@ -139,6 +139,9 @@ class CBRDelayLink(BaseLink):
 
                 if(c.fix_stale__bq_belief and t == c.T-1):
                     delivery_rate = v.recomputed_min_c_lambda[n][t]
+
+                # TODO: might want to use the new delivery rate
+                # for the all the steps.
 
                 # sent = ((v.A_f[n][t] - v.Ld_f[n][t]) -
                 #         (v.A_f[n][t-1] - v.Ld_f[n][t-1]))
@@ -256,6 +259,7 @@ class CBRDelayLink(BaseLink):
                     timeout_min_c_lambda = timeout_allowed
 
                 s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
+                # TODO: Avoid decreasing min_c_lambda by too much
                 s.add(v.min_c_lambda[n][t] ==
                       z3.If(timeout_min_c_lambda, recomputed_minc, overall_minc))
                 # s.add(v.min_c_lambda[n][t] == z3_max(overall_minc, v.min_c[n][t]))
