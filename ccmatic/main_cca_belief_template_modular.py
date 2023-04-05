@@ -494,6 +494,14 @@ elif(args.manual_query):
 
     verifier.add(z3.Not(link.desired))
 
+    # # Sanity check if we get traces for all scenarios. I.e., we have not
+    # # inadvertently removed these intial conditions.
+    # assert isinstance(v, CBRDelayLink.LinkVariables)
+    # # verifier.add(z3.Not(v.initial_minc_lambda_consistent))
+    # # verifier.add(z3.Not(v.initial_bq_consistent))
+    # verifier.add(v.initial_minc_lambda_consistent)
+    # verifier.add(v.initial_bq_consistent)
+
     sat = verifier.check()
     print(sat)
     if(str(sat) == "sat"):

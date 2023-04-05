@@ -149,7 +149,11 @@ class CBRDelayLink(BaseLink):
                 delivered = delivery_rate * 1
                 bq2 = z3_max(0, v.bq_belief2[n][t-1] + sent - delivered)
                 # bq2 cannot be more than inflight
-                s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
+
+                if(c.fix_stale__bq_belief and t == c.T-1):
+                    s.add(v.bq_belief2[n][t] == v.bq_belief1[n][t])
+                else:
+                    s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
 
         # for n in range(c.N):
         #     for t in range(1, c.T):
@@ -496,6 +500,6 @@ class CBRDelayLink(BaseLink):
                         break
                 qdelay.append(this_value)
             assert len(qdelay) == c.T
-            df["first_qdelay_t"] = np.array(qdelay).astype(float)
+            df["first_qdel_t"] = np.array(qdelay).astype(float)
 
         return df.astype(float)

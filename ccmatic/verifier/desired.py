@@ -354,7 +354,6 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             none_expand_list.append(
                 v.min_c_lambda[n][c.T-1] >= v.min_c_lambda[n][first])
 
-
     none_expand = z3.And(*none_expand_list)
     atleast_one_shrinks = z3.Or(*atleast_one_shrinks_list)
 
