@@ -333,6 +333,17 @@ class TemplateBuilder:
         for ct in self.cond_terms:
             self.cond_terms_by_unit[ct.unit].append(ct)
 
+    def get_search_space_size(self):
+        expr_choices = 1
+        for et in self.expr_terms:
+            expr_choices *= len(et.coeff_search_space)
+
+        cond_choices = 1
+        for ct in self.cond_terms:
+            cond_choices *= len(ct.coeff_search_space)
+
+        return (expr_choices**self.n_exprs) * (cond_choices**self.n_conds)
+
     def build_coeffs(self):
         self.expr_coeffs = [
             {et: z3.Real(

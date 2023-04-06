@@ -88,6 +88,25 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
             """, main_tb)
         solution_dict['two_probes'] = two_probes
 
+    if (n_exprs >= 4 and
+       template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1 and
+       main_lhs_term == 'r_f'):
+        buffer_based = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -5R + 1min_buffer > 0):
+                if (+ -2min_c + 2alpha + 1max_c > 0):
+                    + 2min_c
+                else:
+                    + 1min_c + -1alpha
+            else:
+                if (+ 1bq_belief2 + -1alpha > 0):
+                    + 1alpha
+                else:
+                    + 3min_c_lambda + 1alpha
+            """, main_tb)
+        solution_dict['buffer_based'] = buffer_based
+
     return solution_dict
 
 
@@ -652,9 +671,32 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
     return solution_dict
 
 
+def get_solutions_ccac(main_tb: TemplateBuilder, main_lhs_term: str):
+    n_conds = len(main_tb.cond_terms)
+    n_exprs = len(main_tb.expr_terms)
+    template_type = main_tb.template_type
+    solution_dict = {}
+
+    if (n_exprs >= 2 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_until_shrink = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -2min_c + 1max_c + 2alpha > 0):
+                + 2min_c
+            else:
+                + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['probe_until_shrink'] = probe_until_shrink
+    return solution_dict
+
+
 def get_solutions(cc: CegisConfig, main_tb: TemplateBuilder,
                   main_lhs_term: str):
     if(cc.verifier_type == VerifierType.cbrdelay):
         return get_solutions_cbr_delay(main_tb, main_lhs_term)
+    elif(cc.verifier_type == VerifierType.ccac):
+        return get_solutions_ccac(main_tb, main_lhs_term)
     else:
         return get_solutions_ccac(main_tb, main_lhs_term)

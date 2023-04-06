@@ -39,6 +39,7 @@ def get_args():
     parser.add_argument('--infinite-buffer', action='store_true')
     parser.add_argument('--finite-buffer', action='store_true')
     parser.add_argument('--dynamic-buffer', action='store_true')
+    parser.add_argument('--large-buffer', action='store_true')
     parser.add_argument('-T', action='store', type=int, default=6)
     parser.add_argument('--ideal', action='store_true')
     parser.add_argument('--app-limited', action='store_true')
@@ -69,6 +70,7 @@ def get_args():
 
 args = get_args()
 assert args.infinite_buffer + args.finite_buffer + args.dynamic_buffer == 1
+assert (not args.large_buffer) or args.dynamic_buffer
 logger.info(args)
 
 # ----------------------------------------------------------------
@@ -86,6 +88,7 @@ NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
 SELF_AS_RVALUE = False
 CONVERGENCE_BASED_ON_BUFFER = False
+assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
@@ -126,10 +129,7 @@ expr_terms = [
 if (args.verifier_type == VerifierType.cbrdelay):
     expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
-    if(not args.infinite_buffer):
-        expr_terms.append(TemplateTerm('bq_belief2', TemplateTermType.VAR,
-                                       TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts))
-    else:
+    if(not args.finite_buffer):
         expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
                                        TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
 else:
@@ -272,7 +272,7 @@ def get_solution_str(
 # ADVERSARIAL LINK
 cc = CegisConfig()
 # cc.DEBUG = True
-cc.name = "adv"
+# cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
@@ -357,15 +357,19 @@ if (CONVERGENCE_BASED_ON_BUFFER):
     If buffer is large and CCA knows it,
     we must have fast convergence.
     """
+    buf_multiplier = 3 if args.verifier_type == VerifierType.ideal else 5
     assert c.N == 1
     d = link.d
     first = link.cc.history
     desired = link.desired
     desired = z3.And(desired,
-                     z3.Implies(v.min_buffer[0][0] > 3 * (c.R + c.D),
+                     z3.Implies(v.min_buffer[0][0] > buf_multiplier * (c.R + c.D),
                                 z3.Implies(
                                     v.r_f[0][first] <= 0.1 * c.C, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
     link.desired = desired
+
+if(args.large_buffer):
+    link.environment = z3.And(link.environment, c.buf_min >= 4 *c.C * (c.R + c.D))
 
 # ----------------------------------------------------------------
 # KNOWN SOLUTIONS
