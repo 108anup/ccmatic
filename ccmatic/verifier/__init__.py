@@ -1426,12 +1426,12 @@ def get_cex_df(
                 for n in range(c.N):
                     cex_dict.update({
                         get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
-    if(hasattr(v, 'W')):
-        cex_dict.update({
-            get_name_for_list(vn.W): _get_model_value(v.W)})
-        # cex_dict.update({
-        #     'non-wasted-tokens': _get_model_value(
-        #         [v.C0 + c.C * t - v.W[t] for t in range(c.T)])})
+    # if(hasattr(v, 'W')):
+    #     cex_dict.update({
+    #         get_name_for_list(vn.W): _get_model_value(v.W)})
+    #     # cex_dict.update({
+    #     #     'non-wasted-tokens': _get_model_value(
+    #     #         [v.C0 + c.C * t - v.W[t] for t in range(c.T)])})
     if(c.app_limited):
         for n in range(c.N):
             cex_dict.update({
@@ -1489,22 +1489,22 @@ def get_cex_df(
                 get_raw_value(counter_example.eval(
                     v.C0 + c.C * t - v.W[t] - v.S[t]
                 )))
-        df["bottle_queue_t"] = bottle_queue_t
-        df["token_queue_t"] = token_queue_t
+        df["bqueue_t"] = bottle_queue_t
+        df["tqueue_t"] = token_queue_t
 
-        upper_S = []
-        for t in range(c.T):
-            upper_S.append(
-                get_raw_value(counter_example.eval(
-                    (v.C0 + c.C * t - v.W[t])
-                )))
-            # if(t > c.D):
-            #     lower_S.append(
-            #         get_raw_value(counter_example.eval(
-            #             v.C0 + c.C * (t - c.D) - v.W[t - c.D]
-            #         ))
-            #     )
-        df["upper_S_t"] = upper_S
+        # upper_S = []
+        # for t in range(c.T):
+        #     upper_S.append(
+        #         get_raw_value(counter_example.eval(
+        #             (v.C0 + c.C * t - v.W[t])
+        #         )))
+        #     # if(t > c.D):
+        #     #     lower_S.append(
+        #     #         get_raw_value(counter_example.eval(
+        #     #             v.C0 + c.C * (t - c.D) - v.W[t - c.D]
+        #     #         ))
+        #     #     )
+        # df["upper_S_t"] = upper_S
 
     if(c.N == 1):
         df["del_A_f"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
@@ -1548,19 +1548,19 @@ def get_cex_df(
         # ret += "\n{}".format(np.array(qbound_vals))
         # ret += "\n{}".format(counter_example.eval(qsize_thresh))
 
-    if(c.calculate_qdel):
-        qdelay = []
-        for t in range(c.T):
-            this_value = c.T
-            for dt in range(c.T):
-                value = counter_example.eval(v.qdel[t][dt])
-                bool_value = bool(value)
-                if(bool_value):
-                    this_value = min(this_value, dt)
-                    break
-            qdelay.append(this_value)
-        assert len(qdelay) == c.T
-        df["qdelay_t"] = np.array(qdelay).astype(float)
+    # if(c.calculate_qdel):
+    #     qdelay = []
+    #     for t in range(c.T):
+    #         this_value = c.T
+    #         for dt in range(c.T):
+    #             value = counter_example.eval(v.qdel[t][dt])
+    #             bool_value = bool(value)
+    #             if(bool_value):
+    #                 this_value = min(this_value, dt)
+    #                 break
+    #         qdelay.append(this_value)
+    #     assert len(qdelay) == c.T
+    #     df["qdelay_t"] = np.array(qdelay).astype(float)
 
     return df.astype(float)
 

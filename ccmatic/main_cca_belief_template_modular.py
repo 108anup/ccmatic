@@ -81,19 +81,19 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
-USE_BUFFER = False
+USE_BUFFER = True
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
-USE_CWND_CAP = False
+USE_CWND_CAP = True
 SELF_AS_RVALUE = False
-CONVERGENCE_BASED_ON_BUFFER = False
+CONVERGENCE_BASED_ON_BUFFER = True
 assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
-template_type = TemplateType.IF_ELSE_CHAIN
-# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+# template_type = TemplateType.IF_ELSE_CHAIN
+template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 # template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
@@ -120,7 +120,8 @@ main_lhs_term = "r_f"
 if (synthesis_type == SynthesisType.CWND_ONLY):
     main_lhs_term = "c_f"
 
-search_range_expr_vars = (0, 1/2, 1, 2, 3)
+search_range_expr_vars = (0, 1/2, 1, 2)
+search_range_expr_vars_min_c_lambda = (0, 1/2, 1, 2, 3)
 search_range_expr_consts = (-1, 0, 1)
 expr_terms = [
     TemplateTerm('alpha', TemplateTermType.CONST,
@@ -128,7 +129,7 @@ expr_terms = [
 ]
 if (args.verifier_type == VerifierType.cbrdelay):
     expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
-                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+                                   TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars_min_c_lambda))
     if(not args.finite_buffer):
         expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
                                        TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
@@ -142,8 +143,10 @@ if SELF_AS_RVALUE:
                      TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
 
 search_range_cond_vars_time = (-1, 0, 1)
-search_range_cond_vars_bytes = tuple(range(-2, 3))
-search_range_cond_consts = tuple(range(-3, 4))
+# search_range_cond_vars_bytes = tuple(list(range(-2, 3)) + [1.5, -1.5])
+search_range_cond_vars_bytes = tuple(list(range(-2, 3)))
+search_range_cond_consts = tuple(range(-6, 7))
+# search_range_cond_consts = tuple(range(-2, 3))
 cond_terms = [
     TemplateTerm('min_c', TemplateTermType.VAR,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_vars_bytes),
@@ -189,32 +192,39 @@ main_tb = TemplateBuilder(
         get_value_for_term)
 
 custom_search_constraints = []
-if (len(expr_terms) == 2):
-    # Limit the search space
-    # Only 5 instead of 9 expressions.
-    for ei in range(n_exprs):
-        custom_search_constraints.append(
-            z3.Or(*[
-                z3.And(*[main_tb.get_expr_coeff(ei, 'min_c') == 2,
-                       main_tb.get_expr_coeff(ei, 'alpha') == 0]),
-                z3.And(*[main_tb.get_expr_coeff(ei, 'min_c') == 0.5,
-                       main_tb.get_expr_coeff(ei, 'alpha') == 0]),
-                main_tb.get_expr_coeff(ei, 'min_c') == 1,
-            ]))
+# if (len(expr_terms) == 2):
+#     # Limit the search space
+#     # Only 5 instead of 9 expressions.
+#     for ei in range(n_exprs):
+#         custom_search_constraints.append(
+#             z3.Or(*[
+#                 z3.And(*[main_tb.get_expr_coeff(ei, 'min_c') == 2,
+#                        main_tb.get_expr_coeff(ei, 'alpha') == 0]),
+#                 z3.And(*[main_tb.get_expr_coeff(ei, 'min_c') == 0.5,
+#                        main_tb.get_expr_coeff(ei, 'alpha') == 0]),
+#                 main_tb.get_expr_coeff(ei, 'min_c') == 1,
+#             ]))
 
-if (len(main_tb.expr_terms_by_type[TemplateTermType.VAR]) > 1):
+# if (len(main_tb.expr_terms_by_type[TemplateTermType.VAR]) > 1):
+#     for ei in range(n_exprs):
+#         # Exactly one of the rhs_vars needs to be non zero:
+#         non_zero_list = [main_tb.get_expr_coeff(ei, et.name) != 0
+#                          for et in main_tb.expr_terms_by_type[TemplateTermType.VAR]]
+#         custom_search_constraints.append(z3.Sum(*non_zero_list) == 1)
+#         # If the const term is non zero, then the rhs_var must have coeff 1.
+#         coeff_list = [main_tb.get_expr_coeff(ei, et.name)
+#                       for et in main_tb.expr_terms_by_type[TemplateTermType.VAR]]
+#         custom_search_constraints.append(
+#             z3.Implies(
+#                 main_tb.get_expr_coeff(ei, "alpha") != 0,
+#                 z3.Sum(*coeff_list) == 1))
+
+if (args.verifier_type == VerifierType.cbrdelay and not args.finite_buffer):
+    # Should only use min_c or min_c_lambda (not both in RHS expr)
     for ei in range(n_exprs):
-        # Exactly one of the rhs_vars needs to be non zero:
-        non_zero_list = [main_tb.get_expr_coeff(ei, et.name) != 0
-                         for et in main_tb.expr_terms_by_type[TemplateTermType.VAR]]
-        custom_search_constraints.append(z3.Sum(*non_zero_list) == 1)
-        # If the const term is non zero, then the rhs_var must have coeff 1.
-        coeff_list = [main_tb.get_expr_coeff(ei, et.name)
-                      for et in main_tb.expr_terms_by_type[TemplateTermType.VAR]]
-        custom_search_constraints.append(
-            z3.Implies(
-                main_tb.get_expr_coeff(ei, "alpha") != 0,
-                z3.Sum(*coeff_list) == 1))
+        non_zero_list = [main_tb.get_expr_coeff(ei, 'min_c') != 0,
+                         main_tb.get_expr_coeff(ei, 'min_c_lambda') != 0]
+        custom_search_constraints.append(z3.Sum(*non_zero_list) <= 1)
 
 search_constraints = z3.And(
     *main_tb.get_search_space_constraints(),
@@ -357,7 +367,7 @@ if (CONVERGENCE_BASED_ON_BUFFER):
     If buffer is large and CCA knows it,
     we must have fast convergence.
     """
-    buf_multiplier = 3 if args.verifier_type == VerifierType.ideal else 5
+    buf_multiplier = 3 if args.verifier_type == VerifierType.ideal else 6
     assert c.N == 1
     d = link.d
     first = link.cc.history
@@ -365,11 +375,11 @@ if (CONVERGENCE_BASED_ON_BUFFER):
     desired = z3.And(desired,
                      z3.Implies(v.min_buffer[0][0] > buf_multiplier * (c.R + c.D),
                                 z3.Implies(
-                                    v.r_f[0][first] <= 0.1 * c.C, v.r_f[0][c.T-1] >= 2 * v.r_f[0][first])))
+                                    v.r_f[0][first] <= 0.1 * c.C, v.r_f[0][c.T-1] >= 1.1 * v.r_f[0][first])))
     link.desired = desired
 
 if(args.large_buffer):
-    link.environment = z3.And(link.environment, c.buf_min >= 4 *c.C * (c.R + c.D))
+    link.environment = z3.And(link.environment, c.buf_min >= 3 * c.C * (c.R + c.D))
 
 # ----------------------------------------------------------------
 # KNOWN SOLUTIONS

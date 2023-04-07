@@ -107,6 +107,33 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
             """, main_tb)
         solution_dict['buffer_based'] = buffer_based
 
+        buffer_based_qdel = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -6R + 1min_buffer > 0):
+                if (+ 1min_qdel > 0):
+                    + 0.5min_c
+                else:
+                    + 2min_c
+            else:
+                if (+ 1bq_belief2 + -1alpha > 0):
+                    + 1alpha
+                else:
+                    + 3min_c_lambda + 1alpha
+            """, main_tb)
+        solution_dict['buffer_based_qdel'] = buffer_based_qdel
+
+        """
+        r_f = max alpha,
+        if (+ 1min_c + 3bq_belief2 > 0):
+            if (+ -3alpha + 3bq_belief2 > 0):
+                + 1alpha + 1/2min_c_lambda + -1bq_belief2
+            else:
+                + 1alpha + 3min_c_lambda + 1bq_belief2
+        else:
+            + 1alpha + 2min_c_lambda + -1bq_belief2
+        """
+
     return solution_dict
 
 
@@ -117,7 +144,6 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
     template_type = main_tb.template_type
 
     known_solution_list = []
-
 
     # MIMD style solution
     """
@@ -661,34 +687,25 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
         probe_until_shrink = solution_parser(
             """
             r_f = max alpha,
-            if (+ -2min_c + 1max_c > 0):
-                + 2min_c
-            else:
-                + 1min_c + -1alpha
-            """, main_tb)
-        solution_dict['probe_until_shrink'] = probe_until_shrink
-
-    return solution_dict
-
-
-def get_solutions_ccac(main_tb: TemplateBuilder, main_lhs_term: str):
-    n_conds = len(main_tb.cond_terms)
-    n_exprs = len(main_tb.expr_terms)
-    template_type = main_tb.template_type
-    solution_dict = {}
-
-    if (n_exprs >= 2 and
-            template_type == TemplateType.IF_ELSE_CHAIN and
-            main_lhs_term == 'r_f'):
-        probe_until_shrink = solution_parser(
-            """
-            r_f = max alpha,
             if (+ -2min_c + 1max_c + 2alpha > 0):
                 + 2min_c
             else:
                 + 1min_c + -1alpha
             """, main_tb)
         solution_dict['probe_until_shrink'] = probe_until_shrink
+
+    if (n_exprs >= 2 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_qdel = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1min_qdel > 0):
+                + 0.5min_c
+            else:
+                + 2min_c
+            """, main_tb)
+        solution_dict['probe_qdel'] = probe_qdel
     return solution_dict
 
 

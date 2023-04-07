@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+import logging
 import z3
 import enum
 
@@ -10,6 +11,11 @@ from ccac.variables import Variables
 from ccmatic.cegis import CegisConfig
 from ccmatic.common import flatten_dict, get_product_ite_cc, try_except, try_except_wrapper
 from cegis.util import get_raw_value
+from pyz3_utils.common import GlobalConfig
+
+
+logger = logging.getLogger('generator')
+GlobalConfig().default_logger_setup(logger)
 
 
 class TemplateType(enum.Enum):
@@ -333,14 +339,22 @@ class TemplateBuilder:
         for ct in self.cond_terms:
             self.cond_terms_by_unit[ct.unit].append(ct)
 
-    def get_search_space_size(self):
-        expr_choices = 1
-        for et in self.expr_terms:
-            expr_choices *= len(et.coeff_search_space)
+        logger.info(f"Search size upper bound: {self.get_search_space_size()}")
 
-        cond_choices = 1
-        for ct in self.cond_terms:
-            cond_choices *= len(ct.coeff_search_space)
+    def get_search_space_size(self):
+        expr_choices = 0
+        for et_unit in self.expr_terms_by_unit.values():
+            this_expr_choices = 1
+            for et in et_unit:
+                this_expr_choices *= len(et.coeff_search_space)
+            expr_choices += this_expr_choices
+
+        cond_choices = 0
+        for ct_unit in self.cond_terms_by_unit.values():
+            this_cond_choices = 1
+            for ct in ct_unit:
+                this_cond_choices *= len(ct.coeff_search_space)
+            cond_choices += this_cond_choices
 
         return (expr_choices**self.n_exprs) * (cond_choices**self.n_conds)
 
