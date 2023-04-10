@@ -10,7 +10,7 @@ import z3
 
 from ccac.variables import VariableNames
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData, VerifierType
-from ccmatic.common import flatten, get_renamed_vars, try_except
+from ccmatic.common import flatten, get_renamed_vars, try_except, try_except_wrapper
 from ccmatic.verifier import (BaseLink, SteadyStateVariable,
                               get_cex_df,
                               get_gen_cex_df, run_verifier_incomplete)
@@ -326,6 +326,7 @@ class OptimizationStruct:
         return self._get_counter_example_str_function
 
 
+@try_except_wrapper
 def find_optimum_bounds(
         solution: z3.BoolRef, optimization_structs: List[OptimizationStruct],
         extra_constraints: List[z3.BoolRef] = []):

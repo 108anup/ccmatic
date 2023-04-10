@@ -31,12 +31,12 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][0],
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
-            z3.Real("steady__minc_c_lambda__hi"))
+            None)
         self.steady__bq_belief2 = SteadyStateVariable(
             "steady__bq_belief2",
             v.bq_belief2[0][0],
             v.bq_belief2[0][-1],
-            z3.Real("steady__bq_belief2__lo"),
+            None,
             z3.Real("steady__bq_belief2__hi"))
 
         self.movement_mult__consistent = z3.Real(
@@ -82,7 +82,8 @@ class CBRDelayProofs(Proofs):
             self.steady__bq_belief2.final_inside())
 
     def setup_offline_cache(self):
-        pass
+        if(self.solution_id == "drain_probe"):
+            self.recursive[self.movement_mult__consistent] = 1.9
 
     def lemma1__beliefs_become_consistent(self,):
         link = self.link
@@ -117,7 +118,40 @@ class CBRDelayProofs(Proofs):
             model = self.debug_verifier(lemma1, ss_assignments)
 
     def lemma21__beliefs_recursive(self,):
-        pass
+        link = self.link
+        c, v = self.link.c, self.link.v
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+        assert isinstance(v, CBRDelayLink.LinkVariables)
+
+        lemma21 = z3.Implies(
+            z3.And(self.initial_beliefs_valid,
+                   self.initial_beliefs_consistent,
+                   self.initial_beliefs_inside),
+            z3.And(self.final_beliefs_valid,
+                   self.final_beliefs_consistent,
+                   self.final_beliefs_inside))
+
+        metric_lists = [
+            [Metric(self.steady__minc_c_lambda.lo, 0.1*c.C, c.C, 1, True)],
+            [Metric(self.steady__bq_belief2.hi, 0, 10 * c.C * (c.R + c.D), 1, False)]]
+
+        os = OptimizationStruct(
+            self.link, self.vs, [], metric_lists,
+            lemma21, self.get_counter_example_str)
+        logger.info("Lemma 2.1: initial beliefs steady implies final steady")
+        if(self.steady__minc_c_lambda.lo not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
+
+        if(self.check_lemmas):
+            assert self.steady__bottle_queue.hi in self.recursive
+            ss_assignments = [
+                self.steady__minc_c_lambda.lo ==
+                self.recursive[self.steady__minc_c_lambda.lo],
+                self.steady__bq_belief2.hi ==
+                self.recursive[self.steady__bq_belief2.hi]
+            ]
+            model = self.debug_verifier(lemma21, ss_assignments)
 
     def lemma2__beliefs_steady(self,):
         pass
@@ -135,5 +169,7 @@ class CBRDelayProofs(Proofs):
         self.setup_steady_variables()
         self.setup_functions()
         self.setup_conditions()
+        self.setup_offline_cache()
 
         self.lemma1__beliefs_become_consistent()
+        self.lemma21__beliefs_recursive()
