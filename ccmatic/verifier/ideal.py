@@ -11,7 +11,7 @@ from ccmatic.verifier import (DesiredContainer, calculate_qbound_defs, calculate
                               calculate_qdel_defs, calculate_qdel_env, check_config,
                               exceed_queue_defs, fifo_service, get_desired_in_ss, initial_beliefs,
                               last_decrease_defs, monotone_defs, monotone_env,
-                              setup_ccac_for_cegis, update_beliefs)
+                              setup_ccac_for_cegis, update_beliefs, app_limits_env)
 from pyz3_utils.my_solver import MySolver
 
 
@@ -30,6 +30,8 @@ class IdealLink:
 
         if c.buf_min is not None:
             s.add(v.A[0] - v.L[0] <= v.S[0] + c.buf_min)
+            s.add(z3.Implies(z3.Or([v.L_f[n][0] > v.Ld_f[n][0] for n in range(c.N)]),
+                             v.A[0] - v.L[0] == v.S[0] + c.buf_min))
         for t in range(1, c.T):
             if c.buf_min is None:  # no loss case
                 s.add(v.L[t] == v.L[0])
@@ -46,6 +48,15 @@ class IdealLink:
                 #     v.A[t] - v.L[t-1] <= v.S[t] + c.buf_min,
                 #     v.L[t] == v.L[t-1]))
         # L[0] is still chosen non-deterministically in an unconstrained fashion.
+
+        if(c.buf_min is None):
+            # For multiflow, L_f is ideally non-deterministic
+            # When there is inf buffer however, L_f should be deterministic
+            for n in range(c.N):
+                for t in range(1, c.T):
+                    s.add(v.L_f[n][t] == v.L_f[n][0])
+                # There shouldn't be any detected losses as well.
+                s.add(v.Ld_f[n][0] == v.L_f[n][0])
 
     @staticmethod
     def service_defs(c: ModelConfig, s: MySolver, v: Variables):
@@ -134,9 +145,25 @@ class IdealLink:
                 [v.min_c[:, :1], v.max_c[:, :1]]))
             if(c.buf_min is not None and c.beliefs_use_buffer):
                 definition_vars.extend(flatten(
-                    [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+                    v.min_buffer[:, 1:]))
                 verifier_vars.extend(flatten(
-                    [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+                    v.min_buffer[:, :1]))
+                if(c.beliefs_use_max_buffer):
+                    definition_vars.extend(flatten(
+                        v.max_buffer[:, 1:]))
+                    verifier_vars.extend(flatten(
+                        v.max_buffer[:, :1]))
+            verifier_vars.extend(flatten(v.start_state_f))
+
+        if(c.app_limited):
+            verifier_vars.extend(flatten(v.app_limits))
+            verifier_vars.append(v.app_rate)
+            if(c.app_fixed_avg_rate and c.beliefs):
+                verifier_vars.extend(flatten(
+                    [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
+                definition_vars.extend(flatten(
+                    [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
+
 
         return verifier_vars, definition_vars
 
@@ -207,12 +234,15 @@ class IdealLink:
             #             c.buf_min == 0.1 * c.C * (c.R + c.D)))
         if(c.beliefs):
             initial_beliefs(c, s, v)
+        if(c.app_limited):
+            app_limits_env(c, s, v)
         return s
 
     @staticmethod
     def setup_cegis_basic(cc: CegisConfig):
         check_config(cc)
         c = setup_ccac_for_cegis(cc)
+        c.D = 0
         s = MySolver()
         s.warn_undeclared = False
         v = Variables(c, s, cc.name)

@@ -178,9 +178,13 @@ class CCmatic():
                     [counter_example.eval(v.start_state_f[n])
                      for n in range(c.N)])
 
-            ret = "{}\n{}, alpha={}, buf_size={}{}.".format(
+            app_rate_str = ""
+            if(cc.app_limited):
+                app_rate_str = f", app_rate={counter_example.eval(v.app_rate)}"
+
+            ret = "{}\n{}, alpha={}, buf_size={}{}{}.".format(
                 df, desired_string, counter_example.eval(v.alpha),
-                buf_size, start_state_str)
+                buf_size, start_state_str, app_rate_str)
             return ret
 
         def get_verifier_view(
@@ -226,12 +230,16 @@ class CCmatic():
         if(val < 0):
             return f'-{-val}{suffix}'
 
-    def run_cegis(self, known_solution: Optional[z3.ExprRef]=None):
+    def run_cegis(self, known_solution: Optional[z3.ExprRef]=None,
+                  solution_log_path: Optional[str] = None,
+                  run_log_path: Optional[str] = None):
         # Directly update any closures or critical_generator_vars
         # or any other expression before calling run function.
 
         assert self.get_solution_str is not None, \
             "This needs to be set manually based on template."
+
+        cc = self.cc
 
         # Debugging:
         debug_known_solution = None
@@ -251,14 +259,24 @@ class CCmatic():
         cg = CegisCCAGen(
             self.generator_vars, self.verifier_vars, self.definition_vars,
             self.search_constraints, self.definitions, self.specification,
-            self.ctx, debug_known_solution, md)
+            self.ctx, debug_known_solution, md, solution_log_path=solution_log_path,
+            run_log_path=run_log_path)
+        if(not cc.opt_ve):
+            vvars = self.verifier_vars + self.definition_vars
+            spec = z3.Implies(self.definitions, self.specification)
+            cg = CegisCCAGen(
+                self.generator_vars, vvars, [],
+                self.search_constraints, True, spec,
+                self.ctx, debug_known_solution, md,
+                solution_log_path=solution_log_path, run_log_path=run_log_path)
         cg.get_solution_str = self.get_solution_str
         cg.get_counter_example_str = self.get_counter_example_str
         cg.get_generator_view = self.get_generator_view
         cg.get_verifier_view = self.get_verifier_view
-        run_verifier = functools.partial(
-            run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
-        cg.run_verifier = run_verifier
+        if(cc.opt_wce):
+            run_verifier = functools.partial(
+                run_verifier_incomplete, c=self.c, v=self.v, ctx=self.ctx)
+            cg.run_verifier = run_verifier
         try_except(cg.run)
 
     def get_verifier_struct(self):
@@ -381,12 +399,202 @@ def steady_state_variables_improve(
 class Proofs:
     link: CCmatic
     solution: z3.BoolRef
-    recursive: Dict[z3.ExprRef, float] = {}
+    recursive: Dict[Optional[z3.ExprRef], float] = {}
     cache: Dict[str, Any] = {}
 
-    def __init__(self, link: CCmatic, solution: z3.BoolRef):
+    def __init__(self, link: CCmatic, solution: z3.BoolRef, solution_id: int):
         self.link = link
         self.solution = solution
+        self.solution_id = solution_id
+
+    def setup_steady_variables_functions(self):
+        link = self.link
+        c, v = self.link.c, self.link.v
+        # I have only thought about single flow case for these proofs.
+        assert c.N == 1
+
+        # Steady states
+        first = link.cc.history
+        self.steady__cwnd = SteadyStateVariable(
+            "steady__cwnd",
+            v.c_f[0][first],
+            v.c_f[0][-1],
+            z3.Real("steady__cwnd__lo"),
+            z3.Real("steady__cwnd__hi"))
+        self.steady__bottle_queue = SteadyStateVariable(
+            "steady__bottle_queue",
+            (v.A[first] - v.L[first]) - (v.C0 + c.C * (first) - v.W[first]),
+            (v.A[c.T-1] - v.L[c.T-1]) - (v.C0 + c.C * (c.T-1) - v.W[c.T-1]),
+            None,
+            z3.Real("steady__bottle_queue__hi"))
+        svs = [self.steady__cwnd, self.steady__bottle_queue]
+
+        # Movements
+        self.movement_mult__cwnd = z3.Real('movement_mult__cwnd_queue')
+        movements = [
+            self.movement_mult__cwnd,
+        ]
+
+        vs = link.get_verifier_struct()
+        def get_counter_example_str(counter_example: z3.ModelRef,
+                                    verifier_vars: List[z3.ExprRef]) -> str:
+            ret = vs.get_counter_example_str(counter_example, verifier_vars)
+            sv_strs = []
+            for sv in svs:
+                lo = sv.lo
+                hi = sv.hi
+                if(lo is not None):
+                    val = get_raw_value(counter_example.eval(lo))
+                    if(not math.isnan(val)):
+                        sv_strs.append(f"{lo.decl().name()}="
+                                       f"{val}")
+                if(hi is not None):
+                    val = get_raw_value(counter_example.eval(hi))
+                    if(not math.isnan(val)):
+                        sv_strs.append(f"{hi.decl().name()}="
+                                       f"{val}")
+            ret += "\n"
+            ret += ", ".join(sv_strs)
+            movement_strs = []
+            for movement in movements:
+                val = get_raw_value(counter_example.eval(movement))
+                if(not math.isnan(val)):
+                    movement_strs.append(f"{movement.decl().name()}="
+                                         f"{val}")
+            ret += "\n"
+            ret += ", ".join(movement_strs)
+            return ret
+
+        def debug_verifier(lemma: z3.BoolRef, extra_constraints):
+            verifier = MySolver()
+            verifier.warn_undeclared = False
+            verifier.add(link.definitions)
+            verifier.add(link.environment)
+            verifier.add(self.solution)
+            verifier.add(z3.Not(lemma))
+            verifier.add(z3.And(extra_constraints))
+            sat = verifier.check()
+            if(str(sat) == "sat"):
+                model = verifier.model()
+                logger.error("Lemma violated. Cex:\n" +
+                             get_counter_example_str(model, link.verifier_vars))
+                logger.critical("Note, the desired string in above output is based "
+                                "on cegis metrics instead of optimization metrics.")
+                import ipdb; ipdb.set_trace()
+                return model
+            else:
+                logger.info("Lemma passes")
+
+        self.vs = link.get_verifier_struct()
+        self.debug_verifier = debug_verifier
+        self.get_counter_example_str = get_counter_example_str
+
+    def setup_conditions(self):
+        # Rate/bottle_queue
+        self.initial_inside = z3.And(
+            self.steady__cwnd.init_inside(),
+            self.steady__bottle_queue.init_inside())
+        self.final_inside = z3.And(
+            self.steady__cwnd.final_inside(),
+            self.steady__bottle_queue.final_inside())
+        # self.final_improves = steady_state_variables_improve(
+        #         [self.steady__rate, self.steady__bottle_queue])
+
+    def recursive_rate_queue(self):
+        """
+        Find smallest rate/queue state that is recursive
+        """
+        link = self.link
+        c = link.c
+        recur_rate_queue = z3.Implies(
+            self.initial_inside,
+            self.final_inside)
+
+        BDP = c.C * c.R
+
+        fixed_metrics = []
+        metric_lists = [
+            [Metric(self.steady__cwnd.lo, EPS, BDP-EPS, EPS, True)],
+            [Metric(self.steady__cwnd.hi, BDP+EPS, 10 * c.C, EPS, False)],
+            [Metric(self.steady__bottle_queue.hi, EPS, 10 * c.C * (c.R + c.D), EPS, False)]
+        ]
+        os = OptimizationStruct(link, self.vs, fixed_metrics,
+                                metric_lists, recur_rate_queue, self.get_counter_example_str)
+        logger.info("Recursive state for rate, queue")
+        if(self.steady__cwnd.lo not in self.recursive or
+           self.steady__cwnd.hi not in self.recursive or
+           self.steady__bottle_queue.hi not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
+
+        ss_assignments = [
+            self.steady__cwnd.lo == self.recursive[self.steady__cwnd.lo],
+            self.steady__cwnd.hi == self.recursive[self.steady__cwnd.hi],
+            self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi]
+        ]
+        model = self.debug_verifier(recur_rate_queue, ss_assignments)
+
+    def optimum_bounds_in_ss(self):
+        """
+        If performance metrics are in steady range, then
+            performance metrics remain in steady range
+            the performance metrics satisfy desired objectives.
+        """
+        link = self.link
+        c = link.c
+
+        # Recompute desired after resetting.
+        cc_old = link.cc
+        cc = copy.copy(cc_old)
+        cc.reset_desired_z3(link.v.pre)
+        link.cc = cc
+        d, _ = link.get_desired()
+        link.cc = cc_old
+
+        # cc = link.cc
+        # cc.reset_desired_z3(link.v.pre)
+        # d, _ = link.get_desired()
+
+        BDP = c.C * c.R
+
+        lemma4 = z3.Implies(
+                    self.initial_inside,
+            z3.And(self.final_inside, d.desired_in_ss))
+        fixed_metrics = [
+            Metric(self.steady__cwnd.lo,
+                   self.recursive[self.steady__cwnd.lo], BDP-EPS, EPS, True),
+            Metric(self.steady__cwnd.hi, BDP+EPS,
+                   self.recursive[self.steady__cwnd.hi], EPS, False),
+            Metric(self.steady__bottle_queue.hi, c.C * c.R,
+                   self.recursive[self.steady__bottle_queue.hi], EPS, False),
+            Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
+            Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+        ]
+        metric_lists = [
+            [Metric(cc.desired_util_f, 0.01, 1, 1e-3, True)],
+            [Metric(cc.desired_queue_bound_multiplier, 0, 16, EPS, False)],
+            [Metric(cc.desired_loss_count_bound, 0, c.T, EPS, False)],
+            [Metric(cc.desired_large_loss_count_bound, 0, c.T, EPS, False)],
+            [Metric(cc.desired_loss_amount_bound_multiplier, 0, c.T, EPS, False)],
+        ]
+        os = OptimizationStruct(link, self.vs, fixed_metrics,
+                                metric_lists, lemma4, self.get_counter_example_str)
+        logger.info("Objectives in steady state (no link rate variations)")
+        model = find_optimum_bounds(self.solution, [os])
+
+    def setup_offline_cache(self):
+        link = self.link
+        c = link.c
+
+    def proofs(self):
+        self.setup_steady_variables_functions()
+        self.setup_conditions()
+        self.setup_offline_cache()
+
+        self.recursive_rate_queue()
+        # self.optimum_bounds_in_ss()
+
+
 
 
 class BeliefProofs(Proofs):
@@ -583,6 +791,141 @@ class BeliefProofs(Proofs):
         # self.final_improves = steady_state_variables_improve(
         #         [self.steady__rate, self.steady__bottle_queue])
 
+    def setup_offline_cache(self):
+        link = self.link
+        c = link.c
+
+        """
+        [01/26 15:46:34]  Lemma 1
+        [01/26 15:46:34]  Testing link: adv
+        [01/26 15:57:56]  Solver gives unsat with loosest bounds.
+        [01/26 15:57:56]  --------------------------------------------------------------------------------
+        [01/26 15:57:56]  This Try: {'movement_mult__consistent': 1.1}
+        [01/26 15:57:56]  Finding bounds for movement_mult__consistent
+        [01/26 15:57:56]  Optimizing movement_mult__consistent.
+        [01/26 16:13:19]  Found bounds for movement_mult__consistent, 1.1, (1.1, None, 1.1008789062500002)
+        [01/26 16:13:19]  {'movement_mult__consistent': {1.1}}
+        [01/26 16:13:19]  ================================================================================
+        """
+        self.recursive[self.movement_mult__consistent] = 1.1
+
+        # drain_then_blast_then_stable
+        if(self.solution_id == 5):
+            self.recursive[self.steady__min_c.lo] = c.C/3
+            self.recursive[self.steady__max_c.hi] = 4.5 * c.C
+            self.recursive[self.movement_mult__minc_maxc] = 1.5
+
+            # self.recursive[self.steady__rate.lo] = c.C/2
+            # self.recursive[self.steady__rate.hi] = 2 * c.C
+            # self.recursive[self.steady__bottle_queue.hi] = 4 * c.C * (c.R + c.D)
+
+            # self.recursive[self.movement_mult__rate] = 2
+
+        # blast_then_medblast_then_minc_negalpha_correct_units
+        if(self.solution_id == 6):
+            """
+            We find 38.8 and 300 as the recursive region for minc and maxc.
+            The lower bound probably depends on:
+                (1) how much data we had when we timed out min_c
+                (2) when probing is done by CCA, i.e.,
+                    largest min_c at which probing won't be done (= c.C/2).
+            """
+            self.recursive[self.steady__min_c.lo] = c.C/3
+            self.recursive[self.steady__max_c.hi] = 3 * c.C
+
+            self.recursive[self.movement_mult__minc_maxc] = 2
+
+            """
+            Rate lies in range [50, 200], i.e, [C/2, 2C], while bottleneck queue is
+            below 800, i.e., 4 * c.C * (c.R + c.D).
+            """
+
+            """
+            Deprecated output:
+            Since the mult_gap or add_gap is not recursive,
+            below states don't matter.
+            If we keep minc_maxc_mult_gap to 2:
+                Smallest recursive state is rate in [60, 200],
+                bottle_queue in 300.
+            i.e., anything larger should still be recursive.
+
+            If we keep minc_maxc_add_gap to 10:
+                Smallest recursive state is rate in [60, 200],
+                bottle_queue is recursive in 300.
+            """
+
+            self.recursive[self.steady__rate.lo] = c.C/2
+            self.recursive[self.steady__rate.hi] = 2 * c.C
+            self.recursive[self.steady__bottle_queue.hi] = 4 * c.C * (c.R + c.D)
+
+            self.recursive[self.movement_mult__rate] = 2
+
+            """
+            [01/23 16:47:06]  Lemma 4 - Objectives in steady state
+            [01/23 16:47:06]  Testing link: adv
+            [01/23 17:05:39]  Solver gives unsat with loosest bounds.
+            [01/23 17:05:39]  --------------------------------------------------------------------------------
+            [01/23 17:05:39]  This Try: {'adv__Desired__util_f': 0.01}
+            [01/23 17:05:39]  Finding bounds for adv__Desired__util_f
+            [01/23 17:05:39]  Optimizing adv__Desired__util_f.
+            [01/23 23:01:13]  Found bounds for adv__Desired__util_f, 0.499, (0.49919921874999995, None, 0.500166015625)
+            [01/23 23:01:13]  {'adv__Desired__util_f': {0.499, 0.01}}
+            [01/23 23:01:13]     adv__Desired__util_f
+            0                 0.499
+            [01/23 23:01:13]  --------------------------------------------------------------------------------
+            [01/23 23:01:13]  --------------------------------------------------------------------------------
+            [01/23 23:01:13]  This Try: {'adv__Desired__queue_bound_multiplier': 16}
+            [01/23 23:01:13]  Finding bounds for adv__Desired__queue_bound_multiplier
+            [01/23 23:01:13]  Optimizing adv__Desired__queue_bound_multiplier.
+            [01/24 00:57:02]  Found bounds for adv__Desired__queue_bound_multiplier, 6.0, (5.9375, None, 6.0)
+            [01/24 00:57:02]  {'adv__Desired__queue_bound_multiplier': {16, 6.0}}
+            [01/24 00:57:02]     adv__Desired__queue_bound_multiplier
+            0                                   6.0
+            [01/24 00:57:02]  --------------------------------------------------------------------------------
+            [01/24 00:57:02]  --------------------------------------------------------------------------------
+            [01/24 00:57:02]  This Try: {'adv__Desired__loss_count_bound': 10}
+            [01/24 00:57:02]  Finding bounds for adv__Desired__loss_count_bound
+            [01/24 00:57:02]  Optimizing adv__Desired__loss_count_bound.
+            [01/24 01:50:58]  Found bounds for adv__Desired__loss_count_bound, 4.1000000000000005, (3.984375, None, 4.0625)
+            [01/24 01:50:58]  {'adv__Desired__loss_count_bound': {10, 4.1000000000000005}}
+            [01/24 01:50:58]     adv__Desired__loss_count_bound
+            0                             4.1
+            [01/24 01:50:58]  --------------------------------------------------------------------------------
+            [01/24 01:50:58]  --------------------------------------------------------------------------------
+            [01/24 01:50:58]  This Try: {'adv__Desired__large_loss_count_bound': 10}
+            [01/24 01:50:58]  Finding bounds for adv__Desired__large_loss_count_bound
+            [01/24 01:50:58]  Optimizing adv__Desired__large_loss_count_bound.
+            [01/24 01:57:47]  Found bounds for adv__Desired__large_loss_count_bound, 0.0, (0, None, 0)
+            [01/24 01:57:47]  {'adv__Desired__large_loss_count_bound': {0.0, 10}}
+            [01/24 01:57:47]     adv__Desired__large_loss_count_bound
+            0                                   0.0
+            [01/24 01:57:47]  --------------------------------------------------------------------------------
+            [01/24 01:57:47]  --------------------------------------------------------------------------------
+            [01/24 01:57:47]  This Try: {'adv__Desired__loss_amount_bound': 10}
+            [01/24 01:57:47]  Finding bounds for adv__Desired__loss_amount_bound
+            [01/24 01:57:47]  Optimizing adv__Desired__loss_amount_bound.        [01/24 03:40:34]  Found bounds for adv__Desired__loss_amount_bound, 2.1, (1.953125, None, 2.03125)
+            [01/24 03:40:34]  {'adv__Desired__loss_amount_bound': {10, 2.1}}
+            [01/24 03:40:34]     adv__Desired__loss_amount_bound
+            0                              2.1
+            [01/24 03:40:34]  --------------------------------------------------------------------------------
+            [01/24 03:40:34]  ================================================================================
+            """
+
+            """
+            The one with correct units also gets the same bounds as above.
+            """
+
+        # blast_then_medblast_then_minc_negalpha_correct_units_higher_util
+        if(self.solution_id == 7):
+            self.recursive[self.steady__min_c.lo] = c.C/2
+            self.recursive[self.steady__max_c.hi] = 2.5 * c.C
+
+            self.recursive[self.movement_mult__minc_maxc] = 1.2
+
+        # blast_then_medblast_then_minc_negalpha_correct_units_lower_loss
+        if(self.solution_id == 8):
+            pass
+
     def lemma1(self):
         """
         Lemma 1: If inconsistent and outside small range then beliefs
@@ -642,9 +985,6 @@ class BeliefProofs(Proofs):
                          final_moves_consistent,
                          # d.desired_in_ss
                          )))
-        # TODO: With beleifs timing out if they changed only slightly, we
-        # probably don't need the statement about beliefs timing out when they
-        # become too close.
         metric_lists = [
             [Metric(self.movement_mult__consistent,
                     c.maxc_minc_change_mult, 2, 1e-3, True)]
@@ -653,23 +993,12 @@ class BeliefProofs(Proofs):
             self.link, self.vs, [], metric_lists,
             lemma1, self.get_counter_example_str)
         logger.info("Lemma 1: move quickly towards consistent")
-        # model = find_optimum_bounds(self.solution, [os])
+        if(self.movement_mult__consistent not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
 
-        self.recursive[self.movement_mult__consistent] = 1.1
-        """
-        [01/26 15:46:34]  Lemma 1
-        [01/26 15:46:34]  Testing link: adv
-        [01/26 15:57:56]  Solver gives unsat with loosest bounds.
-        [01/26 15:57:56]  --------------------------------------------------------------------------------
-        [01/26 15:57:56]  This Try: {'movement_mult__consistent': 1.1}
-        [01/26 15:57:56]  Finding bounds for movement_mult__consistent
-        [01/26 15:57:56]  Optimizing movement_mult__consistent.
-        [01/26 16:13:19]  Found bounds for movement_mult__consistent, 1.1, (1.1, None, 1.1008789062500002)
-        [01/26 16:13:19]  {'movement_mult__consistent': {1.1}}
-        [01/26 16:13:19]  ================================================================================
-        """
         ss_assignments = [
-            self.movement_mult__consistent == 1.1
+            self.movement_mult__consistent == self.recursive[self.movement_mult__consistent]
         ]
         model = self.debug_verifier(lemma1, ss_assignments)
 
@@ -788,8 +1117,10 @@ class BeliefProofs(Proofs):
             z3.And(self.final_beliefs_consistent,
                    z3.Or(self.final_beliefs_inside, final_beliefs_improve)))
         fixed_metrics = [
-            Metric(self.steady__min_c.lo, EPS, 1/3 * c.C, EPS, False),
-            Metric(self.steady__max_c.hi, 3 * c.C, 10 * c.C, EPS, True),
+            Metric(self.steady__min_c.lo, EPS,
+                   self.recursive[self.steady__min_c.lo], EPS, False),
+            Metric(self.steady__max_c.hi,
+                   self.recursive[self.steady__max_c.hi], 10 * c.C, EPS, True),
         ]
         metric_lists = [
             [Metric(self.movement_mult__minc_maxc, 1.2, 5, EPS, True)]
@@ -799,16 +1130,16 @@ class BeliefProofs(Proofs):
             lemma2, self.get_counter_example_str)
         logger.info(
             "Lemma 2: move quickly towards maxc/minc.")
-        # model = find_optimum_bounds(self.solution, [os])
+        if(self.movement_mult__minc_maxc not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
 
-        self.recursive[self.movement_mult__minc_maxc] = 2
         ss_assignments = [
-            self.steady__min_c.lo == c.C/3,
-            self.steady__max_c.hi == 3 * c.C,
-            self.movement_mult__minc_maxc == 2
+            self.steady__min_c.lo == self.recursive[self.steady__min_c.lo],
+            self.steady__max_c.hi == self.recursive[self.steady__max_c.hi],
+            self.movement_mult__minc_maxc == self.recursive[self.movement_mult__minc_maxc]
         ]
-        self.debug_verifier(lemma2, ss_assignments)
-
+        model = self.debug_verifier(lemma2, ss_assignments)
 
     def deprecated_recursive_mult_gap(self):
         # Lemma 2, Step 1.1: Find smallest recursive state for mult gap.
@@ -821,7 +1152,7 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists, desired, self.get_counter_example_str)
         logger.info("Lemma 2: Find recursive state for mult gap")
-        # find_optimum_bounds(self.solution, [os])
+        model = find_optimum_bounds(self.solution, [os])
         """
         [01/24 23:03:53]  Lemma 2: Find recursive state for mult gap
         [01/24 23:03:53]  Testing link: adv
@@ -861,7 +1192,8 @@ class BeliefProofs(Proofs):
         recursive_beliefs = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside),
-            self.final_beliefs_inside)
+            z3.And(self.final_beliefs_consistent,
+                   self.final_beliefs_inside))
         metric_lists = [
             [Metric(self.steady__min_c.lo, EPS, c.C-EPS, EPS, True),
              Metric(self.steady__max_c.hi, c.C+EPS, 10 * c.C, EPS, False)]
@@ -869,24 +1201,17 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, [], metric_lists,
                                 recursive_beliefs, self.get_counter_example_str)
         logger.info("Lemma 2: recursive state for minc and maxc")
-        # find_optimum_bounds(self.solution, [os])
 
-        self.recursive[self.steady__min_c.lo] = c.C/3
-        self.recursive[self.steady__max_c.hi] = 3 * c.C
+        if(self.steady__min_c.lo not in self.recursive or
+           self.steady__max_c.hi not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
 
-        """
-        We find 38.8 and 300 as the recursive region for minc and maxc.
-        The lower bound probably depends on:
-            (1) how much data we had when we timed out min_c
-            (2) when probing is done by CCA, i.e.,
-                largest min_c at which probing won't be done (= c.C/2).
-        """
         ss_assignments = [
-            self.steady__min_c.lo == c.C/3,
-            self.steady__max_c.hi == 3 * c.C,
+            self.steady__min_c.lo == self.recursive[self.steady__min_c.lo],
+            self.steady__max_c.hi == self.recursive[self.steady__max_c.hi]
         ]
-        self.debug_verifier(recursive_beliefs, ss_assignments)
-
+        model = self.debug_verifier(recursive_beliefs, ss_assignments)
 
     def lemma2_step2_possible_perf_with_recursive_minc_maxc(self):
         """
@@ -1002,18 +1327,17 @@ class BeliefProofs(Proofs):
             z3.And(self.final_beliefs_consistent, self.final_beliefs_inside,
                    z3.Or(self.final_inside, final_improves)))
 
-        recur_minc = self.recursive[self.steady__min_c.lo]
-        recur_maxc = self.recursive[self.steady__max_c.hi]
-        recur_rate_lo = self.recursive[self.steady__rate.lo]
-        recur_rate_hi = self.recursive[self.steady__rate.hi]
-        recur_bottle_queue = self.recursive[self.steady__bottle_queue.hi]
-
         fixed_metrics = [
-            Metric(self.steady__rate.lo, recur_rate_lo, c.C-EPS, EPS, True),
-            Metric(self.steady__rate.hi, c.C+EPS, recur_rate_hi, EPS, False),
-            Metric(self.steady__bottle_queue.hi, c.C * c.R, recur_bottle_queue, EPS, False),
-            Metric(self.steady__min_c.lo, EPS, recur_minc, EPS, True),
-            Metric(self.steady__max_c.hi, recur_maxc, 10 * c.C, EPS, False)
+            Metric(self.steady__rate.lo,
+                   self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
+            Metric(self.steady__rate.hi, c.C+EPS,
+                   self.recursive[self.steady__rate.hi], EPS, False),
+            Metric(self.steady__bottle_queue.hi, c.C * c.R,
+                   self.recursive[self.steady__bottle_queue.hi], EPS, False),
+            Metric(self.steady__min_c.lo, EPS,
+                   self.recursive[self.steady__min_c.lo], EPS, True),
+            Metric(self.steady__max_c.hi,
+                   self.recursive[self.steady__max_c.hi], 10 * c.C, EPS, False)
         ]
         metric_lists = [
             [Metric(self.movement_mult__rate, 2, 3, EPS, True)]
@@ -1022,18 +1346,19 @@ class BeliefProofs(Proofs):
                                 metric_lists, lemma3,
                                 self.get_counter_example_str)
         logger.info("Lemma 3: move quickly towards rate/queue")
-        # find_optimum_bounds(self.solution, [os])
-        self.recursive[self.movement_mult__rate] = 2
+        if(self.movement_mult__rate not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
 
         ss_assignments = [
-            self.steady__min_c.lo == c.C/3,
-            self.steady__max_c.hi == 3 * c.C,
-            self.steady__rate.lo == c.C/2,
-            self.steady__rate.hi == 2 * c.C,
-            self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D),
-            self.movement_mult__rate == 2
+            self.steady__min_c.lo == self.recursive[self.steady__min_c.lo],
+            self.steady__max_c.hi == self.recursive[self.steady__max_c.hi],
+            self.steady__rate.lo == self.recursive[self.steady__rate.lo],
+            self.steady__rate.hi == self.recursive[self.steady__rate.hi],
+            self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi],
+            self.movement_mult__rate == self.recursive[self.movement_mult__rate]
         ]
-        self.debug_verifier(lemma3, ss_assignments)
+        model = self.debug_verifier(lemma3, ss_assignments)
 
     def lemma3_1_recursive_rate_queue(self):
         """
@@ -1047,11 +1372,11 @@ class BeliefProofs(Proofs):
                    self.initial_inside),
             self.final_inside)
 
-        recur_minc = self.recursive[self.steady__min_c.lo]
-        recur_maxc = self.recursive[self.steady__max_c.hi]
         fixed_metrics = [
-            Metric(self.steady__min_c.lo, EPS, recur_minc, EPS, True),
-            Metric(self.steady__max_c.hi, recur_maxc, 10 * c.C, EPS, False)]
+            Metric(self.steady__min_c.lo, EPS,
+                   self.recursive[self.steady__min_c.lo], EPS, True),
+            Metric(self.steady__max_c.hi, self.recursive[self.steady__max_c.hi],
+                   10 * c.C, EPS, False)]
 
         metric_lists = [
             [Metric(self.steady__rate.lo, EPS, c.C-EPS, EPS, True)],
@@ -1061,39 +1386,20 @@ class BeliefProofs(Proofs):
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, recur_rate_queue, self.get_counter_example_str)
         logger.info("Lemma 3, Step 1: recursive state for rate, queue")
-        # find_optimum_bounds(self.solution, [os])
-
-        self.recursive[self.steady__rate.lo] = c.C/2
-        self.recursive[self.steady__rate.hi] = 2 * c.C
-        self.recursive[self.steady__bottle_queue.hi] = 4 * c.C * (c.R + c.D)
-
-        """
-        Rate lies in range [50, 200], i.e, [C/2, 2C], while bottleneck queue is
-        below 800, i.e., 4 * c.C * (c.R + c.D).
-        """
-
-        """
-        Deprecated output:
-        Since the mult_gap or add_gap is not recursive,
-        below states don't matter.
-        If we keep minc_maxc_mult_gap to 2:
-            Smallest recursive state is rate in [60, 200],
-            bottle_queue in 300.
-        i.e., anything larger should still be recursive.
-
-        If we keep minc_maxc_add_gap to 10:
-            Smallest recursive state is rate in [60, 200],
-            bottle_queue is recursive in 300.
-        """
+        if(self.steady__rate.lo not in self.recursive or
+           self.steady__rate.hi not in self.recursive or
+           self.steady__bottle_queue.hi not in self.recursive):
+            model = find_optimum_bounds(self.solution, [os])
+            return
 
         ss_assignments = [
-            self.steady__min_c.lo == c.C/3,
-            self.steady__max_c.hi == 3 * c.C,
-            self.steady__rate.lo == c.C/2,
-            self.steady__rate.hi == 2 * c.C,
-            self.steady__bottle_queue.hi == 4 * c.C * (c.R + c.D)
+            self.steady__min_c.lo == self.recursive[self.steady__min_c.lo],
+            self.steady__max_c.hi == self.recursive[self.steady__max_c.hi],
+            self.steady__rate.lo == self.recursive[self.steady__rate.lo],
+            self.steady__rate.hi == self.recursive[self.steady__rate.hi],
+            self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi]
         ]
-        self.debug_verifier(recur_rate_queue, ss_assignments)
+        model = self.debug_verifier(recur_rate_queue, ss_assignments)
 
     def deprecated_lemma3_step1_1(self):
         """
@@ -1190,12 +1496,6 @@ class BeliefProofs(Proofs):
         #     z3.And(self.final_beliefs_consistent, self.final_beliefs_close_add,
         #            self.final_inside, d.desired_in_ss))
 
-        recur_minc = self.recursive[self.steady__min_c.lo]
-        recur_maxc = self.recursive[self.steady__max_c.hi]
-        recur_rate_lo = self.recursive[self.steady__rate.lo]
-        recur_rate_hi = self.recursive[self.steady__rate.hi]
-        recur_bottle_queue = self.recursive[self.steady__bottle_queue.hi]
-
         # Recompute desired after resetting.
         cc_old = link.cc
         cc = copy.copy(cc_old)
@@ -1214,11 +1514,16 @@ class BeliefProofs(Proofs):
             z3.And(self.final_beliefs_consistent, self.final_beliefs_inside,
                    self.final_inside, d.desired_in_ss))
         fixed_metrics = [
-            Metric(self.steady__rate.lo, recur_rate_lo, c.C-EPS, EPS, True),
-            Metric(self.steady__rate.hi, c.C+EPS, recur_rate_hi, EPS, False),
-            Metric(self.steady__bottle_queue.hi, c.C * c.R, recur_bottle_queue, EPS, False),
-            Metric(self.steady__min_c.lo, EPS, recur_minc, EPS, True),
-            Metric(self.steady__max_c.hi, recur_maxc, 10 * c.C, EPS, False),
+            Metric(self.steady__rate.lo,
+                   self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
+            Metric(self.steady__rate.hi, c.C+EPS,
+                   self.recursive[self.steady__rate.hi], EPS, False),
+            Metric(self.steady__bottle_queue.hi, c.C * c.R,
+                   self.recursive[self.steady__bottle_queue.hi], EPS, False),
+            Metric(self.steady__min_c.lo, EPS,
+                   self.recursive[self.steady__min_c.lo], EPS, True),
+            Metric(self.steady__max_c.hi,
+                   self.recursive[self.steady__max_c.hi], 10 * c.C, EPS, False),
 
             Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
             Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
@@ -1235,60 +1540,10 @@ class BeliefProofs(Proofs):
         logger.info("Lemma 4: objectives in steady state (no link rate variations)")
         model = find_optimum_bounds(self.solution, [os])
 
-        """
-        [01/23 16:47:06]  Lemma 4 - Objectives in steady state
-        [01/23 16:47:06]  Testing link: adv
-        [01/23 17:05:39]  Solver gives unsat with loosest bounds.
-        [01/23 17:05:39]  --------------------------------------------------------------------------------
-        [01/23 17:05:39]  This Try: {'adv__Desired__util_f': 0.01}
-        [01/23 17:05:39]  Finding bounds for adv__Desired__util_f
-        [01/23 17:05:39]  Optimizing adv__Desired__util_f.
-        [01/23 23:01:13]  Found bounds for adv__Desired__util_f, 0.499, (0.49919921874999995, None, 0.500166015625)
-        [01/23 23:01:13]  {'adv__Desired__util_f': {0.499, 0.01}}
-        [01/23 23:01:13]     adv__Desired__util_f
-        0                 0.499
-        [01/23 23:01:13]  --------------------------------------------------------------------------------
-        [01/23 23:01:13]  --------------------------------------------------------------------------------
-        [01/23 23:01:13]  This Try: {'adv__Desired__queue_bound_multiplier': 16}
-        [01/23 23:01:13]  Finding bounds for adv__Desired__queue_bound_multiplier
-        [01/23 23:01:13]  Optimizing adv__Desired__queue_bound_multiplier.
-        [01/24 00:57:02]  Found bounds for adv__Desired__queue_bound_multiplier, 6.0, (5.9375, None, 6.0)
-        [01/24 00:57:02]  {'adv__Desired__queue_bound_multiplier': {16, 6.0}}
-        [01/24 00:57:02]     adv__Desired__queue_bound_multiplier
-        0                                   6.0
-        [01/24 00:57:02]  --------------------------------------------------------------------------------
-        [01/24 00:57:02]  --------------------------------------------------------------------------------
-        [01/24 00:57:02]  This Try: {'adv__Desired__loss_count_bound': 10}
-        [01/24 00:57:02]  Finding bounds for adv__Desired__loss_count_bound
-        [01/24 00:57:02]  Optimizing adv__Desired__loss_count_bound.
-        [01/24 01:50:58]  Found bounds for adv__Desired__loss_count_bound, 4.1000000000000005, (3.984375, None, 4.0625)
-        [01/24 01:50:58]  {'adv__Desired__loss_count_bound': {10, 4.1000000000000005}}
-        [01/24 01:50:58]     adv__Desired__loss_count_bound
-        0                             4.1
-        [01/24 01:50:58]  --------------------------------------------------------------------------------
-        [01/24 01:50:58]  --------------------------------------------------------------------------------
-        [01/24 01:50:58]  This Try: {'adv__Desired__large_loss_count_bound': 10}
-        [01/24 01:50:58]  Finding bounds for adv__Desired__large_loss_count_bound
-        [01/24 01:50:58]  Optimizing adv__Desired__large_loss_count_bound.
-        [01/24 01:57:47]  Found bounds for adv__Desired__large_loss_count_bound, 0.0, (0, None, 0)
-        [01/24 01:57:47]  {'adv__Desired__large_loss_count_bound': {0.0, 10}}
-        [01/24 01:57:47]     adv__Desired__large_loss_count_bound
-        0                                   0.0
-        [01/24 01:57:47]  --------------------------------------------------------------------------------
-        [01/24 01:57:47]  --------------------------------------------------------------------------------
-        [01/24 01:57:47]  This Try: {'adv__Desired__loss_amount_bound': 10}
-        [01/24 01:57:47]  Finding bounds for adv__Desired__loss_amount_bound
-        [01/24 01:57:47]  Optimizing adv__Desired__loss_amount_bound.        [01/24 03:40:34]  Found bounds for adv__Desired__loss_amount_bound, 2.1, (1.953125, None, 2.03125)
-        [01/24 03:40:34]  {'adv__Desired__loss_amount_bound': {10, 2.1}}
-        [01/24 03:40:34]     adv__Desired__loss_amount_bound
-        0                              2.1
-        [01/24 03:40:34]  --------------------------------------------------------------------------------
-        [01/24 03:40:34]  ================================================================================
-        """
-
     def proofs(self):
         self.setup_steady_variables_functions()
         self.setup_conditions()
+        self.setup_offline_cache()
 
         # TODO: There are many cases where lemmas can be in terms of gaps or
         # range. We should programatically figure these things out.
@@ -1296,10 +1551,10 @@ class BeliefProofs(Proofs):
         # self.deprecated_lemma1_1()
         # self.lemma2_step2_possible_perf_with_recursive_minc_maxc()
 
-        self.lemma1()  # movement
+        # self.lemma1()  # movement
         # self.deprecated_recursive_mult_gap()
-        self.lemma2_step1_recursive_minc_maxc()  # recursion
-        self.lemma2()  # movement
+        # self.lemma2_step1_recursive_minc_maxc()  # recursion
+        # self.lemma2()  # movement
         self.lemma3_1_recursive_rate_queue()  # recursion
         self.lemma3()  # movement
         self.lemma4()  # performance

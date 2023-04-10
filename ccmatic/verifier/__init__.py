@@ -1,11 +1,13 @@
-import math
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import z3
+
 from ccac.model import (ModelConfig, cca_paced, cwnd_rate_arrival,
                         epsilon_alpha, initial, loss_detected, loss_oracle,
                         make_solver, multi_flows, relate_tot)
@@ -14,7 +16,7 @@ from ccmatic.cegis import CegisConfig
 from ccmatic.common import (flatten, get_name_for_list, get_renamed_vars,
                             get_val_list)
 from cegis import NAME_TEMPLATE, Cegis, get_unsat_core, rename_vars
-from cegis.util import get_raw_value, z3_max, z3_min
+from cegis.util import get_raw_value, z3_max, z3_max_list, z3_min, z3_min_list
 from pyz3_utils.binary_search import BinarySearch
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -371,6 +373,28 @@ def app_limits_env(c: ModelConfig, s: MySolver, v: Variables):
         for t in range(1, c.T):
             s.add(v.app_limits[n][t] >= v.app_limits[n][t-1])
 
+    if(c.app_fixed_avg_rate):
+        # Set app rate
+        if(c.app_rate):
+            s.add(v.app_rate == c.app_rate)
+        else:
+            s.add(v.app_rate >= 0.1 * c.C)
+
+        # Enfore app rate and burst
+        burst = c.app_burst_factor * v.app_rate * 1
+        # here one is the time quanta            ^^^
+
+        def alpha(t):
+            return burst + v.app_rate * t
+
+        # From https://leboudec.github.io/netcal/
+        for n in range(c.N):
+            for t in range(c.T):
+                for st in range(t+1):
+                    s.add(v.app_limits[n][t] <= v.app_limits[n][st] + alpha(t-st))
+                if(t >= 1):
+                    s.add(v.app_limits[n][t] >= v.app_limits[n][t-1] + v.app_rate * 1)
+
 
 def update_bandwidth_beliefs_with_timeout(
         c: ModelConfig, s: MySolver, v: Variables):
@@ -668,7 +692,43 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # high_delay = z3.Or(*[v.qdel[st+1][dt]
                 #                      for dt in range(c.D+1, c.T)])
                 loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
-                this_utilized = z3.Or(loss, high_delay)
+                if(c.D == 0):
+                    assert c.loss_oracle
+                    loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
+
+                # We can only count qdelay when packets actually arrived.
+                # Otherwise the qdelay is stale.
+                # recvd_new_pkts = v.S_f[n][st+1] > v.S_f[n][st]
+                recvd_new_pkts = True
+
+                # CCAC can somehow give high utilization signals even when cwnd is low.
+                # This basically happens when no new pkts are sent due to low cwnd.
+                # To avoid underestimating max_c, we update it only when we sent new pkts.
+
+                # Updated reason: A delay of high can happen when there are last
+                # few pkts left in the queue. Thus the ack rate will be low. If
+                # the CCA sent pkts R + D time ago, this qdelay can only be high
+                # if this quue is big, if the queue is small, then the recently
+                # sent pkts will show low qdelay.
+
+                # Based on this, ideally we should be checking A_f[n][st+1-D]
+                # > A_f[n][st-D]. But this works out. For ideal link D = 0, so
+                # this is fine. For jittery link, since we always look at
+                # windows >=D+1, the constraint for previous batch would ensure
+                # constraint for this batch (we either sent new packets in
+                # previous batch or caused loss, loss can only happen if we sent
+                # new pkts.). We only really care about the constraint for the
+                # last batch.
+                sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
+
+                # We assume the link is utilized if we did not recv any packets.
+                # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
+                # This causes us to never have long enough utilized window (hence we can't improve max_c).
+                # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
+                #                        z3.Or(loss, high_delay))
+                this_utilized = z3.Or(
+                    z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                    loss)
                 utilized_t[st] = this_utilized
                 if(st + 1 == et):
                     utilized_cummulative[st] = this_utilized
@@ -695,7 +755,20 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
 
                 # UPPER
-                if(window - 1 > 0):
+                """
+                For ideal link, D = 0, but still we want ot measure ack rate
+                over at least windows of length 2. This is because initial
+                conditions can provide utilized signals for 1 timeunit while
+                still giving low ack rate.
+
+                # if(window - max(1, c.D) > 0):
+
+                Above issue if fixed by ensuring loss detected happens then
+                buffer must be full and also using L_f instead of Ld_f, i.e., if
+                loss happened then we must have sent pkts and service must have
+                been high. This needs to change when we do loss detection.
+                """
+                if(window - c.D > 0):
                     this_upper = z3.If(
                         utilized_cummulative[st],
                         measured_c * window / (window - c.D),
@@ -788,7 +861,7 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                 v.max_qdel[n][et] == 1000 * c.T))
 
     # Buffer
-    if(c.buf_min is not None and c.beliefs_use_buffer):
+    if (c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             for et in range(1, c.T):
                 for dt in range(c.T):
@@ -803,21 +876,40 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
                         c.T-c.D,
                         v.min_buffer[n][et-1])))
 
-                for dt in range(et+1):
+                if (c.beliefs_use_max_buffer):
+                    for dt in range(et+1):
+                        s.add(z3.Implies(
+                            z3.And(v.Ld_f[n][et] > v.Ld_f[n]
+                                   [et-1], v.qdel[et][dt]),
+                            v.max_buffer[n][et] ==
+                            z3_min(v.max_buffer[n][et-1], dt+1)))
+                    # TODO: is this the best way to handle the case when qdel > et?
                     s.add(z3.Implies(
-                        z3.And(v.Ld_f[n][et] > v.Ld_f[n][et-1], v.qdel[et][dt]),
+                        z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
+                              z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
                         v.max_buffer[n][et] ==
-                        z3_min(v.max_buffer[n][et-1], dt+1)))
-                # TODO: is this the best way to handle the case when qdel > et?
-                s.add(z3.Implies(
-                    z3.Or(z3.Not(v.Ld_f[n][et] > v.Ld_f[n][et-1]),
-                          z3.And(*[z3.Not(v.qdel[et][dt]) for dt in range(et+1)])),
-                    v.max_buffer[n][et] ==
-                    v.max_buffer[n][et-1]))
+                        v.max_buffer[n][et-1]))
 
     # update_bandwidth_beliefs_invalidation(c, s, v)
     # update_bandwidth_beliefs_with_timeout(c, s, v)
     update_bandwidth_beliefs_invalidation_and_timeout(c, s, v)
+
+    if (c.app_limited and c.app_fixed_avg_rate):
+        for n in range(c.N):
+            for et in range(1, c.T):
+                lb_list = [v.min_app_rate[n][et-1]]
+                ub_list = [v.max_app_rate[n][et-1]]
+                for st in range(et):
+                    app_pkts = v.app_limits[n][et] - v.app_limits[n][st]
+                    window = et - st
+                    measured_app_rate = app_pkts / window
+
+                    lb_list.append(measured_app_rate * window /
+                                   (window + c.app_burst_factor * 1))
+                    ub_list.append(measured_app_rate)
+
+                s.add(v.min_app_rate[n][et] == z3_max_list(lb_list))
+                s.add(v.max_app_rate[n][et] == z3_min_list(ub_list))
 
 
 def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
@@ -830,7 +922,7 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
         s.add(v.min_c[n][0] * c.min_maxc_minc_gap_mult <= v.max_c[n][0])
         # s.add(v.min_c[n][0] >= 0)
         # s.add(v.max_c[n][0] > 0)
-        s.add(v.min_c[n][0] <= v.max_c[n][0])
+        # s.add(v.min_c[n][0] <= v.max_c[n][0])
         """
         Anytime that min_c > max_c happens, we want to see it happen within the
         trace, not b4.
@@ -843,14 +935,22 @@ def initial_beliefs(c: ModelConfig, s: MySolver, v: Variables):
     if(c.buf_min is not None and c.beliefs_use_buffer):
         for n in range(c.N):
             s.add(v.min_buffer[n][0] >= 0)
-            s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
             s.add(v.min_buffer[n][0] <= c.buf_min / c.C)
-            s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
+            if(c.beliefs_use_max_buffer):
+                s.add(v.min_buffer[n][0] <= v.max_buffer[n][0])
+                s.add(v.max_buffer[n][0] >= c.buf_min / c.C)
 
             for dt in range(c.T):
                 s.add(z3.Implies(
                     v.qdel[0][dt],
-                    v.min_buffer[n][0] == max(0, dt-c.D)))
+                    v.min_buffer[n][0] >= max(0, dt-c.D)))
+
+    if(c.app_limited and c.app_fixed_avg_rate):
+        for n in range(c.N):
+            s.add(v.min_app_rate[n][0] >= 0)
+            s.add(v.min_app_rate[n][0] <= v.max_app_rate[n][0])
+            s.add(v.min_app_rate[n][0] <= v.app_rate)
+            s.add(v.max_app_rate[n][0] >= v.app_rate)
 
     # Part of def vars now.
     # for n in range(c.N):
@@ -1000,20 +1100,22 @@ def get_beliefs_improve_old(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.min_c[n][c.T-1] > v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            atleast_one_improves_list.extend([
-                v.max_buffer[n][c.T-1] < v.max_buffer[n][first],
-                v.min_buffer[n][c.T-1] > v.min_buffer[n][first]
-            ])
+            atleast_one_improves_list.append(
+                v.min_buffer[n][c.T-1] > v.min_buffer[n][first])
+            if(c.beliefs_use_max_buffer):
+                atleast_one_improves_list.append(
+                    v.max_buffer[n][c.T-1] < v.max_buffer[n][first])
 
         none_degrade_list.extend([
             v.max_c[n][c.T-1] <= v.max_c[n][first],
             v.min_c[n][c.T-1] >= v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
-            none_degrade_list.extend([
-                v.max_buffer[n][c.T-1] <= v.max_buffer[n][first],
-                v.min_buffer[n][c.T-1] >= v.min_buffer[n][first]
-            ])
+            none_degrade_list.append(
+                v.min_buffer[n][c.T-1] >= v.min_buffer[n][first])
+            if(c.beliefs_use_max_buffer):
+                none_degrade_list.append(
+                    v.max_buffer[n][c.T-1] <= v.max_buffer[n][first])
 
     none_degrade = z3.And(*none_degrade_list)
     atleast_one_improves = z3.Or(*atleast_one_improves_list)
@@ -1032,9 +1134,15 @@ def get_beliefs_remain_consistent(cc: CegisConfig, c: ModelConfig, v: Variables)
             v.min_c[n][c.T-1] <= c.C
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
+            final_consistent_list.append(
+                v.min_buffer[n][c.T-1] <= c.buf_min / c.C)
+            if(c.beliefs_use_max_buffer):
+                final_consistent_list.append(
+                    v.max_buffer[n][c.T-1] >= c.buf_min / c.C)
+        if(c.app_limited and c.app_fixed_avg_rate):
             final_consistent_list.extend([
-                v.max_buffer[n][c.T-1] >= c.buf_min / c.C,
-                v.min_buffer[n][c.T-1] <= c.buf_min / c.C
+                v.max_app_rate[n][c.T-1] >= v.app_rate,
+                v.min_app_rate[n][c.T-1] <= v.app_rate
             ])
 
     final_consistent = z3.And(*final_consistent_list)
@@ -1067,9 +1175,18 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][first] - v.min_c[n][first],
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
+            if(c.beliefs_use_max_buffer):
+                atleast_one_shrinks_list.extend([
+                    v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
+                    v.max_buffer[n][first] - v.min_buffer[n][first]
+                ])
+            else:
+                atleast_one_shrinks_list.append(
+                    v.min_buffer[n][c.T-1] > v.min_buffer[n][first])
+        if(c.app_limited and c.app_fixed_avg_rate):
             atleast_one_shrinks_list.extend([
-                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <
-                v.max_buffer[n][first] - v.min_buffer[n][first]
+                v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <
+                v.max_app_rate[n][first] - v.min_app_rate[n][first]
             ])
 
         none_expand_list.extend([
@@ -1077,9 +1194,18 @@ def get_beliefs_improve(cc: CegisConfig, c: ModelConfig, v: Variables):
             v.max_c[n][first] - v.min_c[n][first]
         ])
         if(c.buf_min is not None and c.beliefs_use_buffer):
+            if(c.beliefs_use_max_buffer):
+                none_expand_list.extend([
+                    v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
+                    v.max_buffer[n][first] - v.min_buffer[n][first]
+                ])
+            else:
+                none_expand_list.append(
+                    v.min_buffer[n][c.T-1] >= v.min_buffer[n][first])
+        if(c.app_limited and c.app_fixed_avg_rate):
             none_expand_list.extend([
-                v.max_buffer[n][c.T-1] - v.min_buffer[n][c.T-1] <=
-                v.max_buffer[n][first] - v.min_buffer[n][first]
+                v.max_app_rate[n][c.T-1] - v.min_app_rate[n][c.T-1] <=
+                v.max_app_rate[n][first] - v.min_app_rate[n][first]
             ])
 
     none_expand = z3.And(*none_expand_list)
@@ -1169,6 +1295,8 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
 
     if c.buf_min is not None:
         s.add(v.A[0] - v.L[0] <= v.C0 + c.C * 0 - v.W[0] + c.buf_min)
+        s.add(z3.Implies(z3.Or([v.L_f[n][0] > v.Ld_f[n][0] for n in range(c.N)]),
+                         v.A[0] - v.L[0] == v.C0 + c.C * 0 - v.W[0] + c.buf_min))
     for t in range(1, c.T):
         if c.buf_min is None:  # no loss case
             s.add(v.L[t] == v.L[0])
@@ -1187,6 +1315,8 @@ def loss_deterministic(c: ModelConfig, s: MySolver, v: Variables):
         for n in range(c.N):
             for t in range(1, c.T):
                 s.add(v.L_f[n][t] == v.L_f[n][0])
+            # There shouldn't be any detected losses as well.
+            s.add(v.Ld_f[n][0] == v.L_f[n][0])
 
 
 def loss_non_deterministic(c: ModelConfig, s: MySolver, v: Variables):
@@ -1229,22 +1359,14 @@ def calculate_qbound_defs(c: ModelConfig, s: MySolver, v: Variables):
         s.add(v.qbound[t][0])
 
     for t in range(1, c.T):
-        for dt in range(1, c.T):
-            if(dt <= t):
-                s.add(
-                    z3.Implies(v.S[t] == v.S[t-1],
-                               v.qbound[t][dt] == v.qbound[t-1][dt]))
-                s.add(
-                    z3.Implies(v.S[t] != v.S[t-1],
-                               v.qbound[t][dt] ==
-                               (v.S[t] <= v.A[t-dt] - v.L[t-dt])))
-            else:
-                s.add(
-                    z3.Implies(v.S[t] == v.S[t-1],
-                               v.qbound[t][dt] == v.qbound[t-1][dt]))
-                # Let solver choose non-deterministically what happens when
-                # S[t] != S[t-1] for t-dt < 0, i.e.,
-                # no constraint on qbound[t][dt>t]
+        for dt in range(1, t+1):
+            s.add(
+                z3.Implies(v.S[t] == v.S[t-1],
+                           v.qbound[t][dt] == v.qbound[t-1][dt]))
+            s.add(
+                z3.Implies(v.S[t] != v.S[t-1],
+                           v.qbound[t][dt] ==
+                           (v.S[t] <= v.A[t-dt] - v.L[t-dt])))
 
 
 def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
@@ -1261,6 +1383,14 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
             # If queuing delay at t is greater than dt+1 then
             # it is also greater than dt.
             s.add(z3.Implies(v.qbound[t][dt+1], v.qbound[t][dt]))
+
+    for t in range(1, c.T):
+        for dt in range(t+1, c.T):
+            s.add(z3.Implies(v.S[t] == v.S[t-1],
+                             v.qbound[t][dt] == v.qbound[t-1][dt]))
+            # Let solver choose non-deterministically what happens when
+            # S[t] != S[t-1] for t-dt < 0, i.e.,
+            # no constraint on qbound[t][dt>t]
 
     for t in range(c.T-1):
         for dt in range(c.T-1):
@@ -1282,16 +1412,24 @@ def calculate_qbound_env(c: ModelConfig, s: MySolver, v: Variables):
                 z3.Not(v.qbound[t][dt]),
                 z3.Not(v.qbound[t+1][dt+1])))
 
-    # Queueing delay cannot be more than buffer/C + D.
+    # # Queueing delay cannot be more than buffer/C + D.
+    # if(c.buf_min is not None):
+    #     max_delay_float = c.buf_min/c.C + c.D
+    #     max_delay_ceil = math.ceil(max_delay_float)
+    #     lowest_unallowed_delay = max_delay_ceil
+    #     if(max_delay_float == max_delay_ceil):
+    #         lowest_unallowed_delay = max_delay_ceil + 1
+    #     if(lowest_unallowed_delay <= c.T - 1):
+    #         for t in range(c.T):
+    #             s.add(z3.Not(v.qbound[t][lowest_unallowed_delay]))
+
+    # Delay cannot be more than max_delay. This means that one of
+    # qbound[t][dt>max_delay] are False
     if(c.buf_min is not None):
-        max_delay_float = c.buf_min/c.C + c.D
-        max_delay_ceil = math.ceil(max_delay_float)
-        lowest_unallowed_delay = max_delay_ceil
-        if(max_delay_float == max_delay_ceil):
-            lowest_unallowed_delay = max_delay_ceil + 1
-        if(lowest_unallowed_delay <= c.T - 1):
-            for t in range(c.T):
-                s.add(z3.Not(v.qbound[t][lowest_unallowed_delay]))
+        max_delay = c.buf_min/c.C + c.D
+        for t in range(c.T):
+            for dt in range(c.T):
+                s.add(z3.Implies(dt > max_delay, z3.Not(v.qbound[t][dt])))
 
 
 def last_decrease_defs(c: ModelConfig, s: MySolver, v: Variables):
@@ -1326,9 +1464,9 @@ def exceed_queue_defs(c: ModelConfig, s: MySolver, v: Variables):
 
 
 def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
-    # qdel[t][dt<t] is deterministic
     # qdel[t][dt>=t] is non-deterministic (including,
-    # qdel[0][dt], qdel[t][dt>t-1])
+    #                qdel[0][dt], qdel[t][dt>t-1])
+    # qdel[t][dt<t] is deterministic
     """
            dt
          0 1 2 3
@@ -1339,23 +1477,14 @@ def calculate_qdel_defs(c: ModelConfig, s: MySolver, v: Variables):
       3| d d d n
     """
 
-    # Let solver choose non-deterministically what happens for
-    # t = 0, i.e., no constraint on qdel[0][dt].
     for t in range(1, c.T):
-        for dt in range(c.T):
-            if(dt <= t-1):
-                s.add(z3.Implies(v.S[t] != v.S[t - 1],
-                                 v.qdel[t][dt] == z3.And(
-                    v.A[t - dt - 1] - v.L[t - dt - 1] < v.S[t],
-                    v.A[t - dt] - v.L[t - dt] >= v.S[t])))
-                s.add(z3.Implies(v.S[t] == v.S[t - 1],
-                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
-            else:
-                s.add(z3.Implies(v.S[t] == v.S[t - 1],
-                                 v.qdel[t][dt] == v.qdel[t-1][dt]))
-                # We let solver choose non-deterministically what happens when
-                # S[t] != S[t-1] for dt > t-1, i.e.,
-                # no constraint on qdel[t][dt>t-1]
+        for dt in range(t):
+            s.add(z3.Implies(v.S[t] != v.S[t - 1],
+                             v.qdel[t][dt] == z3.And(
+                v.A[t - dt - 1] - v.L[t - dt - 1] < v.S[t],
+                v.A[t - dt] - v.L[t - dt] >= v.S[t])))
+            s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                             v.qdel[t][dt] == v.qdel[t-1][dt]))
 
 
 def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
@@ -1364,6 +1493,16 @@ def calculate_qdel_env(c: ModelConfig, s: MySolver, v: Variables):
     # deterministic variables.
     for t in range(c.T):
         s.add(z3.Sum(*v.qdel[t]) <= 1)
+
+    # Let solver choose non-deterministically what happens for
+    # t = 0, i.e., no constraint on qdel[0][dt].
+    for t in range(1, c.T):
+        for dt in range(t, c.T):
+            s.add(z3.Implies(v.S[t] == v.S[t - 1],
+                             v.qdel[t][dt] == v.qdel[t-1][dt]))
+            # We let solver choose non-deterministically what happens when
+            # S[t] != S[t-1] for dt > t-1, i.e.,
+            # no constraint on qdel[t][dt>t-1]
 
     # qdel[t][dt] is True iff queueing delay is >=dt but <dt+1
     # If queuing delay at time t1 is dt1, then queuing delay at time t2=t1+1,
@@ -1438,6 +1577,7 @@ def setup_ccac():
     c.T = 9
 
     s = MySolver()
+    s.warn_undeclared = False
     v = Variables(c, s)
 
     # s.add(z3.And(v.S[0] <= 1000, v.S[0] >= -1000))
@@ -1517,13 +1657,24 @@ def get_cegis_vars(
             [v.min_c[:, :1], v.max_c[:, :1]]))
         if(c.buf_min is not None and c.beliefs_use_buffer):
             definition_vars.extend(flatten(
-                [v.min_buffer[:, 1:], v.max_buffer[:, 1:]]))
+                v.min_buffer[:, 1:]))
             verifier_vars.extend(flatten(
-                [v.min_buffer[:, :1], v.max_buffer[:, :1]]))
+                v.min_buffer[:, :1]))
+            if(c.beliefs_use_max_buffer):
+                definition_vars.extend(flatten(
+                    v.max_buffer[:, 1:]))
+                verifier_vars.extend(flatten(
+                    v.max_buffer[:, :1]))
         verifier_vars.extend(flatten(v.start_state_f))
 
     if(c.app_limited):
         verifier_vars.extend(flatten(v.app_limits))
+        verifier_vars.append(v.app_rate)
+        if(c.app_fixed_avg_rate and c.beliefs):
+            verifier_vars.extend(flatten(
+                [v.max_app_rate[:, :1], v.min_app_rate[:, :1]]))
+            definition_vars.extend(flatten(
+                [v.max_app_rate[:, 1:], v.min_app_rate[:, 1:]]))
 
     return verifier_vars, definition_vars
 
@@ -1595,14 +1746,21 @@ def setup_ccac_for_cegis(cc: CegisConfig):
         c.calculate_qdel = True
     c.mode_switch = cc.template_mode_switching
     c.feasible_response = cc.feasible_response
+
     c.app_limited = cc.app_limited
+    c.app_fixed_avg_rate = cc.app_fixed_avg_rate
+    c.app_rate = cc.app_rate
+    c.app_burst_factor = cc.app_burst_factor
 
     c.beliefs = cc.template_beliefs
     c.beliefs_use_buffer = cc.template_beliefs_use_buffer
+    c.beliefs_use_max_buffer = cc.template_beliefs_use_max_buffer
     c.fix_stale__min_c = cc.fix_stale__min_c
     c.fix_stale__max_c = cc.fix_stale__max_c
     c.min_maxc_minc_gap_mult = cc.min_maxc_minc_gap_mult
     c.maxc_minc_change_mult = cc.maxc_minc_change_mult
+
+    c.send_min_alpha = cc.send_min_alpha
 
     return c
 
@@ -1820,8 +1978,8 @@ def get_desired_necessary(
             > (v.A[first] - v.L[first] - (v.C0 + c.C * first - v.W[first])))
     else:
         # For ideal link
-        d.ramp_down_bq = False
-        d.ramp_up_bq = False
+        d.ramp_down_bq = d.ramp_down_queue
+        d.ramp_up_bq = d.ramp_up_queue
 
     d.desired_necessary = z3.And(
         z3.Or(d.fefficient, d.ramp_up_cwnd,
@@ -1834,6 +1992,17 @@ def get_desired_necessary(
               d.ramp_down_queue, d.ramp_down_bq),
         z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd,
               d.ramp_down_queue, d.ramp_down_bq))
+
+    # # Simpler desired necessary
+    # d.desired_necessary = z3.And(
+    #     z3.Or(d.fefficient, d.ramp_up_cwnd),
+    #     z3.Or(d.bounded_queue, d.ramp_down_bq),
+    #     z3.Or(d.bounded_loss_count, d.ramp_down_cwnd),
+    #     z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd),
+    #     z3.Or(d.bounded_loss_amount, d.ramp_down_cwnd))
+
+    # Above, instead of d.ramp_down_bq, we could use d.ramp_down_cwnd or
+    # d.ramp_down_queue.
 
     return d
 
@@ -1858,10 +2027,17 @@ def get_desired_in_ss(cc: CegisConfig, c: ModelConfig, v: Variables):
         cc.desired_util_f * c.C * (c.T-1-(first-1)-c.D))
 
     if(c.app_limited):
-        all_app_limited = z3.And(*[
-            v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
-            for n in range(c.N)])
-        d.fefficient = z3.Or(d.fefficient, all_app_limited)
+        # all_app_limited = z3.And(*[
+        #     v.A_f[n][c.T-1] == v.app_limits[n][c.T-1]
+        #     for n in range(c.N)])
+        # d.fefficient = z3.Or(d.fefficient, all_app_limited)
+
+        # I can't expect 50% link utilization if app sends at 30% link rate. App
+        # can blast packets on the last second, so I can't expect app saturation
+        # at the last second.
+        d.fefficient = (v.S[-1] - v.S[first-1] >=
+                        (c.T-1-(first-1)-c.D)
+                        * z3_min(v.app_rate, cc.desired_util_f * c.C))
 
     loss_list: List[z3.BoolRef] = []
     for t in range(first, c.T):
@@ -2146,8 +2322,8 @@ def get_cex_df(
             ret.append(val)
         return ret
     cex_dict = {
-        get_name_for_list(vn.A): _get_model_value(v.A),
-        get_name_for_list(vn.S): _get_model_value(v.S),
+        # get_name_for_list(vn.A): _get_model_value(v.A),
+        # get_name_for_list(vn.S): _get_model_value(v.S),
         # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
@@ -2174,8 +2350,11 @@ def get_cex_df(
         if(c.buf_min is not None and c.beliefs_use_buffer):
             for n in range(c.N):
                 cex_dict.update({
-                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n]),
-                    get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
+                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n])})
+            if(c.beliefs_use_max_buffer):
+                for n in range(c.N):
+                    cex_dict.update({
+                        get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})
@@ -2207,25 +2386,40 @@ def get_cex_df(
                 v.A[t] - v.L[t] - v.S[t])))
     df["queue_t"] = queue_t
 
-    if(c.calculate_qdel):
+    if (c.calculate_qdel and c.beliefs):
         for n in range(c.N):
             utilized_t = [-1]
             for t in range(1, c.T):
                 high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
                                             for dt in range(c.D+1)]))
                 loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                if(c.D == 0):
+                    assert c.loss_oracle
+                    loss = v.L_f[n][t] - v.L_f[n][t-1] > 0
+                sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
+                # recvd_new_pkts = v.S_f[n][t] - v.S_f[n][t-1] > 0
+                recvd_new_pkts = True
+                this_utilized = z3.Or(
+                    z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                    loss)
                 utilized_t.append(get_raw_value(
-                    counter_example.eval(z3.Or(high_delay, loss))))
+                    counter_example.eval(this_utilized)))
             df[f"utilized_{n},t"] = utilized_t
 
     if(hasattr(v, 'C0') and hasattr(v, 'W')):
         bottle_queue_t = []
+        token_queue_t = []
         for t in range(c.T):
             bottle_queue_t.append(
                 get_raw_value(counter_example.eval(
                     v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
                 )))
+            token_queue_t.append(
+                get_raw_value(counter_example.eval(
+                    v.C0 + c.C * t - v.W[t] - v.S[t]
+                )))
         df["bottle_queue_t"] = bottle_queue_t
+        df["token_queue_t"] = token_queue_t
 
         upper_S = []
         for t in range(c.T):
@@ -2240,6 +2434,12 @@ def get_cex_df(
             #         ))
             #     )
         df["upper_S_t"] = upper_S
+
+    if(c.N == 1):
+        df["del_A"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
+        df["del_S"] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift(1)
+        df["del_L"] = df[get_name_for_list(vn.L_f[0])] - df[get_name_for_list(vn.L_f[0])].shift(1)
+
 
     if(c.calculate_qbound):
         qdelay = []
@@ -2355,4 +2555,29 @@ def get_gen_cex_df(
         #     qbound_val_list = get_val_list(solution, _get_renamed(qbound_list))
         #     qbound_vals.append(qbound_val_list)
         # ret += "\n{}".format(np.array(qbound_vals))
+
+    # df['service_delta'] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift()
     return df
+
+
+def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpath: str):
+    vn = VariableNames(v)
+    fig, ax = plt.subplots()
+    xx = list(range(c.T))
+    ax.plot(xx, df[get_name_for_list(vn.A_f[0])], color='blue', label='arrival')
+    ax.plot(xx, df[get_name_for_list(vn.S_f[0])], color='red', label='service')
+    if(hasattr(v, 'W')):
+        ubl = []
+        lbl = []
+        for t in range(c.T):
+            if(t >= c.D):
+                lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t-c.D])))
+            else:
+                lbl.append(get_raw_value(m.eval(v.C0 + c.C * (t-c.D) - v.W[t])))
+            ubl.append(get_raw_value(m.eval(v.C0 + c.C * t - v.W[t])))
+        ax.plot(xx, lbl, color='black', alpha=0.5)
+        ax.plot(xx, ubl, color='black', alpha=0.5)
+    ax.legend()
+    ax.grid(True)
+    fig.set_tight_layout(True)
+    fig.savefig(fpath, bbox_inches='tight', pad_inches=0.01)

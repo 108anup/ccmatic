@@ -1,0 +1,37 @@
+[02/06 12:32:06]  Namespace(infinite_buffer=False, finite_buffer=False, dynamic_buffer=True, T=9, ideal=True, app_limited=True, fix_minc=False, fix_maxc=False, optimize=False, proofs=False, solution=None, opt_cegis_n=False, opt_ve_n=False, opt_pdt_n=False, opt_wce_n=False, opt_feasible_n=False)
+[02/06 12:32:06]  Using cond_vars: ['min_c', 'max_c', 'A_f', 'app_limits', 'min_qdel']
+[02/06 12:32:07]  Adver: desired_util_f=0.4, desired_queue_bound_multiplier=4, desired_queue_bound_alpha=3, desired_loss_count_bound=4.0, desired_large_loss_count_bound=4.0, desired_loss_amount_bound_multiplier=3.0, desired_loss_amount_bound_alpha=3.0
+[02/06 12:32:07]  Ideal: desired_util_f=0.4, desired_queue_bound_multiplier=4, desired_queue_bound_alpha=3, desired_loss_count_bound=4.0, desired_large_loss_count_bound=4.0, desired_loss_amount_bound_multiplier=3.0, desired_loss_amount_bound_alpha=3.0
+[02/06 12:32:07]  Run log at: logs/optimizations/fname=main_cca_belief_template.py-infinite_buffer=False-finite_buffer=False-dynamic_buffer=True-opt_cegis=True-opt_ve=True-opt_pdt=True-opt_wce=True-opt_feasible=True-opt_ideal=True.csv
+[02/06 12:32:07]  --------------------------------------------------------------------------------
+[02/06 12:32:07]  Iteration: 1 (0 solution, 0 counterexamples)
+[02/06 12:32:07]  Generator returned sat in 0.006773 secs.
+[02/06 12:32:07]  Candidate solution: 
+[1m[94mif (0 > 0):
+    r_f[n][t] = max(alpha,  + 1/2min_c)
+elif (0 > 0):
+    r_f[n][t] = max(alpha,  + 1/2min_c)
+else:
+    r_f[n][t] = max(alpha,  + 1/2min_c)[0m
+[02/06 12:32:18]  Improved number of small numbers from 147 to 147 out of a max of 147
+[02/06 12:32:18]  Verifer returned sat in 10.765693 secs.
+[02/06 12:32:18]  Counter example: 
+[93m   ideal__arrival_0,t  ideal__cwnd_0,t  ideal__rate_0,t  ideal__service_0,t  ideal__losts_0,t  ideal__loss_detected_0,t  ideal__tot_service_choice_t  ideal__min_c_0,t  ideal__max_c_0,t  ideal__min_qdel_0,t  ideal__app_limits_0,t  queue_t  utilized_0,t  qdelay_t
+0              -499.5              0.5              0.5              -501.5               0.0                       0.0                          NaN               1.0             100.0                  1.0                    NaN      2.0          -1.0       2.0
+1              -499.5           1002.0              1.0              -499.5               0.0                       0.0                          NaN               1.0             100.0                  2.0                 -499.5      0.0           1.0       3.0
+2              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               2.0                  2.0                 -499.5      0.0           1.0       3.0
+3              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               0.0                  2.0                 -499.5      0.0           1.0       3.0
+4              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               0.0                  2.0                 -499.5      0.0           1.0       3.0
+5              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               0.0                  2.0                 -499.5      0.0           1.0       3.0
+6              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               0.0                  2.0                 -499.5      0.0           1.0       3.0
+7              -499.5           1000.0              1.0              -499.5               0.0                       0.0                          NaN               1.0               0.0                  2.0                 -499.5      0.0           1.0       3.0
+8              -498.5           1000.0              1.0              -498.5               0.0                       0.0                          NaN               1.0               0.0                  0.0                 -498.0      0.0           0.0       0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=False, beliefs_improve=True, alpha=1, buf_size=300, start_state=[0].[0m
+[02/06 12:32:18]  --------------------------------------------------------------------------------
+[02/06 12:32:18]  Iteration: 2 (0 solution, 1 counterexamples)
+[02/06 12:32:21]  Generator returned unsat in 3.366928 secs.
+[02/06 12:32:21]  [96mNo more solutions found[0m
+[02/06 12:32:21]  Final solutions:
+[02/06 12:32:21]  Took 14.479767 secs.

@@ -25,6 +25,7 @@ class CegisConfig:
     # ^^ For infrequent losses with fast increase, revert to last cwnd on loss.
     template_beliefs: bool = False
     template_beliefs_use_buffer: bool = False
+    template_beliefs_use_max_buffer: bool = False
 
     # desired
     desired_util_f: Union[float, z3.ArithRef]
@@ -47,7 +48,12 @@ class CegisConfig:
     infinite_buffer: bool = False
     buffer_size_multiplier: float = 1  # Used if dynamic_buffer = False
     dynamic_buffer: bool = False
+
     app_limited: bool = False
+    app_fixed_avg_rate: bool = False
+    app_rate: Optional[float] = None
+    app_burst_factor: float = 1
+
     fix_stale__max_c: bool = False
     fix_stale__min_c: bool = False
     min_maxc_minc_gap_mult: float = 1
@@ -70,6 +76,15 @@ class CegisConfig:
     use_ref_cca: bool = False
     monotonic_inc_assumption: bool = False
     assumption_verifier: bool = False
+
+    opt_cegis: bool = True  # using exists forall with z3 if this is off
+    opt_ve: bool = True
+    opt_pdt: bool = True
+    opt_wce: bool = True
+    # feasible_response  # already has a flag
+    # ideal_link   # is outside the scope of a single CC instance
+
+    send_min_alpha: bool = False
 
     DEBUG: bool = False
 
@@ -111,11 +126,12 @@ class CegisCCAGen(Cegis):
             definitions: z3.ExprRef, specification: z3.ExprRef,
             ctx: z3.Context, known_solution: Optional[z3.ExprRef] = None,
             metadata: Optional[CegisMetaData] = None,
-            solution_log_path: Optional[str] = None):
+            solution_log_path: Optional[str] = None,
+            run_log_path: Optional[str] = None):
         super(CegisCCAGen, self).__init__(
             generator_vars, verifier_vars, definition_vars,
             search_constraints, definitions, specification, ctx,
-            known_solution, solution_log_path)
+            known_solution, solution_log_path, run_log_path)
         self.metadata = metadata
 
     def remove_solution(self, solution: z3.ModelRef):

@@ -31,6 +31,7 @@ def test_rate_bounds(
     cc.template_queue_bound = False
     cc.template_mode_switching = False
     cc.template_qdel = False
+    cc.ideal_link = False
 
     # These are just placed holders, these are not used.
     cc.desired_util_f = 1
@@ -53,7 +54,7 @@ def test_rate_bounds(
         v.r_f[n][t] == cc.C * pacing_gain
         for t in range(cc.T) for n in range(cc.N)])
     cwnd_constraint = z3.And(*[
-        v.c_f[n][t] == cwnd_gain * cc.C * (c.R + c.D)
+        v.c_f[n][t] == cwnd_gain * c.C * (c.R + c.D)
         for t in range(cc.T) for n in range(cc.N)])
     # Ensure we are only rate limited, never cwnd limited.
 
@@ -123,7 +124,7 @@ def test_rate_bounds(
     # sort_order = [x.maximize for x in optimization_list]
     # df = df.sort_values(by=sort_columns, ascending=sort_order)
 
-    print(pacing_gain, tsteps, ret)
+    print(pacing_gain, cwnd_gain, tsteps, ret)
     if(upper_bound):
         return ret[0]
     else:
@@ -132,11 +133,18 @@ def test_rate_bounds(
 
 def vary_sending_rate():
     all_records = []
-    for pacing_gain in \
-            [0.1, 0.25, fractions.Fraction(1, 3), 0.5, fractions.Fraction(2, 3), 0.75, 1, 2]:
+    # sweep_range = [0.1, 0.25, fractions.Fraction(1, 3), 0.5, fractions.Fraction(2, 3), 0.75, 1, 2]
+    sweep_range = sorted(list(set(
+        [x/10 for x in range(1, 21)] + [fractions.Fraction(x/3) for x in range(1, 6)] +
+        [fractions.Fraction(x/7) for x in range(1, 14)]
+    )))
+    sweep_range = sorted(list(set(
+        [fractions.Fraction(x/3) for x in range(1, 6)]
+    )))
+    for pacing_gain in sweep_range:
         records = []
-        n_tsteps = 5
-        for tsteps in range(1, n_tsteps+1):
+        n_tsteps = 1
+        for tsteps in range(n_tsteps, n_tsteps+1):
             lower = test_rate_bounds(
                 pacing_gain, tsteps, upper_bound=False)
             upper = test_rate_bounds(pacing_gain, tsteps)
@@ -150,8 +158,10 @@ def vary_sending_rate():
                 'tsteps': tsteps,
                 # 'lower': fractions.Fraction(lower/min_rate).limit_denominator(den_limit),
                 # 'upper': fractions.Fraction(upper/min_rate).limit_denominator(den_limit)
-                'lower': round(lower/min_rate, 6),
-                'upper': round(upper/min_rate, 6)
+                # 'lower': round(lower/min_rate, 6),
+                # 'upper': round(upper/min_rate, 6),
+                'lower_ack_rate': lower,
+                'upper_ack_rate': upper
             }
             records.append(record)
             all_records.append(record)
@@ -160,6 +170,7 @@ def vary_sending_rate():
 
     df = pd.DataFrame(all_records).astype(float)
     print(df)
+    return df
 
 
 def vary_inflight():
@@ -177,8 +188,8 @@ def vary_inflight():
             record = {
                 'inflight': cwnd_gain,
                 'tsteps': tsteps,
-                'lower': lower,
-                'upper': upper
+                'lower_ack_rate': lower,
+                'upper_ack_rate': upper
             }
             records.append(record)
             all_records.append(record)
@@ -234,8 +245,9 @@ if (__name__ == "__main__"):
     # print(df)
 
     df = vary_inflight()
-    plot_rate_bounds(df)
-    # vary_sending_rate()
+    # plot_rate_bounds(df)
+    # df = vary_sending_rate()
+    # plot_rate_bounds(df)
 
 
 """
