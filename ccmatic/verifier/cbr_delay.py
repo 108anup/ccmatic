@@ -276,16 +276,49 @@ class CBRDelayLink(BaseLink):
                         recomputed_minc = z3_max(recomputed_minc, filtered_lower)
 
                 timeout_min_c_lambda = False
+                # bq_went_low_rtt_ago = False
                 # first = 0
                 # minc_lambda_changed = overall_minc > v.min_c_lambda[n][first]
-                if(c.fix_stale__min_c_lambda):
+                if(c.fix_stale__min_c_lambda and t == c.T-1):
                     timeout_allowed = (t == c.T-1)
+
+                    # Timeout if large loss happened
+                    large_loss_list: List[z3.BoolRef] = []
+                    for t in range(1, c.T):
+                        large_loss_list.append(v.L[t] > v.L[t-1] + v.alpha * (c.T-1))
+                    large_loss_count = z3.Sum(*large_loss_list)
+                    large_loss_happened = large_loss_count > 0
+
+                    # Deprecated
+                    # bq_went_low_rtt_ago_list = []
+                    # for et in range(t, 0, -1):
+                    #     correct_et = z3.And(
+                    #         v.A_f[n][et] - v.L_f[n][et] <= v.S_f[n][t])
+                    #     bq_went_low = v.r_f[n][et] > v.alpha
+                    #     bq_went_low_rtt_ago_list.append(z3.And(correct_et, bq_went_low))
+                    # bq_went_low_rtt_ago = z3.Or(bq_went_low_rtt_ago_list)
+
+                    # Timeout if probe happened and queue did not drain
+                    probe_happened = z3.Or(*[v.r_f[n][t] > v.alpha for t in range(1, t+1)])
+                    probe_did_not_happen_in_last_2_rm = z3.And(*[v.r_f[n][t] <= v.alpha for t in range(t-1, t+1)])
+                    inflight_did_not_drain = v.bq_belief1[n][t] > v.alpha
+                    probe_based_timeout = z3.And(probe_happened, probe_did_not_happen_in_last_2_rm, inflight_did_not_drain)
+
+                    # Timeout if min_c from ack rate is consistent and lower
+                    # than min_c_lambda
+                    minc_increased_and_lower = z3.And(v.min_c[n][c.T-1] > v.min_c[n][0], v.min_c[n][c.T-1] < overall_minc)
+
+                    # timeout_min_c_lambda = timeout_allowed
+                    # timeout_min_c_lambda = z3.And(timeout_allowed, bq_went_low_rtt_ago)
                     # timeout_min_c_lambda = z3.And(
                     #     timeout_allowed, z3.Not(minc_lambda_changed))
-                    timeout_min_c_lambda = timeout_allowed
+                    timeout_min_c_lambda = z3.If(timeout_allowed,
+                                                 z3.If(large_loss_happened, True,
+                                                       z3.If(minc_increased_and_lower, True,
+                                                             z3.If(probe_based_timeout, True, False))),
+                                                 False)
 
                 s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
-                # TODO: Avoid decreasing min_c_lambda by too much
                 clamped_minc = z3_max(recomputed_minc, 1/2 * v.min_c_lambda[n][0])
                 s.add(v.min_c_lambda[n][t] ==
                       z3.If(timeout_min_c_lambda, clamped_minc, overall_minc))
@@ -437,10 +470,24 @@ class CBRDelayLink(BaseLink):
 
     def setup_environment(self, c: ModelConfig, v: Variables):
         s = super().setup_environment(c, v)
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+
         if(c.calculate_qdel):
             self.calculate_first_qdel_env(c, s, v)
         if(c.beliefs):
             self.initial_beliefs(c, s, v)
+
+        if (c.fix_stale__min_c_lambda):
+            # WLOG realign the finite trace window so that if there is a probe,
+            # the probe is moved to 2 Rm periods before the end of the trace.
+            # TODO: see how history would need to be maintained in the kernel.
+            assert c.N == 1
+            probe_happened = z3.Or(
+                *[v.r_f[0][t] > v.alpha for t in range(1, c.T)])
+            probe_happened_2_rm_ago = z3.Or(
+                *[v.r_f[0][t] > v.alpha for t in range(1, c.T-2)])
+            s.add(z3.Implies(probe_happened, probe_happened_2_rm_ago))
+
         return s
 
     def get_base_cegis_vars(
