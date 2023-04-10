@@ -32,12 +32,13 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
             None)
-        self.steady__bq_belief2 = SteadyStateVariable(
-            "steady__bq_belief2",
-            v.bq_belief2[0][0],
-            v.bq_belief2[0][-1],
+        self.bq_belief = v.bq_belief2
+        self.steady__bq_belief = SteadyStateVariable(
+            "steady__bq_belief",
+            self.bq_belief[0][0],
+            self.bq_belief[0][-1],
             None,
-            z3.Real("steady__bq_belief2__hi"))
+            z3.Real("steady__bq_belief__hi"))
 
         self.movement_mult__consistent = z3.Real(
             'movement_mult__consistent')
@@ -76,16 +77,16 @@ class CBRDelayProofs(Proofs):
 
         self.initial_beliefs_inside = z3.And(
             self.steady__minc_c_lambda.init_inside(),
-            self.steady__bq_belief2.init_inside())
+            self.steady__bq_belief.init_inside())
         self.final_beliefs_inside = z3.And(
             self.steady__minc_c_lambda.final_inside(),
-            self.steady__bq_belief2.final_inside())
+            self.steady__bq_belief.final_inside())
 
     def setup_offline_cache(self):
         if(self.solution_id == "drain_probe"):
             self.recursive[self.movement_mult__consistent] = 1.9
             self.recursive[self.steady__minc_c_lambda.lo] = 24
-            self.recursive[self.steady__bq_belief2.hi] = 321
+            self.recursive[self.steady__bq_belief.hi] = 321
 
     def lemma1__beliefs_become_consistent(self,):
         link = self.link
@@ -152,7 +153,7 @@ class CBRDelayProofs(Proofs):
 
         metric_lists = [
             [Metric(self.steady__minc_c_lambda.lo, 0.1*c.C, c.C, 1, True)],
-            [Metric(self.steady__bq_belief2.hi, 0, 10 * c.C * (c.R + c.D), 1, False)]]
+            [Metric(self.steady__bq_belief.hi, 0, 10 * c.C * (c.R + c.D), 1, False)]]
 
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists,
@@ -167,8 +168,8 @@ class CBRDelayProofs(Proofs):
             ss_assignments = [
                 self.steady__minc_c_lambda.lo ==
                 self.recursive[self.steady__minc_c_lambda.lo],
-                self.steady__bq_belief2.hi ==
-                self.recursive[self.steady__bq_belief2.hi]
+                self.steady__bq_belief.hi ==
+                self.recursive[self.steady__bq_belief.hi]
             ]
             model = self.debug_verifier(lemma21, ss_assignments)
 
