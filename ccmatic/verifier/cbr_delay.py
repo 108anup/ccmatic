@@ -25,6 +25,10 @@ class CBRDelayLink(BaseLink):
             assert t >= 0 and t <= self.c.T-1
             return self.A[t] - self.L[t] - (self.C0 + self.c.C * t - self.W[t])
 
+        def q(self, t: int):
+            assert t >= 0 and t <= self.c.T-1
+            return self.A[t] - self.L[t] - self.S[t]
+
         def derived_expressions(self):
             c = self.c
             assert isinstance(c, CBRDelayLink.LinkModelConfig)
@@ -98,7 +102,10 @@ class CBRDelayLink(BaseLink):
                     s.Real(f"{pre}recomputed_min_c_lambda_{n},{t}")
                     for t in range(c.T)]
                     for n in range(c.N)])
-
+                # self.under_utilized = np.array([[
+                #     s.Bool(f"{pre}under_util_{n},{t}")
+                #     for t in range(c.T)]
+                #     for n in range(c.N)])
 
                 # bytes in the bottleneck queue just after the latest byte
                 # acked, assuming the link rate is min_c_lambda.
@@ -175,10 +182,25 @@ class CBRDelayLink(BaseLink):
         assert isinstance(v, CBRDelayLink.LinkVariables)
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
 
+        # for n in range(c.N):
+        #     for st in range(c.T-1):
+        #         high_delay = z3.Not(z3.Or(*[v.first_qdel[st+1][dt]
+        #                                     for dt in range(c.D+1+1)]))
+        #         loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+        #         if (c.D == 0):
+        #             assert c.loss_oracle
+        #             loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
+        #         recvd_new_pkts = v.S_f[n][st+1] - v.S_f[n][st] > 0
+        #         sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
+        #         this_utilized = z3.Or(
+        #             z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+        #             loss)
+        #         s.add(v.under_utilized[n][st+1] == z3.Not(this_utilized))
+
         # Update min_c_lambda, i.e., belief of min_c using sending rate instead
         # of ack rate.
         for n in range(c.N):
-            v.recomputed_min_c_lambda[n][0] = v.alpha
+            s.add(v.recomputed_min_c_lambda[n][0] == v.alpha)
 
             for t in range(1, c.T):
 
@@ -192,7 +214,7 @@ class CBRDelayLink(BaseLink):
                     if (c.D == 0):
                         assert c.loss_oracle
                         loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
-                    recvd_new_pkts = True
+                    recvd_new_pkts = v.S_f[n][st+1] - v.S_f[n][st] > 0
                     sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
                     this_utilized = z3.Or(
                         z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
@@ -488,6 +510,8 @@ class CBRDelayLink(BaseLink):
                 df[get_name_for_list(vn.min_c_lambda[n])] = _get_model_value(v.min_c_lambda[n])
                 df[get_name_for_list(vn.bq_belief1[n])] = _get_model_value(v.bq_belief1[n])
                 df[get_name_for_list(vn.bq_belief2[n])] = _get_model_value(v.bq_belief2[n])
+                # df[get_name_for_list(vn.recomputed_min_c_lambda[n])] = _get_model_value(v.recomputed_min_c_lambda[n])
+                # df[get_name_for_list(vn.under_utilized[n])] = _get_model_value(v.under_utilized[n])
 
         if(c.calculate_qdel):
             qdelay = []

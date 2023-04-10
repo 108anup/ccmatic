@@ -84,6 +84,8 @@ class CBRDelayProofs(Proofs):
     def setup_offline_cache(self):
         if(self.solution_id == "drain_probe"):
             self.recursive[self.movement_mult__consistent] = 1.9
+            self.recursive[self.steady__minc_c_lambda.lo] = 24
+            self.recursive[self.steady__bq_belief2.hi] = 321
 
     def lemma1__beliefs_become_consistent(self,):
         link = self.link
@@ -91,13 +93,30 @@ class CBRDelayProofs(Proofs):
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
         assert isinstance(v, CBRDelayLink.LinkVariables)
 
-        lemma1 = z3.Implies(
+        queue_reduces = v.q(c.T-1) < v.q(0) - c.C * (c.R + c.D)
+        queue_low = v.q(0) < c.C * (c.R + c.D)
+
+        lemma1_1 = z3.Implies(
             z3.And(self.initial_beliefs_valid,
                    z3.Not(self.initial_beliefs_consistent)),
             z3.And(self.final_beliefs_valid,
                    z3.Or(self.final_beliefs_consistent,
                          self.all_beliefs_improve,
+                         link.d.desired_in_ss,
+                         queue_reduces
+                         )))
+
+        lemma1_2 = z3.Implies(
+            z3.And(self.initial_beliefs_valid,
+                   z3.Not(self.initial_beliefs_consistent),
+                   queue_low),
+            z3.And(self.final_beliefs_valid,
+                   z3.Or(self.final_beliefs_consistent,
+                         self.all_beliefs_improve,
                          link.d.desired_in_ss)))
+
+        lemma1 = z3.And(lemma1_1, lemma1_2)
+
         metric_lists = [
             [Metric(self.movement_mult__consistent,
                     1.1, 3, 1e-1, True)]]

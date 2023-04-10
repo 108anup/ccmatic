@@ -444,7 +444,7 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
             invariant = z3.If(
                 z3.Not(v.initial_minc_lambda_consistent),
                 z3.Or(v.stale_minc_lambda_improves,
-                      v.final_minc_lambda_consistent, d.desired_in_ss),
+                      v.final_minc_lambda_consistent, d.desired_necessary),
                 invariant)
             assert isinstance(invariant, z3.BoolRef)
             d.desired_belief_invariant = invariant
@@ -453,7 +453,7 @@ def get_belief_invariant(cc: CegisConfig, c: ModelConfig, v: Variables):
             invariant = z3.If(
                 z3.Not(v.initial_bq_consistent),
                 z3.Or(v.stale_bq_belief_improves,
-                      v.final_bq_consistent, d.desired_in_ss),
+                      v.final_bq_consistent, d.desired_necessary),
                 invariant)
             assert isinstance(invariant, z3.BoolRef)
             d.desired_belief_invariant = invariant
