@@ -264,8 +264,9 @@ class CBRDelayLink(BaseLink):
 
                 s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
                 # TODO: Avoid decreasing min_c_lambda by too much
+                clamped_minc = z3_max(recomputed_minc, 1/2 * v.min_c_lambda[n][0])
                 s.add(v.min_c_lambda[n][t] ==
-                      z3.If(timeout_min_c_lambda, recomputed_minc, overall_minc))
+                      z3.If(timeout_min_c_lambda, clamped_minc, overall_minc))
                 # s.add(v.min_c_lambda[n][t] == z3_max(overall_minc, v.min_c[n][t]))
 
     @staticmethod

@@ -19,6 +19,7 @@ from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
                                TemplateType, solution_parser)
 from ccmatic.solutions.solutions_belief_template_modular import get_solutions
 from ccmatic.verifier.cbr_delay import CBRDelayLink
+from ccmatic.verifier.proofs import CBRDelayProofs
 from cegis import get_unsat_core
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
@@ -81,19 +82,19 @@ logger.info(args)
 # HISTORY = R
 USE_T_LAST_LOSS = False
 USE_MAX_QDEL = False
-USE_BUFFER = True
+USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
-USE_CWND_CAP = True
+USE_CWND_CAP = False
 SELF_AS_RVALUE = False
-CONVERGENCE_BASED_ON_BUFFER = True
+CONVERGENCE_BASED_ON_BUFFER = False
 assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
-# template_type = TemplateType.IF_ELSE_CHAIN
-template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
+template_type = TemplateType.IF_ELSE_CHAIN
+# template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
 # template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
@@ -282,7 +283,7 @@ def get_solution_str(
 # ADVERSARIAL LINK
 cc = CegisConfig()
 # cc.DEBUG = True
-# cc.name = "adv"
+cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
@@ -472,7 +473,10 @@ elif(args.proofs):
     solution = solution_dict[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
-    bp = BeliefProofs(link, solution, args.solution)
+    ProofClass = BeliefProofs \
+        if args.verifier_type == VerifierType.ccac \
+        else CBRDelayProofs
+    bp = ProofClass(link, solution, args.solution)
     bp.proofs()
 
 elif(args.manual_query):
