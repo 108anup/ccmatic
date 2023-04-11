@@ -162,7 +162,7 @@ cond_terms = [
 ]
 if (args.verifier_type == VerifierType.cbrdelay and not args.infinite_buffer):
     cond_terms.append(
-        TemplateTerm('bq_belief2', TemplateTermType.VAR,
+        TemplateTerm('bq_belief', TemplateTermType.VAR,
                      TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts))
 if (USE_BUFFER and args.dynamic_buffer):
     cond_terms.append(TemplateTerm('min_buffer', TemplateTermType.VAR, TemplateTermUnit.TIME,
@@ -184,6 +184,9 @@ def get_value_for_term(
         return c.R
     elif (tt.name == "alpha"):
         return v.alpha
+    elif (tt.name == "bq_belief"):
+        assert isinstance(v, CBRDelayLink.LinkVariables)
+        return v.bq_belief1[n][t-1]
     else:
         return v.__getattribute__(tt.name)[n][t-1]
 

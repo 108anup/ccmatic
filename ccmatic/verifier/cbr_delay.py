@@ -63,7 +63,7 @@ class CBRDelayLink(BaseLink):
                      for n in range(c.N)])
 
                 # bq_belief (valid, consistent, improves)
-                bq_belief = self.bq_belief2
+                bq_belief = self.bq_belief1
                 self.initial_bq_valid = z3.And([
                     bq_belief[n][0] >= 0
                     for n in range(c.N)])
@@ -142,6 +142,7 @@ class CBRDelayLink(BaseLink):
 
         for n in range(c.N):
             for t in range(1, c.T):
+                # s.add(v.bq_belief2[n][t] == v.bq_belief1[n][t])
                 delivery_rate = v.min_c_lambda[n][t]
 
                 if(c.fix_stale__bq_belief and t == c.T-1):

@@ -19,7 +19,7 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
             """
             r_f = max alpha,
             if (+ 1max_c + -2min_c + 2alpha > 0):
-                if (+ 1bq_belief2 + -1alpha > 0):
+                if (+ 1bq_belief + -1alpha > 0):
                     + 1alpha
                 else:
                     + 3min_c_lambda + 1alpha
@@ -31,11 +31,11 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
     if (n_exprs >= 2 and
         template_type == TemplateType.IF_ELSE_CHAIN and
         main_lhs_term == 'r_f' and
-            main_tb.get_cond_coeff(0, 'bq_belief2') is not None):
+            main_tb.get_cond_coeff(0, 'bq_belief') is not None):
         drain_probe = solution_parser(
             """
             r_f = max alpha,
-            if (+ 1bq_belief2 + -1alpha > 0):
+            if (+ 1bq_belief + -1alpha > 0):
                 + 1alpha
             else:
                 + 3min_c_lambda + 1alpha
@@ -45,7 +45,7 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
     if (n_exprs >= 2 and
         template_type == TemplateType.IF_ELSE_CHAIN and
         main_lhs_term == 'r_f' and
-            main_tb.get_cond_coeff(0, 'bq_belief2') is not None):
+            main_tb.get_cond_coeff(0, 'bq_belief') is not None):
         # This does not pass the verifier. Can perhaps only gaurantee lower
         # utilization. Because minc_lambda can be farther away from minc with
         # MI=1. CCA ends up sending at minc_lambda/2 for longer time than if
@@ -53,7 +53,7 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
         slow_drain_probe = solution_parser(
             """
             r_f = max alpha,
-            if (+ 1bq_belief2 + -1alpha > 0):
+            if (+ 1bq_belief + -1alpha > 0):
                 + 0.5min_c_lambda
             else:
                 + 3min_c_lambda + 1alpha
@@ -100,7 +100,7 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
                 else:
                     + 1min_c + -1alpha
             else:
-                if (+ 1bq_belief2 + -1alpha > 0):
+                if (+ 1bq_belief + -1alpha > 0):
                     + 1alpha
                 else:
                     + 3min_c_lambda + 1alpha
@@ -116,7 +116,7 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
                 else:
                     + 2min_c
             else:
-                if (+ 1bq_belief2 + -1alpha > 0):
+                if (+ 1bq_belief + -1alpha > 0):
                     + 1alpha
                 else:
                     + 3min_c_lambda + 1alpha
@@ -125,13 +125,13 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
         """
         r_f = max alpha,
-        if (+ 1min_c + 3bq_belief2 > 0):
-            if (+ -3alpha + 3bq_belief2 > 0):
-                + 1alpha + 1/2min_c_lambda + -1bq_belief2
+        if (+ 1min_c + 3bq_belief > 0):
+            if (+ -3alpha + 3bq_belief > 0):
+                + 1alpha + 1/2min_c_lambda + -1bq_belief
             else:
-                + 1alpha + 3min_c_lambda + 1bq_belief2
+                + 1alpha + 3min_c_lambda + 1bq_belief
         else:
-            + 1alpha + 2min_c_lambda + -1bq_belief2
+            + 1alpha + 2min_c_lambda + -1bq_belief
         """
 
     return solution_dict
