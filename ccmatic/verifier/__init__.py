@@ -153,6 +153,33 @@ class SteadyStateVariable:
         assert isinstance(ret, z3.BoolRef)
         return ret
 
+    def strictly_improves_add(
+        self, movement_add: Optional[Union[float, z3.ExprRef]] = None
+    ) -> z3.BoolRef:
+        assert self.lo is not None or self.hi is not None
+        if(movement_add is None):
+            movement_add = 0
+        strictly_improves_list = []
+        if(self.hi is None):
+            strictly_improves_list.append(
+                z3.Implies(self.initial < self.lo,
+                           self.final > movement_add + self.initial))
+        elif(self.lo is None):
+            strictly_improves_list.append(
+                z3.Implies(self.initial > self.hi,
+                           self.final + movement_add < self.initial))
+        else:
+            strictly_improves_list.append(
+                z3.Implies(self.initial < self.lo,
+                           z3.And(self.final > movement_add + self.initial,
+                                  self.final <= self.hi)))
+            strictly_improves_list.append(
+                z3.Implies(self.initial > self.hi,
+                           z3.And(self.final + movement_add < self.initial,
+                                  self.final >= self.lo)))
+        ret = z3.And(strictly_improves_list)
+        assert isinstance(ret, z3.BoolRef)
+        return ret
 
 def monotone_env(c, s, v):
     for t in range(1, c.T):
