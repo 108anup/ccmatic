@@ -44,7 +44,7 @@ class CBRDelayProofs(Proofs):
         self.movement_mult__consistent = z3.Real(
             'movement_mult__consistent')
         self.movement_add__min_c_lambda = z3.Real(
-            'movement_mult__min_c_lambda')
+            'movement_add__min_c_lambda')
 
         self.svs.append(self.steady__minc_c_lambda)
         self.movements.append(self.movement_mult__consistent)
@@ -110,7 +110,7 @@ class CBRDelayProofs(Proofs):
         queue_reduces = v.q(c.T-1) < v.q(0) - c.C * (c.R + c.D)
         queue_low = v.q(0) < c.C * (c.R + c.D)
 
-        lemma1_1 = z3.Implies(
+        lemma1a = z3.Implies(
             z3.And(self.initial_beliefs_valid,
                    z3.Not(self.initial_beliefs_consistent)),
             z3.And(self.final_beliefs_valid,
@@ -120,7 +120,7 @@ class CBRDelayProofs(Proofs):
                          queue_reduces
                          )))
 
-        lemma1_2 = z3.Implies(
+        lemma1b = z3.Implies(
             z3.And(self.initial_beliefs_valid,
                    z3.Not(self.initial_beliefs_consistent),
                    queue_low),
@@ -129,7 +129,7 @@ class CBRDelayProofs(Proofs):
                          self.all_beliefs_improve_towards_consistency,
                          link.d.desired_in_ss)))
 
-        lemma1 = z3.And(lemma1_1, lemma1_2)
+        lemma1 = z3.And(lemma1a, lemma1b)
         assert isinstance(lemma1, z3.BoolRef)
 
         metric_lists = [
@@ -207,14 +207,31 @@ class CBRDelayProofs(Proofs):
             some_belief_improves_towards_shrinking = z3.And(
                 none_degrade, at_least_one_improves)
 
-        lemma2 = z3.Implies(
+        queue_reduces = v.q(c.T-1) < v.q(0) - c.C * (c.R + c.D)
+        queue_low = v.q(0) < c.C * (c.R + c.D)
+
+        lemma2a = z3.Implies(
             z3.And(self.initial_beliefs_valid,
                    self.initial_beliefs_consistent),
             z3.And(self.final_beliefs_valid,
                    self.final_beliefs_consistent,
                    z3.Or(self.final_beliefs_inside,
+                         some_belief_improves_towards_shrinking,
+                         queue_reduces),
+                   d.bounded_large_loss_count))
+
+        lemma2b = z3.Implies(
+            z3.And(self.initial_beliefs_valid,
+                   self.initial_beliefs_consistent,
+                   queue_low),
+            z3.And(self.final_beliefs_valid,
+                   self.final_beliefs_consistent,
+                   z3.Or(self.final_beliefs_inside,
                          some_belief_improves_towards_shrinking),
                    d.bounded_large_loss_count))
+
+        lemma2 = z3.And(lemma2a, lemma2b)
+        assert isinstance(lemma2, z3.BoolRef)
 
         fixed_metrics = [
             Metric(self.steady__minc_c_lambda.lo,
