@@ -19,7 +19,7 @@ from ccmatic.generator import (SynthesisType, TemplateBuilder, TemplateTerm,
                                TemplateType, solution_parser)
 from ccmatic.solutions.solutions_belief_template_modular import get_solutions
 from ccmatic.verifier.cbr_delay import CBRDelayLink
-from ccmatic.verifier.proofs import CBRDelayProofs
+from ccmatic.verifier.proofs import CBRDelayProofs, CCACProofs
 from cegis import get_unsat_core
 from cegis.multi_cegis import MultiCegis
 from cegis.quantified_smt import ExistsForall
@@ -86,7 +86,7 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
-USE_CWND_CAP = False
+USE_CWND_CAP = True
 SELF_AS_RVALUE = False
 CONVERGENCE_BASED_ON_BUFFER = False
 assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
@@ -435,15 +435,15 @@ if(args.optimize):
     # Adversarial link
     cc.reset_desired_z3(link.v.pre)
     metric_alpha = [
-        Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.1, False),
         Metric(cc.desired_queue_bound_alpha, 0, 3, 0.1, False),
+        Metric(cc.desired_loss_amount_bound_alpha, 0, (cc.T-1), 0.1, False),
     ]
     metric_non_alpha = [
         Metric(cc.desired_util_f, 0.4, 1, 0.01, True),
         Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.1, False),
-        Metric(cc.desired_loss_count_bound, 0, 4, 0.1, False),
-        Metric(cc.desired_large_loss_count_bound, 0, 4, 0.1, False),
-        Metric(cc.desired_loss_amount_bound_multiplier, 0, 3, 0.1, False),
+        Metric(cc.desired_loss_count_bound, 0, (cc.T-1)/2 + 1, 0.1, False),
+        Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, 0.1, False),
+        Metric(cc.desired_large_loss_count_bound, 0, (cc.T-1)/2 + 1, 0.1, False),
     ]
     optimize_metrics_list = [[x] for x in metric_non_alpha]
     os = OptimizationStruct(link, link.get_verifier_struct(),
@@ -476,7 +476,7 @@ elif(args.proofs):
     solution = solution_dict[args.solution]
     assert isinstance(solution, z3.BoolRef)
 
-    ProofClass = BeliefProofs \
+    ProofClass = CCACProofs \
         if args.verifier_type == VerifierType.ccac \
         else CBRDelayProofs
     bp = ProofClass(link, solution, args.solution)

@@ -685,6 +685,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
             timeout_minc = False
             timeout_maxc = False
             beliefs_close_mult = overall_maxc < overall_minc * c.min_maxc_minc_gap_mult
+            beliefs_far = overall_maxc > 2 * overall_minc
             first = 0
             minc_changed = overall_minc > v.min_c[n][first]
             maxc_changed = overall_maxc < v.max_c[n][first]
@@ -711,7 +712,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 else:
                     # All resets are infrequent
                     timeout_minc = z3.And(
-                        timeout_allowed, z3.Not(minc_changed),
+                        timeout_allowed, z3.Not(minc_changed), z3.Not(beliefs_far),
                         z3.Or(maxc_came_close, z3.Not(maxc_changed_significantly)))
 
             if(c.fix_stale__max_c):
@@ -725,7 +726,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 else:
                     # All resets are infrequent
                     timeout_maxc = z3.And(
-                        timeout_allowed, z3.Not(maxc_changed),
+                        timeout_allowed, z3.Not(maxc_changed), z3.Not(beliefs_far),
                         z3.Or(minc_came_close, z3.Not(minc_changed_significantly)))
 
             s.add(v.min_c[n][et] ==
@@ -1693,6 +1694,30 @@ class BaseLink:
 
     class LinkVariables(Variables):
         pass
+        # def __init__(self, c: ModelConfig, s: MySolver,
+        #              name: Optional[str] = None):
+        #     super().__init__(c, s, name)
+        #     self.c = c
+
+        #     self.derived_expressions()
+
+        # def derived_expressions(self):
+        #     c = self.c
+
+        #     if (c.beliefs):
+        #         self._initial_minc_consistent = z3.And([self.min_c[n][0] <= c.C
+        #                                                 for n in range(c.N)])
+        #         self._initial_maxc_consistent = z3.And([self.max_c[n][0] >= c.C
+        #                                                 for n in range(c.N)])
+        #         self.initial_beliefs_consistent = z3.And(
+        #             self._initial_minc_consistent, self._initial_maxc_consistent)
+        #         self._final_minc_consistent = z3.And([self.min_c[n][-1] <= c.C
+        #                                               for n in range(c.N)])
+        #         self._final_maxc_consistent = z3.And([self.max_c[n][-1] >= c.C
+        #                                               for n in range(c.N)])
+        #         self.final_beliefs_consistent = z3.And(
+        #             self._final_minc_consistent, self._final_maxc_consistent)
+
 
     class LinkModelConfig(ModelConfig):
         pass
