@@ -22,7 +22,7 @@ from ccmatic.verifier.ideal import IdealLink
 from ccmatic.verifier.tbf import TBFLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import (Metric, fix_metrics, get_raw_value, optimize_multi_var,
+from cegis.util import (Metric, fix_metrics, get_raw_value, optimize_multi_var, optimize_var_nopushpop,
                         z3_min)
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
@@ -387,6 +387,73 @@ def find_optimum_bounds(
                     logger.info(df)
                     logger.info("-"*80)
 
+            logger.info("="*80)
+
+
+@try_except_wrapper
+def find_optimum_bounds_nopushpop(
+        solution: z3.BoolRef, optimization_structs: List[OptimizationStruct],
+        extra_constraints: List[z3.BoolRef] = []):
+    # Query without using push/pop
+    # Due to https://github.com/Z3Prover/z3/discussions/5046#discussioncomment-409024
+
+    for ops in optimization_structs:
+        link = ops.ccmatic
+        cc = link.cc
+        desired = ops.get_desired()
+        get_cex_str_fun = ops.get_get_counter_example_str_function()
+        logger.info(f"Testing link: {cc.name}")
+
+        def create_verifier():
+            verifier = MySolver()
+            verifier.warn_undeclared = False
+            verifier.add(link.definitions)
+            verifier.add(link.environment)
+            verifier.add(solution)
+            verifier.add(z3.Not(desired))
+            verifier.add(z3.And(*extra_constraints))
+            fix_metrics(verifier, ops.fixed_metrics)
+            return verifier
+
+        verifier = create_verifier()
+        fix_metrics(verifier, flatten(ops.optimize_metrics_list))
+        sat = verifier.check()
+
+        if(str(sat) == "sat"):
+            model = verifier.model()
+            logger.error("Objective violted. Cex:\n" +
+                         get_cex_str_fun(model, link.verifier_vars))
+            logger.critical("Note, the desired string in above output is based "
+                            "on cegis metrics instead of optimization metrics.")
+            import ipdb; ipdb.set_trace()
+            return model
+
+        else:
+            # uc = get_unsat_core(verifier)
+            # import ipdb; ipdb.set_trace()
+
+            logger.info(f"Solver gives {str(sat)} with loosest bounds.")
+
+            # Change logging levels used by optimize_multi_var
+            # GlobalConfig().logging_levels['cegis'] = logging.INFO
+            # cegis_logger = logging.getLogger('cegis')
+            # GlobalConfig().default_logger_setup(cegis_logger)
+
+            for metric_list in ops.optimize_metrics_list:
+                verifier = create_verifier()
+                other_metrics = ops.optimize_metrics_list.copy()
+                other_metrics.remove(metric_list)
+                fix_metrics(verifier, flatten(other_metrics))
+                assert len(metric_list) == 1
+                x = metric_list[0]
+                ret = optimize_var_nopushpop(
+                    verifier, x.z3ExprRef, x.lo, x.hi, x.eps, x.maximize)
+                if(x.maximize):
+                    optimal_value = math.floor(ret[0]/x.eps) * x.eps
+                else:
+                    optimal_value = math.ceil(ret[-1]/x.eps) * x.eps
+                logger.info("Found bounds for {}, {}, {}"
+                            .format(x.name, optimal_value, ret))
             logger.info("="*80)
 
 

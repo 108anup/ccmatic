@@ -2,7 +2,7 @@ import copy
 import logging
 import z3
 
-from ccmatic import CCmatic, OptimizationStruct, Proofs, find_optimum_bounds
+from ccmatic import CCmatic, OptimizationStruct, Proofs, find_optimum_bounds, find_optimum_bounds_nopushpop
 from ccmatic.verifier import SteadyStateVariable, initial_beliefs
 from ccmatic.verifier.cbr_delay import CBRDelayLink
 from cegis.util import Metric
@@ -621,7 +621,7 @@ class CCACProofs(Proofs):
             "Lemma 2: initial beliefs consistent implies they "
             "eventually become steady and remain consistent.")
         if(self.movement_mult__minc_maxc not in self.recursive):
-            model = find_optimum_bounds(self.solution, [os])
+            model = find_optimum_bounds_nopushpop(self.solution, [os])
             return
 
         if(self.check_lemmas):
