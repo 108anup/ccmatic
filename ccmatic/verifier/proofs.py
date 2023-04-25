@@ -447,6 +447,8 @@ class CCACProofs(Proofs):
         ])
 
     def setup_conditions(self):
+        super().setup_conditions()
+
         link = self.link
         c, v = link.c, link.v
 
@@ -484,7 +486,7 @@ class CCACProofs(Proofs):
             self.steady__max_c.final * self.steady__min_c.initial \
             < self.steady__max_c.initial * self.steady__min_c.final
 
-        self.final_valid = v.min_c[0][-1] * c.min_maxc_minc_gap_mult <= v.max_c[0][-1]
+        self.final_beliefs_valid = v.min_c[0][-1] * c.min_maxc_minc_gap_mult <= v.max_c[0][-1]
 
     def setup_offline_cache(self):
         link = self.link
@@ -495,6 +497,7 @@ class CCACProofs(Proofs):
         if(self.solution_id == "probe_qdel"):
             self.recursive[self.steady__min_c.lo] = 69
             self.recursive[self.steady__max_c.hi] = 301
+            self.recursive[self.movement_mult__minc_maxc] = 1.7
 
     def lemma1__beliefs_become_consistent(self):
         """
@@ -522,7 +525,7 @@ class CCACProofs(Proofs):
 
         lemma1 = z3.Implies(
             z3.Not(self.initial_beliefs_consistent),
-            z3.And(self.final_valid,
+            z3.And(self.final_beliefs_valid,
                    z3.Or(self.final_beliefs_consistent,
                          final_moves_consistent,
                          d.desired_in_ss
@@ -651,20 +654,23 @@ class CCACProofs(Proofs):
         desired = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside),
-            z3.And(self.final_beliefs_consistent, self.final_beliefs_inside, d.desired_necessary))
+            z3.And(self.final_beliefs_consistent, self.final_beliefs_inside, d.desired_in_ss))
+        EPS = 1
         fixed_metrics = [
-            Metric(self.steady__min_c.lo, EPS, 1/3 * c.C, EPS, False),
-            Metric(self.steady__max_c.hi, 3 * c.C, 10 * c.C, EPS, True),
-            Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
-            Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
+            Metric(self.steady__min_c.lo, self.recursive[self.steady__min_c.lo], c.C, EPS, True),
+            Metric(self.steady__max_c.hi, c.C, self.recursive[self.steady__max_c.hi], EPS, False),
+            Metric(cc.desired_queue_bound_alpha, 0, 3, 0.1, False),
+            Metric(cc.desired_loss_amount_bound_alpha, 0, (cc.T-1), 0.1, False),
         ]
-        metric_lists = [
-            [Metric(cc.desired_util_f, 0.01, 1, 1e-3, True)],
-            [Metric(cc.desired_queue_bound_multiplier, 0, 16, EPS, False)],
-            [Metric(cc.desired_loss_count_bound, 0, c.T, EPS, False)],
-            [Metric(cc.desired_large_loss_count_bound, 0, c.T, EPS, False)],
-            [Metric(cc.desired_loss_amount_bound_multiplier, 0, c.T, EPS, False)],
+
+        metric_non_alpha = [
+            Metric(cc.desired_util_f, 0.4, 1, 0.01, True),
+            Metric(cc.desired_queue_bound_multiplier, 0, 4, 0.1, False),
+            Metric(cc.desired_loss_count_bound, 0, (cc.T-1)/2 + 1, 0.1, False),
+            Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, 0.1, False),
+            Metric(cc.desired_large_loss_count_bound, 0, (cc.T-1)/2 + 1, 0.1, False),
         ]
+        metric_lists = [[x] for x in metric_non_alpha]
         os = OptimizationStruct(link, self.vs, fixed_metrics, metric_lists,
                                 desired, self.get_counter_example_str)
         logger.info("Lemma 3: What are the best metrics possible for"
@@ -857,7 +863,7 @@ class CCACProofs(Proofs):
         self.lemma1__beliefs_become_consistent()
         self.lemma21__beliefs_recursive()
         self.lemma2__beliefs_steady()
-        self.lemma3__objectives()
-        # self.lemma31__rate_recursive()
+        # self.lemma3__objectives()
+        self.lemma31__rate_recursive()
         # self.lemma3__rate_steady()
         # self.lemma4()
