@@ -499,6 +499,10 @@ class CCACProofs(Proofs):
             self.recursive[self.steady__min_c.lo] = 69
             self.recursive[self.steady__max_c.hi] = 301
             self.recursive[self.movement_mult__minc_maxc] = 1.7
+            self.recursive[self.steady__bottle_queue.hi] = 3.3 * c.C * (c.R + c.D)
+
+            # We get 0.87 util, 3.3 queue, 0 loss, when beliefs are consistent
+            # with desired necessary.
 
     def lemma1__beliefs_become_consistent(self):
         """
