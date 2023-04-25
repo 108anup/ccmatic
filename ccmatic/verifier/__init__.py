@@ -181,6 +181,7 @@ class SteadyStateVariable:
         assert isinstance(ret, z3.BoolRef)
         return ret
 
+
 def monotone_env(c, s, v):
     for t in range(1, c.T):
         for n in range(c.N):
@@ -685,7 +686,7 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
             timeout_minc = False
             timeout_maxc = False
             beliefs_close_mult = overall_maxc < overall_minc * c.min_maxc_minc_gap_mult
-            beliefs_far = overall_maxc > 2 * overall_minc
+            beliefs_far = overall_maxc > 2 * overall_minc  # False
             first = 0
             minc_changed = overall_minc > v.min_c[n][first]
             maxc_changed = overall_maxc < v.max_c[n][first]

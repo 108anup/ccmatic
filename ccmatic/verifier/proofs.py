@@ -439,11 +439,9 @@ class CCACProofs(Proofs):
         # Movements
         self.movement_mult__consistent = z3.Real('movement_mult__consistent')
         self.movement_mult__minc_maxc = z3.Real('movement_mult__minc_maxc')
-        self.movement_mult__rate = z3.Real('movement_mult__rate')
         self.movements.extend([
             self.movement_mult__consistent,
             self.movement_mult__minc_maxc,
-            self.movement_mult__rate
         ])
 
     def setup_conditions(self):
@@ -487,6 +485,9 @@ class CCACProofs(Proofs):
             < self.steady__max_c.initial * self.steady__min_c.final
 
         self.final_beliefs_valid = v.min_c[0][-1] * c.min_maxc_minc_gap_mult <= v.max_c[0][-1]
+
+        self.initial_bq_inside = self.steady__bottle_queue.init_inside()
+        self.final_bq_inside = self.steady__bottle_queue.final_inside()
 
     def setup_offline_cache(self):
         link = self.link
@@ -654,7 +655,10 @@ class CCACProofs(Proofs):
         desired = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside),
-            z3.And(self.final_beliefs_consistent, self.final_beliefs_inside, d.desired_in_ss))
+            z3.And(self.final_beliefs_valid,
+                   self.final_beliefs_consistent,
+                   self.final_beliefs_inside,
+                   d.desired_necessary))
         EPS = 1
         fixed_metrics = [
             Metric(self.steady__min_c.lo, self.recursive[self.steady__min_c.lo], c.C, EPS, True),
@@ -683,14 +687,15 @@ class CCACProofs(Proofs):
         """
         link = self.link
         c = link.c
+
         recur_rate_queue = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside,
-                   self.initial_inside),
+                   self.initial_bq_inside),
             z3.And(self.final_beliefs_valid,
                    self.final_beliefs_consistent,
                    self.final_beliefs_inside,
-                   self.final_inside))
+                   self.final_bq_inside))
 
         EPS = 1
         fixed_metrics = [
@@ -699,16 +704,18 @@ class CCACProofs(Proofs):
             Metric(self.steady__max_c.hi, self.recursive[self.steady__max_c.hi],
                    10 * c.C, EPS, False)]
         metric_lists = [
-            [Metric(self.steady__rate.lo, EPS, c.C-EPS, EPS, True)],
-            [Metric(self.steady__rate.hi, c.C+EPS, 10 * c.C, EPS, False)],
+            # [Metric(self.steady__rate.lo, EPS, c.C-EPS, EPS, True)],
+            # [Metric(self.steady__rate.hi, c.C+EPS, 10 * c.C, EPS, False)],
             [Metric(self.steady__bottle_queue.hi, c.C * c.R, 10 * c.C * (c.R + c.D), EPS, False)]
         ]
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, recur_rate_queue, self.get_counter_example_str)
         logger.info("Lemma 3.1: initial rate/queue steady implies final steady")
-        if(self.steady__rate.lo not in self.recursive or
-           self.steady__rate.hi not in self.recursive or
-           self.steady__bottle_queue.hi not in self.recursive):
+        if (
+            # self.steady__rate.lo not in self.recursive or
+            # self.steady__rate.hi not in self.recursive or
+            self.steady__bottle_queue.hi not in self.recursive
+        ):
             model = find_optimum_bounds(self.solution, [os])
             return
 
@@ -716,8 +723,8 @@ class CCACProofs(Proofs):
             ss_assignments = [
                 self.steady__min_c.lo == self.recursive[self.steady__min_c.lo],
                 self.steady__max_c.hi == self.recursive[self.steady__max_c.hi],
-                self.steady__rate.lo == self.recursive[self.steady__rate.lo],
-                self.steady__rate.hi == self.recursive[self.steady__rate.hi],
+                # self.steady__rate.lo == self.recursive[self.steady__rate.lo],
+                # self.steady__rate.hi == self.recursive[self.steady__rate.hi],
                 self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi]
             ]
             model = self.debug_verifier(recur_rate_queue, ss_assignments)
@@ -738,32 +745,24 @@ class CCACProofs(Proofs):
         link = self.link
         c = link.c
 
-        # final_improves by a decent amount:
-        svs = [self.steady__rate, self.steady__bottle_queue]
-        # Queue might only move slowly (e.g., decrease by T * alpha).
-        # Separately find movement speed of queue and rate.
-        # final_improves = steady_state_variables_improve(
-        #     svs, self.movement_mult__rate)
-        none_degrade = z3.And([x.does_not_degrage() for x in svs])
-        r = self.steady__rate
-        bq = self.steady__bottle_queue
-        atleast_one_improves = z3.Or([
-            z3.And(r.init_outside(), r.strictly_improves(self.movement_mult__rate)),
-            z3.And(bq.init_outside(), bq.strictly_improves())
-        ])
-        final_improves = z3.And(none_degrade, atleast_one_improves)
+        bq_reduces = self.steady__bottle_queue.final < self.steady__bottle_queue.initial - c.C * c.R / 2
 
         lemma3 = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
-                   self.initial_beliefs_inside, z3.Not(self.initial_inside)),
-            z3.And(self.final_beliefs_consistent, self.final_beliefs_inside,
-                   z3.Or(self.final_inside, final_improves)))
+                   self.initial_beliefs_inside,
+                   z3.Not(self.initial_bq_inside)),
+            z3.And(
+                self.final_beliefs_valid,
+                self.final_beliefs_consistent,
+                self.final_beliefs_inside,
+                z3.Or(self.final_bq_inside, bq_reduces)))
 
+        EPS = 1
         fixed_metrics = [
-            Metric(self.steady__rate.lo,
-                   self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
-            Metric(self.steady__rate.hi, c.C+EPS,
-                   self.recursive[self.steady__rate.hi], EPS, False),
+            # Metric(self.steady__rate.lo,
+            #        self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
+            # Metric(self.steady__rate.hi, c.C+EPS,
+            #        self.recursive[self.steady__rate.hi], EPS, False),
             Metric(self.steady__bottle_queue.hi, c.C * c.R,
                    self.recursive[self.steady__bottle_queue.hi], EPS, False),
             Metric(self.steady__min_c.lo, EPS,
@@ -771,16 +770,16 @@ class CCACProofs(Proofs):
             Metric(self.steady__max_c.hi,
                    self.recursive[self.steady__max_c.hi], 10 * c.C, EPS, False)
         ]
-        metric_lists = [
-            [Metric(self.movement_mult__rate, 2, 3, EPS, True)]
-        ]
-        os = OptimizationStruct(link, self.vs, fixed_metrics,
-                                metric_lists, lemma3,
-                                self.get_counter_example_str)
-        logger.info("Lemma 3: move quickly towards rate/queue")
-        if(self.movement_mult__rate not in self.recursive):
-            model = find_optimum_bounds(self.solution, [os])
-            return
+        # metric_lists = [
+        #     [Metric(self.movement_mult__rate_queue, 1.5, 3, EPS, True)]
+        # ]
+        # os = OptimizationStruct(link, self.vs, fixed_metrics,
+        #                         metric_lists, lemma3,
+        #                         self.get_counter_example_str)
+        # logger.info("Lemma 3: move quickly towards rate/queue")
+        # if(self.movement_mult__rate_queue not in self.recursive):
+        #     model = find_optimum_bounds(self.solution, [os])
+        #     return
 
         if(self.check_lemmas):
             ss_assignments = [
@@ -789,11 +788,11 @@ class CCACProofs(Proofs):
                 self.steady__rate.lo == self.recursive[self.steady__rate.lo],
                 self.steady__rate.hi == self.recursive[self.steady__rate.hi],
                 self.steady__bottle_queue.hi == self.recursive[self.steady__bottle_queue.hi],
-                self.movement_mult__rate == self.recursive[self.movement_mult__rate]
+                # self.movement_mult__rate_queue == self.recursive[self.movement_mult__rate_queue]
             ]
             model = self.debug_verifier(lemma3, ss_assignments)
 
-    def lemma4(self):
+    def lemma4__objectives(self):
         """
         Lemma 4: If the beliefs are consistent, in small range (computed above)
         and performance metrics are in steady range, then
@@ -804,11 +803,6 @@ class CCACProofs(Proofs):
         """
         link = self.link
         c = link.c
-        # lemma4 = z3.Implies(
-        #     z3.And(self.initial_beliefs_consistent,
-        #            self.initial_beliefs_close_add, self.initial_inside),
-        #     z3.And(self.final_beliefs_consistent, self.final_beliefs_close_add,
-        #            self.final_inside, d.desired_in_ss))
 
         # Recompute desired after resetting.
         cc_old = link.cc
@@ -824,14 +818,20 @@ class CCACProofs(Proofs):
 
         lemma4 = z3.Implies(
             z3.And(self.initial_beliefs_consistent,
-                   self.initial_beliefs_inside, self.initial_inside),
-            z3.And(self.final_beliefs_consistent, self.final_beliefs_inside,
-                   self.final_inside, d.desired_in_ss))
+                   self.initial_beliefs_inside,
+                   self.initial_bq_inside),
+            z3.And(self.final_beliefs_valid,
+                   self.final_beliefs_consistent,
+                   self.final_beliefs_inside,
+                   self.final_bq_inside,
+                   d.desired_in_ss))
+
+        EPS = 1
         fixed_metrics = [
-            Metric(self.steady__rate.lo,
-                   self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
-            Metric(self.steady__rate.hi, c.C+EPS,
-                   self.recursive[self.steady__rate.hi], EPS, False),
+            # Metric(self.steady__rate.lo,
+            #        self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
+            # Metric(self.steady__rate.hi, c.C+EPS,
+            #        self.recursive[self.steady__rate.hi], EPS, False),
             Metric(self.steady__bottle_queue.hi, c.C * c.R,
                    self.recursive[self.steady__bottle_queue.hi], EPS, False),
             Metric(self.steady__min_c.lo, EPS,
@@ -865,5 +865,5 @@ class CCACProofs(Proofs):
         self.lemma2__beliefs_steady()
         # self.lemma3__objectives()
         self.lemma31__rate_recursive()
-        # self.lemma3__rate_steady()
-        # self.lemma4()
+        self.lemma3__rate_steady()
+        self.lemma4__objectives()
