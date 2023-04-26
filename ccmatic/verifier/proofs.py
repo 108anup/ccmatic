@@ -824,7 +824,8 @@ class CCACProofs(Proofs):
             z3.And(self.initial_beliefs_consistent,
                    self.initial_beliefs_inside,
                    self.initial_bq_inside),
-            z3.And(self.final_beliefs_valid,
+            z3.And(
+                   # self.final_beliefs_valid,  If both change, then we don't time out any.
                    self.final_beliefs_consistent,
                    self.final_beliefs_inside,
                    self.final_bq_inside,
@@ -836,22 +837,19 @@ class CCACProofs(Proofs):
             #        self.recursive[self.steady__rate.lo], c.C-EPS, EPS, True),
             # Metric(self.steady__rate.hi, c.C+EPS,
             #        self.recursive[self.steady__rate.hi], EPS, False),
-            Metric(self.steady__bottle_queue.hi, c.C * c.R,
-                   self.recursive[self.steady__bottle_queue.hi], EPS, False),
-            Metric(self.steady__min_c.lo, EPS,
-                   self.recursive[self.steady__min_c.lo], EPS, True),
-            Metric(self.steady__max_c.hi,
-                   self.recursive[self.steady__max_c.hi], 10 * c.C, EPS, False),
+            Metric(self.steady__bottle_queue.hi, c.C * c.R, self.recursive[self.steady__bottle_queue.hi], EPS, False),
+            Metric(self.steady__min_c.lo, self.recursive[self.steady__min_c.lo], c.C, EPS, True),
+            Metric(self.steady__max_c.hi, c.C, self.recursive[self.steady__max_c.hi], EPS, False),
 
             Metric(cc.desired_loss_amount_bound_alpha, 0, 3, 0.001, False),
             Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
         ]
         metric_lists = [
-            [Metric(cc.desired_util_f, 0.01, 1, 1e-3, True)],
-            [Metric(cc.desired_queue_bound_multiplier, 0, 16, EPS, False)],
-            [Metric(cc.desired_loss_count_bound, 0, c.T, EPS, False)],
-            [Metric(cc.desired_large_loss_count_bound, 0, c.T, EPS, False)],
-            [Metric(cc.desired_loss_amount_bound_multiplier, 0, c.T, EPS, False)],
+            [Metric(cc.desired_util_f, 0.4, 1, 1e-3, True)],
+            [Metric(cc.desired_queue_bound_multiplier, 0, self.recursive[self.steady__bottle_queue.hi], EPS, False)],
+            [Metric(cc.desired_loss_count_bound, 0, (cc.T-1)/2 + 1, EPS, False)],
+            [Metric(cc.desired_large_loss_count_bound, 0, 0, EPS, False)],
+            [Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, EPS, False)],
         ]
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, lemma4, self.get_counter_example_str)
