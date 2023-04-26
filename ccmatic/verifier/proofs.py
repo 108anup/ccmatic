@@ -92,6 +92,7 @@ class CBRDelayProofs(Proofs):
             self.recursive[self.movement_mult__consistent] = 1.9
             self.recursive[self.steady__minc_c_lambda.lo] = 24
             self.recursive[self.steady__bq_belief.hi] = 321
+            self.recursive[self.movement_add__min_c_lambda] = 0.2
 
             """
             [04/11 18:07:22]     adv__Desired__util_f
@@ -240,7 +241,8 @@ class CBRDelayProofs(Proofs):
                    self.final_beliefs_consistent,
                    z3.Or(self.final_beliefs_inside,
                          some_belief_improves_towards_shrinking,
-                         queue_reduces),
+                         queue_reduces,
+                         d.desired_in_ss),
                    d.bounded_large_loss_count))
 
         lemma2b = z3.Implies(
@@ -250,7 +252,8 @@ class CBRDelayProofs(Proofs):
             z3.And(self.final_beliefs_valid,
                    self.final_beliefs_consistent,
                    z3.Or(self.final_beliefs_inside,
-                         some_belief_improves_towards_shrinking),
+                         some_belief_improves_towards_shrinking,
+                         d.desired_in_ss),
                    d.bounded_large_loss_count))
 
         lemma2 = z3.And(lemma2a, lemma2b)
@@ -419,7 +422,7 @@ class CBRDelayProofs(Proofs):
         self.lemma21__beliefs_recursive()
         self.lemma2__beliefs_steady()
         # self.lemma31__rate_recursive()
-        # self.lemma4__objectives()
+        self.lemma4__objectives()
 
 
 class CCACProofs(Proofs):
@@ -559,8 +562,10 @@ class CCACProofs(Proofs):
                          d.desired_in_ss
                          )))
         metric_lists = [
+            # [Metric(self.movement_mult__consistent,
+            #         c.maxc_minc_change_mult, 2, 1e-3, True)]
             [Metric(self.movement_mult__consistent,
-                    c.maxc_minc_change_mult, 2, 1e-3, True)]
+                    1.5, 4, 1e-3, True)]
         ]
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists,
@@ -849,11 +854,11 @@ class CCACProofs(Proofs):
                    self.initial_beliefs_inside,
                    self.initial_bq_inside),
             z3.And(
-                   # self.final_beliefs_valid,  If both change, then we don't time out any.
-                   self.final_beliefs_consistent,
-                   self.final_beliefs_inside,
-                   self.final_bq_inside,
-                   d.desired_in_ss))
+                # self.final_beliefs_valid,  If both change, then we don't time out any.
+                # self.final_beliefs_consistent,
+                # self.final_beliefs_inside,
+                # self.final_bq_inside,
+                d.desired_in_ss))
 
         EPS = 1
         fixed_metrics = [
@@ -869,11 +874,11 @@ class CCACProofs(Proofs):
             Metric(cc.desired_queue_bound_alpha, 0, 3, 0.001, False),
         ]
         metric_lists = [
-            [Metric(cc.desired_util_f, 0.4, 1, 1e-3, True)],
-            [Metric(cc.desired_queue_bound_multiplier, 0, self.recursive[self.steady__bottle_queue.hi], EPS, False)],
+            [Metric(cc.desired_queue_bound_multiplier, 0, 16, 0.1, False)],
+            [Metric(cc.desired_util_f, 0.8, 1, 1e-2, True)],
             [Metric(cc.desired_loss_count_bound, 0, (cc.T-1)/2 + 1, EPS, False)],
             [Metric(cc.desired_large_loss_count_bound, 0, 0, EPS, False)],
-            [Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, EPS, False)],
+            [Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, 0.1, False)],
         ]
         os = OptimizationStruct(link, self.vs, fixed_metrics,
                                 metric_lists, lemma4, self.get_counter_example_str)

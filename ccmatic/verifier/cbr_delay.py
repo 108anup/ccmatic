@@ -293,7 +293,7 @@ class CBRDelayLink(BaseLink):
                     # bq_went_low_rtt_ago = z3.Or(bq_went_low_rtt_ago_list)
 
                     # Timeout if probe happened and queue did not drain
-                    probe_happened = z3.Or(*[v.r_f[n][t] > v.alpha for t in range(1, t+1)])
+                    probe_happened = z3.Or(*[v.r_f[n][_t] > v.alpha for _t in range(1, t+1)])
                     probe_did_not_happen_in_last_2_rm = z3.And(*[v.r_f[n][t] <= v.alpha for t in range(t-1, t+1)])
                     inflight_did_not_drain = v.bq_belief1[n][t] > v.alpha
                     probe_based_timeout = z3.And(probe_happened, probe_did_not_happen_in_last_2_rm, inflight_did_not_drain)
@@ -311,6 +311,30 @@ class CBRDelayLink(BaseLink):
                                                        z3.If(minc_increased_and_lower, True,
                                                              z3.If(probe_based_timeout, True, False))),
                                                  False)
+
+                    if (v.bq_belief == v.bq_belief2):
+                        # large_inflight_before_probe_list = []
+                        # for _t in range(1, c.T):
+                        #     large_inflight_before_probe_list.append(
+                        #         z3.And(v.r_f[n][_t] > v.alpha,
+                        #                v.bq_belief1[n][_t-1] > v.min_c_lambda[n][_t-1] * (c.R + c.D))
+                        #     )
+                        # large_inflight_before_probe = z3.Or(*large_inflight_before_probe_list)
+                        large_inflight = v.bq_belief1[n][t] > v.min_c_lambda[n][t-1] * (
+                            c.R + c.D + 1) + 2 * v.alpha
+                        minc_increased_and_lower = False
+                        timeout_min_c_lambda = z3.If(
+                            timeout_allowed,
+                            z3.If(z3.Or(large_inflight, large_loss_happened), True,
+                                  z3.If(minc_increased_and_lower, True,
+                                        z3.If(probe_based_timeout, True, False))),
+                            False)
+                        # v.timeout_min_c_lambda = timeout_min_c_lambda
+                        # v.large_inflight = large_inflight
+                        # v.large_loss_happened = large_loss_happened
+                        # v.probe_based_timeout = probe_based_timeout
+                        # v.min_c_increased_and_lower = minc_increased_and_lower
+                        # import ipdb; ipdb.set_trace()
 
                 s.add(v.recomputed_min_c_lambda[n][t] == recomputed_minc)
                 clamped_minc = z3_max(recomputed_minc, 1/2 * v.min_c_lambda[n][0])
