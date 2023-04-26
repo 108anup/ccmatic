@@ -1694,13 +1694,20 @@ def plot_cex(m: z3.ModelRef, df: pd.DataFrame, c: ModelConfig, v: Variables, fpa
 class BaseLink:
 
     class LinkVariables(Variables):
-        pass
-        # def __init__(self, c: ModelConfig, s: MySolver,
-        #              name: Optional[str] = None):
-        #     super().__init__(c, s, name)
-        #     self.c = c
+        def bq(self, t: int):
+            assert t >= 0 and t <= self.c.T-1
+            return self.A[t] - self.L[t] - (self.C0 + self.c.C * t - self.W[t])
 
-        #     self.derived_expressions()
+        def q(self, t: int):
+            assert t >= 0 and t <= self.c.T-1
+            return self.A[t] - self.L[t] - self.S[t]
+
+        def __init__(self, c: ModelConfig, s: MySolver,
+                     name: Optional[str] = None):
+            super().__init__(c, s, name)
+            self.c = c
+
+            # self.derived_expressions()
 
         # def derived_expressions(self):
         #     c = self.c

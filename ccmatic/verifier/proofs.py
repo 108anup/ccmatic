@@ -33,6 +33,7 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
             None)
+        # self.bq_belief = v.bq_belief2
         self.bq_belief = v.bq_belief1
         self.steady__bq_belief = SteadyStateVariable(
             "steady__bq_belief",
@@ -75,6 +76,9 @@ class CBRDelayProofs(Proofs):
             z3.Or(self.stale_minc_lambda_improves,
                   v.final_minc_lambda_consistent),
             z3.Or(v.stale_bq_belief_improves, v.final_bq_consistent))
+        self.minc_lambda_improves_towards_consistency = z3.Or(
+            self.stale_minc_lambda_improves,
+            v.final_minc_lambda_consistent)
 
         self.initial_beliefs_inside = z3.And(
             self.steady__minc_c_lambda.init_inside(),
@@ -128,6 +132,25 @@ class CBRDelayProofs(Proofs):
                    z3.Or(self.final_beliefs_consistent,
                          self.all_beliefs_improve_towards_consistency,
                          link.d.desired_in_ss)))
+
+        # lemma1a = z3.Implies(
+        #     z3.And(self.initial_beliefs_valid,
+        #            z3.Not(self.initial_beliefs_consistent)),
+        #     z3.And(self.final_beliefs_valid,
+        #            z3.Or(self.final_beliefs_consistent,
+        #                  self.minc_lambda_improves_towards_consistency,
+        #                  link.d.desired_in_ss,
+        #                  queue_reduces
+        #                  )))
+
+        # lemma1b = z3.Implies(
+        #     z3.And(self.initial_beliefs_valid,
+        #            z3.Not(self.initial_beliefs_consistent),
+        #            queue_low),
+        #     z3.And(self.final_beliefs_valid,
+        #            z3.Or(self.final_beliefs_consistent,
+        #                  self.minc_lambda_improves_towards_consistency,
+        #                  link.d.desired_in_ss)))
 
         lemma1 = z3.And(lemma1a, lemma1b)
         assert isinstance(lemma1, z3.BoolRef)
@@ -807,6 +830,7 @@ class CCACProofs(Proofs):
         """
         link = self.link
         c = link.c
+        v = link.v
 
         # Recompute desired after resetting.
         cc_old = link.cc

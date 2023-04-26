@@ -19,15 +19,7 @@ from pyz3_utils.my_solver import MySolver
 
 class CBRDelayLink(BaseLink):
 
-    class LinkVariables(Variables):
-
-        def bq(self, t: int):
-            assert t >= 0 and t <= self.c.T-1
-            return self.A[t] - self.L[t] - (self.C0 + self.c.C * t - self.W[t])
-
-        def q(self, t: int):
-            assert t >= 0 and t <= self.c.T-1
-            return self.A[t] - self.L[t] - self.S[t]
+    class LinkVariables(BaseLink.LinkVariables):
 
         def derived_expressions(self):
             c = self.c
@@ -63,6 +55,7 @@ class CBRDelayLink(BaseLink):
                      for n in range(c.N)])
 
                 # bq_belief (valid, consistent, improves)
+                # bq_belief = self.bq_belief2
                 bq_belief = self.bq_belief1
                 self.initial_bq_valid = z3.And([
                     bq_belief[n][0] >= 0
