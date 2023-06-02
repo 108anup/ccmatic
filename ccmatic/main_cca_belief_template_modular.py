@@ -106,7 +106,7 @@ elif (cond):
 """
 
 
-n_exprs = 3
+n_exprs = 2 if args.infinite_buffer else 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
@@ -146,8 +146,8 @@ if SELF_AS_RVALUE:
 search_range_cond_vars_time = (-1, 0, 1)
 # search_range_cond_vars_bytes = tuple(list(range(-2, 3)) + [1.5, -1.5])
 search_range_cond_vars_bytes = tuple(list(range(-2, 3)))
-search_range_cond_consts = tuple(range(-6, 7))
-# search_range_cond_consts = tuple(range(-2, 3))
+# search_range_cond_consts = tuple(range(-6, 7))
+search_range_cond_consts = tuple(range(-2, 3))
 cond_terms = [
     TemplateTerm('min_c', TemplateTermType.VAR,
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_vars_bytes),

@@ -681,6 +681,7 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
             """, main_tb)
         solution_dict['rate_probe_2minc'] = rate_probe_2minc
 
+    # This solution requires T=11.
     if (n_exprs >= 2 and
             template_type == TemplateType.IF_ELSE_CHAIN and
             main_lhs_term == 'r_f'):
@@ -694,6 +695,7 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
             """, main_tb)
         solution_dict['probe_until_shrink'] = probe_until_shrink
 
+    # This works with T=6
     if (n_exprs >= 2 and
             template_type == TemplateType.IF_ELSE_CHAIN and
             main_lhs_term == 'r_f'):
@@ -706,6 +708,21 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
                 + 2min_c
             """, main_tb)
         solution_dict['probe_qdel'] = probe_qdel
+
+    # I don't htink this solution works ever. On a high queue, if qdel is low,
+    # then queue increases. I twill take a lot of time to drain this.
+    if (n_exprs >= 2 and
+            template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_qdel_paced = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1min_qdel > 0):
+                + 1min_c + -1alpha
+            else:
+                + 2min_c
+            """, main_tb)
+        solution_dict['probe_qdel_paced'] = probe_qdel_paced
     return solution_dict
 
 
