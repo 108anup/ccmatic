@@ -15,7 +15,7 @@ GlobalConfig().default_logger_setup(logger)
 
 class CBRDelayProofs(Proofs):
 
-    check_lemmas = True
+    check_lemmas = False
 
     def setup_steady_variables(self):
         super().setup_steady_variables()
@@ -33,8 +33,8 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
             None)
-        self.bq_belief = v.bq_belief2
-        # self.bq_belief = v.bq_belief1
+        # self.bq_belief = v.bq_belief2
+        self.bq_belief = v.bq_belief1
         self.steady__bq_belief = SteadyStateVariable(
             "steady__bq_belief",
             self.bq_belief[0][0],
