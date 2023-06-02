@@ -650,7 +650,6 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                 # LOWER
                 this_lower = measured_c * window / (window + c.D)
                 overall_minc = z3_max(overall_minc, this_lower)
-                overall_minc = z3_max(overall_minc, this_lower)
                 recomputed_minc = z3_max(recomputed_minc, this_lower)
 
                 # UPPER
@@ -676,6 +675,191 @@ def update_bandwidth_beliefs_invalidation_and_timeout(
                     # that creates a complicated encoding.
                     assert isinstance(this_upper, z3.ArithRef)
                     overall_maxc = z3_min(overall_maxc, this_upper)
+
+            """
+            If self changed, don't recompute
+            If other came close do recompute.
+
+            On timeout, if other did not change significantly, then recompute.
+            """
+            timeout_minc = False
+            timeout_maxc = False
+            beliefs_close_mult = overall_maxc < overall_minc * c.min_maxc_minc_gap_mult
+            beliefs_far = overall_maxc > 2 * overall_minc  # False
+            first = 0
+            minc_changed = overall_minc > v.min_c[n][first]
+            maxc_changed = overall_maxc < v.max_c[n][first]
+            # TODO: replace other came close, with beliefs came close.
+            maxc_came_close = z3.And(maxc_changed, beliefs_close_mult)
+            minc_came_close = z3.And(minc_changed, beliefs_close_mult)
+            minc_changed_significantly = overall_minc > c.maxc_minc_change_mult * \
+                v.min_c[n][0]
+            maxc_changed_significantly = overall_maxc * \
+                c.maxc_minc_change_mult < v.max_c[n][0]
+            timeout_allowed = et == c.T-1
+            RESET_IMMEDIATELY = False
+            if(RESET_IMMEDIATELY):
+                timeout_allowed = et == c.T-2
+
+            if(c.fix_stale__min_c):
+                if(RESET_IMMEDIATELY):
+                    # Reset immediately if invalid.
+                    timeout_minc = z3.If(
+                        minc_changed, False,
+                        z3.If(maxc_came_close, True,
+                              z3.And(timeout_allowed,
+                                     z3.Not(maxc_changed_significantly))))
+                else:
+                    # All resets are infrequent
+                    timeout_minc = z3.And(
+                        timeout_allowed, z3.Not(minc_changed), z3.Not(beliefs_far),
+                        z3.Or(maxc_came_close, z3.Not(maxc_changed_significantly)))
+
+            if(c.fix_stale__max_c):
+                if(RESET_IMMEDIATELY):
+                    # Reset immediately if invalid.
+                    timeout_maxc = z3.If(
+                        maxc_changed, False,
+                        z3.If(minc_came_close, True,
+                              z3.And(timeout_allowed,
+                                     z3.Not(minc_changed_significantly))))
+                else:
+                    # All resets are infrequent
+                    timeout_maxc = z3.And(
+                        timeout_allowed, z3.Not(maxc_changed), z3.Not(beliefs_far),
+                        z3.Or(minc_came_close, z3.Not(minc_changed_significantly)))
+
+            s.add(v.min_c[n][et] ==
+                  z3.If(timeout_minc, recomputed_minc, overall_minc))
+            reset_maxc = z3_max(
+                v.min_c[n][et] * c.min_maxc_minc_gap_mult, 3/2 * v.max_c[n][et-1])
+            s.add(v.max_c[n][et] ==
+                  z3.If(timeout_maxc, reset_maxc, overall_maxc))
+
+
+def update_bandwidth_beliefs_invalidation_and_timeout_use_more_vars(
+        c: ModelConfig, s: MySolver, v: Variables):
+    assert(c.beliefs)
+    assert isinstance(v, BaseLink.LinkVariables)
+
+    """
+    utilized[st] means interval (st, st+1] is utilized
+    utilized_cummulative[et][st] means interval (st, et] is utilized
+    """
+
+    # Compute utilized
+    for n in range(c.N):
+        for st in range(c.T-1):
+            # Encodes that utilization must have been high if loss happened
+            # or if queing delay was more than D
+
+            # All of qdel might be False. So to check high delay we just
+            # check Not of low delay.
+            high_delay = z3.Not(z3.Or(*[v.qdel[st+1][dt]
+                                        for dt in range(c.D+1)]))
+            # Wrong:
+            # high_delay = z3.Or(*[v.qdel[st+1][dt]
+            #                      for dt in range(c.D+1, c.T)])
+            loss = v.Ld_f[n][st+1] - v.Ld_f[n][st] > 0
+            if(c.D == 0):
+                assert c.loss_oracle
+                loss = v.L_f[n][st+1] - v.L_f[n][st] > 0
+
+            # We can only count qdelay when packets actually arrived.
+            # Otherwise the qdelay is stale.
+            # recvd_new_pkts = v.S_f[n][st+1] > v.S_f[n][st]
+            recvd_new_pkts = True
+
+            # CCAC can somehow give high utilization signals even when cwnd is low.
+            # This basically happens when no new pkts are sent due to low cwnd.
+            # To avoid underestimating max_c, we update it only when we sent new pkts.
+
+            # Updated reason: A delay of high can happen when there are last
+            # few pkts left in the queue. Thus the ack rate will be low. If
+            # the CCA sent pkts R + D time ago, this qdelay can only be high
+            # if this quue is big, if the queue is small, then the recently
+            # sent pkts will show low qdelay.
+
+            # Based on this, ideally we should be checking A_f[n][st+1-D]
+            # > A_f[n][st-D]. But this works out. For ideal link D = 0, so
+            # this is fine. For jittery link, since we always look at
+            # windows >=D+1, the constraint for previous batch would ensure
+            # constraint for this batch (we either sent new packets in
+            # previous batch or caused loss, loss can only happen if we sent
+            # new pkts.). We only really care about the constraint for the
+            # last batch.
+            sent_new_pkts = v.A_f[n][st+1] - v.A_f[n][st] > 0
+
+            # We assume the link is utilized if we did not recv any packets.
+            # If we don't do this, the network sends 0, then 2 * CD, then 0 pkts and so on.
+            # This causes us to never have long enough utilized window (hence we can't improve max_c).
+            # this_utilized = z3.And(v.S_f[n][st+1] > v.S_f[n][st],
+            #                        z3.Or(loss, high_delay))
+            this_utilized = z3.Or(
+                z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                loss)
+
+            s.add(v.utilized[n][st] == this_utilized)
+
+    # Compute utilized_cummulative
+    for n in range(c.N):
+        for et in range(1, c.T):
+            for st in range(et-1, -1, -1):
+                if(st + 1 == et):
+                    s.add(v.utilized_cummulative[n][et][st] == v.utilized[n][st])
+                else:
+                    s.add(v.utilized_cummulative[n][et][st] == z3.And(
+                        v.utilized_cummulative[n][et][st+1], v.utilized[n][st]))
+
+    # Bandwidth beliefs (C)
+    """
+    In summary C >= r * n/(n+1) always, if we additionally know that
+    sending rate is higher than C then, C <= r * n/(n-1).
+    """
+    for n in range(c.N):
+        for et in range(1, c.T):
+            base_maxc = v.max_c[n][et-1]
+            for st in range(et-1, -1, -1):
+                window = et - st
+                measured_c = (v.S_f[n][et] - v.S_f[n][st]) / (window)
+
+                # LOWER
+                this_lower = measured_c * window / (window + c.D)
+                if (st+1 == et):
+                    s.add(v.max_measured_c[n][et][st] == this_lower)
+                else:
+                    s.add(v.max_measured_c[n][et][st] == z3_max(
+                        v.max_measured_c[n][et][st+1], this_lower))
+
+                # UPPER
+                """
+                For ideal link, D = 0, but still we want ot measure ack rate
+                over at least windows of length 2. This is because initial
+                conditions can provide utilized signals for 1 timeunit while
+                still giving low ack rate.
+
+                # if(window - max(1, c.D) > 0):
+
+                Above issue if fixed by ensuring loss detected happens then
+                buffer must be full and also using L_f instead of Ld_f, i.e., if
+                loss happened then we must have sent pkts and service must have
+                been high. This needs to change when we do loss detection.
+                """
+                if(window - c.D > 0):
+                    this_upper = z3.If(
+                        v.utilized_cummulative[n][et][st],
+                        measured_c * window / (window - c.D),
+                        base_maxc)
+                    assert isinstance(this_upper, z3.ArithRef)
+                    if(window - c.D == 1):
+                        s.add(v.min_measured_c[n][et][st] == this_upper)
+                    else:
+                        s.add(v.min_measured_c[n][et][st] == z3_min(
+                            v.min_measured_c[n][et][st+1], this_upper))
+
+            recomputed_minc = v.max_measured_c[n][et][0]
+            overall_minc = z3_max(v.min_c[n][et-1], v.max_measured_c[n][et][0])
+            overall_maxc = z3_min(v.max_c[n][et-1], v.min_measured_c[n][et][0])
 
             """
             If self changed, don't recompute
@@ -792,7 +976,8 @@ def update_beliefs(c: ModelConfig, s: MySolver, v: Variables):
 
     # update_bandwidth_beliefs_invalidation(c, s, v)
     # update_bandwidth_beliefs_with_timeout(c, s, v)
-    update_bandwidth_beliefs_invalidation_and_timeout(c, s, v)
+    # update_bandwidth_beliefs_invalidation_and_timeout(c, s, v)
+    update_bandwidth_beliefs_invalidation_and_timeout_use_more_vars(c, s, v)
 
     if (c.app_limited and c.app_fixed_avg_rate):
         for n in range(c.N):
@@ -1706,8 +1891,30 @@ class BaseLink:
                      name: Optional[str] = None):
             super().__init__(c, s, name)
             self.c = c
+            pre = self.pre
 
             # self.derived_expressions()
+
+            if (c.beliefs):
+                self.utilized = np.array([[
+                    s.Bool(f"{pre}utilized_{n},{t}")
+                    for t in range(c.T)]
+                    for n in range(c.N)])
+                self.utilized_cummulative = np.array([[[
+                    s.Bool(f"{pre}utilized_cummulative_{n},{et},{st}")
+                    for et in range(c.T)]
+                    for st in range(c.T)]
+                    for n in range(c.N)])
+                self.max_measured_c = np.array([[[
+                    s.Real(f"{pre}max_measured_c_{n},{et},{st}")
+                    for et in range(c.T)]
+                    for st in range(c.T)]
+                    for n in range(c.N)])
+                self.min_measured_c = np.array([[[
+                    s.Real(f"{pre}min_measured_c_{n},{et},{st}")
+                    for et in range(c.T)]
+                    for st in range(c.T)]
+                    for n in range(c.N)])
 
         # def derived_expressions(self):
         #     c = self.c
@@ -1897,6 +2104,7 @@ class BaseLink:
     ) -> Tuple[List[z3.ExprRef], List[z3.ExprRef]]:
         history = cc.history
         verifier_vars, definition_vars = self.get_base_cegis_vars(cc, c, v)
+        assert isinstance(v, BaseLink.LinkVariables)
 
         if(not c.loss_oracle):
             verifier_vars.append(v.dupacks)
@@ -1962,6 +2170,10 @@ class BaseLink:
                     verifier_vars.extend(flatten(
                         v.max_buffer[:, :1]))
             verifier_vars.extend(flatten(v.start_state_f))
+            definition_vars.extend(flatten([
+                v.utilized, v.utilized_cummulative,
+                v.max_measured_c, v.min_measured_c
+            ]))
 
         if(c.app_limited):
             verifier_vars.extend(flatten(v.app_limits))
