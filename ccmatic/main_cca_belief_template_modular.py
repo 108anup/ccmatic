@@ -86,7 +86,7 @@ USE_BUFFER = False
 USE_BUFFER_BYTES = False
 ADD_IDEAL_LINK = args.ideal
 NO_LARGE_LOSS = args.no_large_loss
-USE_CWND_CAP = True
+USE_CWND_CAP = False
 SELF_AS_RVALUE = False
 CONVERGENCE_BASED_ON_BUFFER = False
 assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
@@ -186,8 +186,8 @@ def get_value_for_term(
         return v.alpha
     elif (tt.name == "bq_belief"):
         assert isinstance(v, CBRDelayLink.LinkVariables)
-        return v.bq_belief1[n][t-1]
-        # return v.bq_belief2[n][t-1]
+        # return v.bq_belief1[n][t-1]
+        return v.bq_belief2[n][t-1]
     else:
         return v.__getattribute__(tt.name)[n][t-1]
 
@@ -318,7 +318,7 @@ cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
 cc.desired_no_large_loss = args.no_large_loss
-cc.desired_util_f = 0.5
+cc.desired_util_f = 0.1
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
 if(cc.infinite_buffer):

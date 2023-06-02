@@ -55,8 +55,10 @@ class CBRDelayLink(BaseLink):
                      for n in range(c.N)])
 
                 # bq_belief (valid, consistent, improves)
-                # bq_belief = self.bq_belief2
-                bq_belief = self.bq_belief1
+                # bq_belief = self.bq_belief1
+                bq_belief = self.bq_belief2
+                self.bq_belief = bq_belief
+
                 self.initial_bq_valid = z3.And([
                     bq_belief[n][0] >= 0
                     for n in range(c.N)])
@@ -118,8 +120,8 @@ class CBRDelayLink(BaseLink):
 
     class LinkModelConfig(ModelConfig):
         minc_lambda_measurement_interval: float = 1
-        fix_stale__min_c_lambda: bool = False
-        fix_stale__bq_belief: bool = False
+        fix_stale__min_c_lambda: bool = True
+        fix_stale__bq_belief: bool = True
 
     @staticmethod
     def update_bq_belief(c: ModelConfig, s: MySolver, v: Variables):

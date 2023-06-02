@@ -15,7 +15,7 @@ GlobalConfig().default_logger_setup(logger)
 
 class CBRDelayProofs(Proofs):
 
-    check_lemmas = False
+    check_lemmas = True
 
     def setup_steady_variables(self):
         super().setup_steady_variables()
@@ -33,8 +33,8 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
             None)
-        # self.bq_belief = v.bq_belief2
-        self.bq_belief = v.bq_belief1
+        self.bq_belief = v.bq_belief2
+        # self.bq_belief = v.bq_belief1
         self.steady__bq_belief = SteadyStateVariable(
             "steady__bq_belief",
             self.bq_belief[0][0],
@@ -529,6 +529,16 @@ class CCACProofs(Proofs):
 
             # We get 0.87 util, 3.3 queue, 0 loss, when beliefs are consistent
             # with desired necessary.
+
+            """
+            [04/26 16:40:17]     adv__Desired__queue_bound_multiplier
+            0                                   4.4
+            [04/26 16:51:13]     adv__Desired__util_f
+            0                  0.83
+            [04/26 16:59:20]     adv__Desired__loss_count_bound
+            0                               3
+            [04/26 17:01:00]  {'adv__Desired__large_loss_count_bound': {0}}
+            """
 
     def lemma1__beliefs_become_consistent(self):
         """
