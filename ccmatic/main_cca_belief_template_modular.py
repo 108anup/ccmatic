@@ -89,13 +89,15 @@ NO_LARGE_LOSS = args.no_large_loss
 USE_CWND_CAP = False
 SELF_AS_RVALUE = False
 CONVERGENCE_BASED_ON_BUFFER = False
+NO_LARGE_LOSS_WHEN_BUFFER_LARGE = False
 assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
+assert (not NO_LARGE_LOSS_WHEN_BUFFER_LARGE) or args.dynamic_buffer
 
 # synthesis_type = SynthesisType.CWND_ONLY
 synthesis_type = SynthesisType.RATE_ONLY
 template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -291,7 +293,7 @@ cc.name = "adv"
 cc.synth_ss = False
 cc.infinite_buffer = args.infinite_buffer
 cc.dynamic_buffer = args.dynamic_buffer
-cc.buffer_size_multiplier = 1
+cc.buffer_size_multiplier = 1/4
 
 cc.app_limited = args.app_limited
 cc.app_fixed_avg_rate = True
@@ -366,6 +368,17 @@ template_definitions = get_template_definitions(cc, c, v)
 #                      z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
 #                            d.ramp_down_queue, d.ramp_down_bq))
 #     link.desired = desired
+
+if (NO_LARGE_LOSS_WHEN_BUFFER_LARGE):
+    # We don't want large loss even when probing for link rate if the buffer is large
+    d = link.d
+    desired = link.desired
+    desired = z3.And(desired,
+                     z3.Implies(
+                         c.buf_min >= 5 * c.C * (c.R + c.D),
+                         z3.Or(d.bounded_large_loss_count, d.ramp_down_cwnd,
+                               d.ramp_down_queue, d.ramp_down_bq)))
+    link.desired = desired
 
 if (CONVERGENCE_BASED_ON_BUFFER):
     """

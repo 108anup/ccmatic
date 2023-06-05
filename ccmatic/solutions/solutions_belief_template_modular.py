@@ -739,6 +739,25 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
             """, main_tb)
         solution_dict['probe_until_shrink_3expr'] = probe_until_shrink_3expr
 
+    if (n_exprs >= 4 and
+        template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1 and
+            main_lhs_term == 'r_f'):
+        probe_until_shrink_qdel = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -2min_c + 1max_c > 0):
+                if (+ 1min_qdel + -1R > 0):
+                    + 0.5min_c
+                else:
+                    + 2min_c
+            else:
+                if (+ -2min_c + 1max_c + 2alpha > 0):
+                    + 1min_c
+                else:
+                    + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['probe_until_shrink_qdel'] = probe_until_shrink_qdel
+
     return solution_dict
 
 
