@@ -817,6 +817,10 @@ def update_bandwidth_beliefs_invalidation_and_timeout_use_more_vars(
     sending rate is higher than C then, C <= r * n/(n-1).
     """
     for n in range(c.N):
+        # There is no measurement for min_measured_c when et=1, so we define it
+        # to just be initial max_c.
+        s.add(v.min_measured_c[n][1][0] == v.max_c[n][0])
+
         for et in range(1, c.T):
             base_maxc = v.max_c[n][et-1]
             for st in range(et-1, -1, -1):
@@ -2195,11 +2199,14 @@ class BaseLink:
         v = self.LinkVariables(c, s, cc.name)
 
         ccac_domain = z3.And(*s.assertion_list)
+        assert isinstance(ccac_domain, z3.BoolRef)
         se = self.setup_environment(c, v)
         sd = self.setup_definitions(c, v)
         ccac_definitions = z3.And(*sd.assertion_list)
+        assert isinstance(ccac_definitions, z3.BoolRef)
         # not_too_adversarial_init_cwnd(cc, c, se, v)
         environment = z3.And(*se.assertion_list)
+        assert isinstance(environment, z3.BoolRef)
 
         verifier_vars, definition_vars = self.get_cegis_vars(cc, c, v)
 

@@ -95,7 +95,7 @@ assert (not CONVERGENCE_BASED_ON_BUFFER) or USE_BUFFER
 synthesis_type = SynthesisType.RATE_ONLY
 template_type = TemplateType.IF_ELSE_CHAIN
 # template_type = TemplateType.IF_ELSE_COMPOUND_DEPTH_1
-# template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
+template_type = TemplateType.IF_ELSE_3LEAF_UNBALANCED
 
 """
 if (cond):
@@ -144,8 +144,8 @@ if SELF_AS_RVALUE:
                      TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
 
 search_range_cond_vars_time = (-1, 0, 1)
-# search_range_cond_vars_bytes = tuple(list(range(-2, 3)) + [1.5, -1.5])
-search_range_cond_vars_bytes = tuple(list(range(-2, 3)))
+search_range_cond_vars_bytes = tuple(list(range(-2, 3)) + [1.5, -1.5])
+# search_range_cond_vars_bytes = tuple(list(range(-2, 3)))
 # search_range_cond_consts = tuple(range(-6, 7))
 search_range_cond_consts = tuple(range(-2, 3))
 cond_terms = [

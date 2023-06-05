@@ -12,8 +12,8 @@ from ccac.variables import VariableNames
 from ccmatic.cegis import CegisCCAGen, CegisConfig, CegisMetaData, VerifierType
 from ccmatic.common import flatten, get_renamed_vars, try_except, try_except_wrapper
 from ccmatic.verifier import (BaseLink, SteadyStateVariable,
-                              get_cex_df,
-                              get_gen_cex_df, run_verifier_incomplete)
+                              get_gen_cex_df,
+                              run_verifier_incomplete)
 from ccmatic.verifier.desired import get_belief_invariant, \
     get_desired_necessary, get_desired_ss_invariant
 from ccmatic.verifier.assumptions import AssumptionVerifier
@@ -22,8 +22,8 @@ from ccmatic.verifier.ideal import IdealLink
 from ccmatic.verifier.tbf import TBFLink
 from cegis import NAME_TEMPLATE
 from cegis.multi_cegis import VerifierStruct
-from cegis.util import (Metric, fix_metrics, get_raw_value, optimize_multi_var, optimize_var_nopushpop,
-                        z3_min)
+from cegis.util import (Metric, fix_metrics, get_raw_value,
+                        optimize_multi_var, optimize_var_nopushpop, z3_min)
 from pyz3_utils.common import GlobalConfig
 from pyz3_utils.my_solver import MySolver
 
@@ -152,7 +152,9 @@ class CCmatic():
         self.specification = z3.Implies(self.environment, self.desired)
         assert(isinstance(self.specification, z3.ExprRef))
         _definitions = z3.And(
-            self.ccac_domain, self.ccac_definitions, *template_definitions)
+            self.ccac_domain,
+            self.ccac_definitions,
+            z3.And(*template_definitions))
         assert(isinstance(_definitions, z3.ExprRef))
         self.definitions = _definitions
 

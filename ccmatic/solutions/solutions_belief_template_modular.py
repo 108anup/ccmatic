@@ -723,6 +723,22 @@ def get_solutions_ccac(main_tb: TemplateBuilder,
                 + 2min_c
             """, main_tb)
         solution_dict['probe_qdel_paced'] = probe_qdel_paced
+
+    if (n_exprs >= 3 and
+        template_type == TemplateType.IF_ELSE_CHAIN and
+            main_lhs_term == 'r_f'):
+        probe_until_shrink_3expr = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ -2min_c + 1max_c > 0):
+                + 2min_c
+            elif (-2min_c + 1.5max_c + 1alpha):
+                + 1min_c
+            else:
+                + 1min_c + -1alpha
+            """, main_tb)
+        solution_dict['probe_until_shrink_3expr'] = probe_until_shrink_3expr
+
     return solution_dict
 
 
