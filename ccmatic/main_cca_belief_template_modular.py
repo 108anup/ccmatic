@@ -133,9 +133,9 @@ expr_terms = [
 if (args.verifier_type == VerifierType.cbrdelay):
     expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars_min_c_lambda))
-    if(not args.finite_buffer):
-        expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
-                                       TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+    # if(not args.finite_buffer):
+    expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
+                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
 else:
     expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))

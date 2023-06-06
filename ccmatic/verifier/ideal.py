@@ -79,6 +79,8 @@ class IdealLink(BaseLink):
         # variables to be absent. So call get_cegis_vars before calling to
         # setup definitions and environment. TODO: remove this dependency.
 
+        c.D = 0
+
         # No need for tokens and waste
         if(not cc.assumption_verifier):
             del v.C0
