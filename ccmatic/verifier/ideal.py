@@ -74,6 +74,16 @@ class IdealLink(BaseLink):
                 r2 = v.A[t] - v.L[t-1]
                 s.add(v.S[t] == z3.If(r1 < r2, r1, r2))
 
+    def post_init(self, cc: CegisConfig, c: ModelConfig, s: MySolver, v: Variables):
+        # Ideal link deletes certain variables. Later functions require these
+        # variables to be absent. So call get_cegis_vars before calling to
+        # setup definitions and environment. TODO: remove this dependency.
+
+        # No need for tokens and waste
+        if(not cc.assumption_verifier):
+            del v.C0
+            del v.W
+
     def get_cegis_vars(
         self,
         cc: CegisConfig, c: ModelConfig, v: Variables
@@ -89,11 +99,6 @@ class IdealLink(BaseLink):
         verifier_vars = flatten(
             [v.A_f[:, :history], v.c_f[:, :history], v.r_f[:, :history],
              v.alpha, v.S_f[:, :history]])
-
-        # No need for tokens and waste
-        if(not cc.assumption_verifier):
-            del v.C0
-            del v.W
 
         assert c.loss_oracle
 
@@ -156,6 +161,10 @@ class IdealLink(BaseLink):
                     verifier_vars.extend(flatten(
                         v.max_buffer[:, :1]))
             verifier_vars.extend(flatten(v.start_state_f))
+            definition_vars.extend(flatten([
+                v.utilized, v.utilized_cummulative,
+                v.max_measured_c, v.min_measured_c
+            ]))
 
         if(c.app_limited):
             verifier_vars.extend(flatten(v.app_limits))

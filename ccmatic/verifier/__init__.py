@@ -1800,8 +1800,8 @@ def get_gen_cex_df(
             ret.append(get_raw_value(solution.eval(cex_var)))
         return ret
     cex_dict = {
-        get_name_for_list(vn.A): _get_model_value(v.A),
-        get_name_for_list(vn.S): _get_model_value(v.S),
+        # get_name_for_list(vn.A): _get_model_value(v.A),
+        # get_name_for_list(vn.S): _get_model_value(v.S),
         # get_name_for_list(vn.L): _get_model_value(v.L),
     }
     for n in range(c.N):
@@ -1811,14 +1811,78 @@ def get_gen_cex_df(
             get_name_for_list(vn.r_f[n]): _get_model_value(v.r_f[n]),
             get_name_for_list(vn.S_f[n]): _get_model_value(v.S_f[n]),
             get_name_for_list(vn.L_f[n]): _get_model_value(v.L_f[n]),
-            # get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
+            get_name_for_list(vn.Ld_f[n]): _get_model_value(v.Ld_f[n]),
             # get_name_for_list(vn.timeout_f[n]): _get_model_value(v.timeout_f[n]),
         })
     if(hasattr(v, 'W')):
         cex_dict.update({
             get_name_for_list(vn.W): _get_model_value(v.W)})
 
+    if(c.beliefs):
+        for n in range(c.N):
+            cex_dict.update({
+                get_name_for_list(vn.min_c[n]): _get_model_value(v.min_c[n]),
+                get_name_for_list(vn.max_c[n]): _get_model_value(v.max_c[n]),
+                get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
+                # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
+                })
+        if(c.buf_min is not None and c.beliefs_use_buffer):
+            for n in range(c.N):
+                cex_dict.update({
+                    get_name_for_list(vn.min_buffer[n]): _get_model_value(v.min_buffer[n])})
+            if(c.beliefs_use_max_buffer):
+                for n in range(c.N):
+                    cex_dict.update({
+                        get_name_for_list(vn.max_buffer[n]): _get_model_value(v.max_buffer[n])})
+
     df = pd.DataFrame(cex_dict).astype(float)
+
+    queue_t = []
+    for t in range(c.T):
+        queue_t.append(
+            get_raw_value(solution.eval(
+                v.A[t] - v.L[t] - v.S[t])))
+    df["queue_t"] = queue_t
+
+    if (c.calculate_qdel and c.beliefs):
+        for n in range(c.N):
+            utilized_t = [-1]
+            for t in range(1, c.T):
+                high_delay = z3.Not(z3.Or(*[v.qdel[t][dt]
+                                            for dt in range(c.D+1)]))
+                loss = v.Ld_f[n][t] - v.Ld_f[n][t-1] > 0
+                if(c.D == 0):
+                    assert c.loss_oracle
+                    loss = v.L_f[n][t] - v.L_f[n][t-1] > 0
+                sent_new_pkts = v.A_f[n][t] - v.A_f[n][t-1] > 0
+                # recvd_new_pkts = v.S_f[n][t] - v.S_f[n][t-1] > 0
+                recvd_new_pkts = True
+                this_utilized = z3.Or(
+                    z3.And(high_delay, sent_new_pkts, recvd_new_pkts),
+                    loss)
+                utilized_t.append(get_raw_value(
+                    solution.eval(this_utilized)))
+            df[f"utilized_{n},t"] = utilized_t
+
+    if(hasattr(v, 'C0') and hasattr(v, 'W')):
+        bottle_queue_t = []
+        token_queue_t = []
+        for t in range(c.T):
+            bottle_queue_t.append(
+                get_raw_value(counter_example.eval(
+                    v.A[t] - v.L[t] - (v.C0 + c.C * t - v.W[t])
+                )))
+            token_queue_t.append(
+                get_raw_value(counter_example.eval(
+                    v.C0 + c.C * t - v.W[t] - v.S[t]
+                )))
+        df["bqueue_t"] = bottle_queue_t
+        df["tqueue_t"] = token_queue_t
+
+    if(c.N == 1):
+        df["del_A_f"] = df[get_name_for_list(vn.A_f[0])] - df[get_name_for_list(vn.A_f[0])].shift(1)
+        df["del_S_f"] = df[get_name_for_list(vn.S_f[0])] - df[get_name_for_list(vn.S_f[0])].shift(1)
+        df["del_L_f"] = df[get_name_for_list(vn.L_f[0])] - df[get_name_for_list(vn.L_f[0])].shift(1)
 
     if(c.calculate_qbound):
         qdelay = []
@@ -2190,6 +2254,9 @@ class BaseLink:
 
         return verifier_vars, definition_vars
 
+    def post_init(self, cc: CegisConfig, c: ModelConfig, s: MySolver, v: Variables):
+        pass
+
     def setup_cegis_input(self, cc: CegisConfig, name=None):
         if(name is not None):
             cc.name = name
@@ -2197,7 +2264,9 @@ class BaseLink:
         s = MySolver()
         s.warn_undeclared = False
         v = self.LinkVariables(c, s, cc.name)
+        self.post_init(cc, c, s, v)
 
+        verifier_vars, definition_vars = self.get_cegis_vars(cc, c, v)
         ccac_domain = z3.And(*s.assertion_list)
         assert isinstance(ccac_domain, z3.BoolRef)
         se = self.setup_environment(c, v)
@@ -2207,8 +2276,6 @@ class BaseLink:
         # not_too_adversarial_init_cwnd(cc, c, se, v)
         environment = z3.And(*se.assertion_list)
         assert isinstance(environment, z3.BoolRef)
-
-        verifier_vars, definition_vars = self.get_cegis_vars(cc, c, v)
 
         return (c, s, v,
                 ccac_domain, ccac_definitions, environment,

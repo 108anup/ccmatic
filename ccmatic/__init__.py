@@ -264,6 +264,7 @@ class CCmatic():
                 assert(isinstance(self.definitions, z3.ExprRef))
                 f.write(self.definitions.sexpr())
 
+        # import ipdb; ipdb.set_trace()
         md = CegisMetaData(self.critical_generator_vars)
         cg = CegisCCAGen(
             self.generator_vars, self.verifier_vars, self.definition_vars,
