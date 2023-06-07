@@ -885,7 +885,7 @@ class CCACProofs(Proofs):
         ]
         metric_lists = [
             [Metric(cc.desired_queue_bound_multiplier, 0, 16, 0.1, False)],
-            [Metric(cc.desired_util_f, 0.8, 1, 1e-2, True)],
+            [Metric(cc.desired_util_f, 0.5, 1, 1e-2, True)],
             [Metric(cc.desired_loss_count_bound, 0, (cc.T-1)/2 + 1, EPS, False)],
             [Metric(cc.desired_large_loss_count_bound, 0, 0, EPS, False)],
             [Metric(cc.desired_loss_amount_bound_multiplier, 0, (cc.T-1)/2 + 1, 0.1, False)],
