@@ -575,7 +575,7 @@ class CCACProofs(Proofs):
             # [Metric(self.movement_mult__consistent,
             #         c.maxc_minc_change_mult, 2, 1e-3, True)]
             [Metric(self.movement_mult__consistent,
-                    1.5, 4, 1e-3, True)]
+                    1.1, 4, 1e-3, True)]
         ]
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists,
