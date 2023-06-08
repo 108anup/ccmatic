@@ -606,6 +606,7 @@ class CCACProofs(Proofs):
         EPS = 1
         metric_lists = [
             [Metric(self.steady__min_c.lo, EPS, c.C-EPS, EPS, True)],
+            # [Metric(self.steady__min_c.lo, 47, c.C-EPS, EPS, True)],
             [Metric(self.steady__max_c.hi, c.C+EPS, 10 * c.C, EPS, False)]
         ]
         os = OptimizationStruct(link, self.vs, [], metric_lists,

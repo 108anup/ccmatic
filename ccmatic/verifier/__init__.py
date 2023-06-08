@@ -1607,6 +1607,8 @@ def get_cex_df(
     counter_example: z3.ModelRef, v: Variables,
     vn: VariableNames, c: ModelConfig
 ) -> pd.DataFrame:
+    assert isinstance(v, BaseLink.LinkVariables)
+
     def _get_model_value(l):
         return get_model_value_list(counter_example, l)
 
@@ -1628,6 +1630,7 @@ def get_cex_df(
     if(c.feasible_response):
         cex_dict.update({
             get_name_for_list(vn.S_choice): _get_model_value(v.S_choice)})
+
     if(c.beliefs):
         for n in range(c.N):
             cex_dict.update({
@@ -1636,6 +1639,11 @@ def get_cex_df(
                 get_name_for_list(vn.min_qdel[n]): _get_model_value(v.min_qdel[n]),
                 # get_name_for_list(vn.max_qdel[n]): _get_model_value(v.max_qdel[n])
                 })
+            recomputed_minc = []
+            for t in range(1, c.T):
+                recomputed_minc.append(v.max_measured_c[n][t][0])
+            cex_dict[f'recomputed_minc_{n},t'] = [-1] + _get_model_value(recomputed_minc)
+
         if(c.buf_min is not None and c.beliefs_use_buffer):
             for n in range(c.N):
                 cex_dict.update({
