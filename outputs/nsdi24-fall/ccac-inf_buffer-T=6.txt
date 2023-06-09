@@ -1,0 +1,1439 @@
+[06/09 11:40:33]  Namespace(infinite_buffer=True, finite_buffer=False, dynamic_buffer=False, large_buffer=False, T=6, ideal=False, app_limited=False, fix_minc=False, fix_maxc=False, use_belief_invariant_n=False, verifier_type=<VerifierType.ccac: 'ccac'>, no_large_loss=False, run_log_dir=None, solution=None, manual_query=False, cegis_with_solution=False, optimize=False, proofs=False, opt_cegis_n=False, opt_ve_n=True, opt_pdt_n=True, opt_wce_n=True, opt_feasible_n=True)
+[06/09 11:40:33]  Search size upper bound: 37440
+[06/09 11:40:33]  Adver: desired_util_f=0.5, desired_queue_bound_multiplier=4, desired_queue_bound_alpha=3, desired_loss_count_bound=0, desired_large_loss_count_bound=0, desired_loss_amount_bound_multiplier=0, desired_loss_amount_bound_alpha=0
+[06/09 11:40:33]  --------------------------------------------------------------------------------
+[06/09 11:40:33]  Iteration: 1 (0 solution, 0 counterexamples)
+[06/09 11:40:33]  Generator returned sat in 0.007429 secs.
+[06/09 11:40:33]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + -2max_c + -2alpha > 0):
+    + 1/2min_c
+else:
+    + -1alpha[0m
+[06/09 11:40:33]  Verifer returned sat in 0.318090 secs.
+[06/09 11:40:33]  sf_get_cex returned in 0.352465 secs.
+[06/09 11:40:33]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t  bqueue_t   tqueue_t   del_A_f    del_S_f  del_L_f
+0       -545.445545       1.000000        1.00000       -545.445545             0.0                     0.0        19.80198           100.0                3.0            -1.000000   0.000000          -1.0   0.00000   0.000000       NaN        NaN      NaN
+1       -525.841584   19603.960396       19.60396       -539.108911             0.0                     0.0        19.80198           100.0                0.0             3.168317  13.267327           0.0   0.00000  13.267327  19.60396   6.336634      0.0
+2       -506.237624   19617.227723       19.60396       -524.059406             0.0                     0.0        19.80198           100.0                0.0             7.524752  17.821782           0.0  -0.39604  18.217822  19.60396  15.049505      0.0
+3       -486.633663   19621.782178       19.60396       -505.841584             0.0                     0.0        19.80198           100.0                0.0            11.089109  19.207921           0.0   0.00000  19.207921  19.60396  18.217822      0.0
+4       -467.029703   19623.168317       19.60396       -467.029703             0.0                     0.0        19.80198           100.0                0.0            19.405941   0.000000           0.0   0.00000   0.000000  19.60396  38.811881      0.0
+5       -447.425743   19603.960396       19.60396       -455.940594             0.0                     0.0        19.80198           100.0                0.0            17.029703   8.514851           0.0   0.00000   8.514851  19.60396  11.089109      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1980/101, buf_size=None, start_state=[0].[0m
+[06/09 11:40:33]  --------------------------------------------------------------------------------
+[06/09 11:40:33]  Iteration: 2 (0 solution, 1 counterexamples)
+[06/09 11:40:33]  Generator returned sat in 0.003337 secs.
+[06/09 11:40:33]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + -2max_c + -2alpha > 0):
+    + 1/2min_c
+else:
+    + 1min_c[0m
+[06/09 11:40:34]  Verifer returned sat in 0.125085 secs.
+[06/09 11:40:34]  sf_get_cex returned in 0.158563 secs.
+[06/09 11:40:34]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0           21655.0            1.0            1.0           20782.6             0.0                     0.0           100.0           108.0                3.0            -1.000000    872.4          -1.0     776.4      96.0      NaN      NaN      NaN
+1           21755.0       100872.4          100.0           20953.4             0.0                     0.0           100.0           108.0                3.0            85.400000    801.6           1.0     776.4      25.2    100.0    170.8      0.0
+2           21855.0       100801.6          100.0           20994.6             0.0                     0.0           100.0           108.0                3.0            70.666667    860.4           1.0     776.4      84.0    100.0     41.2      0.0
+3           21955.0       100860.4          100.0           21079.4             0.0                     0.0           100.0           108.0                4.0            74.200000    875.6           1.0     776.4      99.2    100.0     84.8      0.0
+4           22055.0       100875.6          100.0           21278.6             0.0                     0.0           100.0           108.0                3.0            99.600000    776.4           1.0     776.4       0.0    100.0    199.2      0.0
+5           22155.0       100776.4          100.0           21278.6             0.0                     0.0           100.0           108.0                3.0            82.666667    876.4           1.0     776.4     100.0    100.0      0.0      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2/5, buf_size=None, start_state=[0].[0m
+[06/09 11:40:34]  --------------------------------------------------------------------------------
+[06/09 11:40:34]  Iteration: 3 (0 solution, 2 counterexamples)
+[06/09 11:40:34]  Generator returned sat in 0.003528 secs.
+[06/09 11:40:34]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + 1max_c + 1alpha > 0):
+    + 2min_c
+else:
+    [0m
+[06/09 11:40:34]  Verifer returned sat in 0.282389 secs.
+[06/09 11:40:34]  sf_get_cex returned in 0.318026 secs.
+[06/09 11:40:34]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t   queue_t  utilized_0,t  bqueue_t  tqueue_t   del_A_f   del_S_f  del_L_f
+0        776.033854       1.000000       1.000000        776.029948             0.0                     0.0        66.78125           100.0                0.0            -1.000000  0.003906          -1.0 -0.037500  0.041406       NaN       NaN      NaN
+1        776.205729     171.878906       0.171875        776.071354             0.0                     0.0        66.78125           100.0                0.0             0.020703  0.134375           0.0  0.000000  0.134375  0.171875  0.041406      0.0
+2        776.377604     172.009375       0.171875        776.361979             0.0                     0.0        66.78125           100.0                0.0             0.145313  0.015625           0.0 -0.015625  0.031250  0.171875  0.290625      0.0
+3        776.549479     171.890625       0.171875        776.393229             0.0                     0.0        66.78125           100.0                0.0             0.107292  0.156250           0.0  0.000000  0.156250  0.171875  0.031250      0.0
+4        776.721354     172.031250       0.171875        776.549479             0.0                     0.0        66.78125           100.0                0.0             0.119531  0.171875           0.0  0.000000  0.171875  0.171875  0.156250      0.0
+5        776.893229     172.046875       0.171875        776.758854             0.0                     0.0        66.78125           100.0                0.0             0.137500  0.134375           0.0  0.000000  0.134375  0.171875  0.209375      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=11/64, buf_size=None, start_state=[0].[0m
+[06/09 11:40:34]  --------------------------------------------------------------------------------
+[06/09 11:40:34]  Iteration: 4 (0 solution, 3 counterexamples)
+[06/09 11:40:34]  Generator returned sat in 0.004931 secs.
+[06/09 11:40:34]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_c + 1max_c + 1alpha > 0):
+    + -1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:40:34]  Verifer returned sat in 0.135988 secs.
+[06/09 11:40:34]  sf_get_cex returned in 0.173951 secs.
+[06/09 11:40:34]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0     -99662.133333       1.000000       1.000000     -99955.733333             0.0                     0.0            99.6           100.0                4.0            -1.000000  293.600000          -1.0  293.600000    0.000000         NaN         NaN      NaN
+1     -99463.200000  199226.933333     198.933333     -99855.733333             0.0                     0.0            99.6           100.0                4.0            50.000000  392.533333           1.0  392.533333    0.000000  198.933333  100.000000      0.0
+2     -99264.266667  199325.866667     198.933333     -99855.733333             0.0                     0.0            99.6           100.0                4.0            33.333333  591.466667           1.0  491.466667  100.000000  198.933333    0.000000      0.0
+3     -99065.333333  199524.800000     198.933333     -99661.866667             0.0                     0.0            99.6           100.0                1.0            96.933333  596.533333           1.0  590.400000    6.133333  198.933333  193.866667      0.0
+4     -98866.400000  199529.866667     198.933333     -99596.888889             0.0                     0.0            99.6           100.0                2.0            86.281481  730.488889           1.0  689.333333   41.155556  198.933333   64.977778      0.0
+5     -98667.466667  199663.822222     198.933333     -99468.533333             0.0                     0.0            99.6           100.0                3.0            96.800000  801.066667           1.0  788.266667   12.800000  198.933333  128.355556      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=4/15, buf_size=None, start_state=[0].[0m
+[06/09 11:40:34]  --------------------------------------------------------------------------------
+[06/09 11:40:34]  Iteration: 5 (0 solution, 4 counterexamples)
+[06/09 11:40:35]  Generator returned sat in 0.006278 secs.
+[06/09 11:40:35]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -2max_c + 2alpha > 0):
+    + -1alpha + 2min_c
+else:
+    + 1alpha + 1/2min_c[0m
+[06/09 11:40:35]  Verifer returned sat in 0.472672 secs.
+[06/09 11:40:35]  sf_get_cex returned in 0.509915 secs.
+[06/09 11:40:35]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0            -408.5           1.00            1.0          -1208.25             0.0                     0.0           100.0           100.0                5.0            -1.000000   799.75          -1.0    700.75     99.00      NaN      NaN      NaN
+1            -214.0      195299.75          194.5          -1031.00             0.0                     0.0           100.0           100.0                5.0            88.625000   817.00           1.0    795.25     21.75    194.5   177.25      0.0
+2             -19.5      195317.00          194.5           -909.75             0.0                     0.0           100.0           100.0                5.0            99.500000   890.25           1.0    889.75      0.50    194.5   121.25      0.0
+3             175.0      195390.25          194.5           -877.25             0.0                     0.0           100.0           100.0                5.0            82.750000  1052.25           1.0    984.25     68.00    194.5    32.50      0.0
+4             369.5      195552.25          194.5           -809.25             0.0                     0.0           100.0           100.0                5.0            79.800000  1178.75           1.0   1078.75    100.00    194.5    68.00      0.0
+5             564.0      195678.75          194.5           -670.25             0.0                     0.0           100.0           100.0                5.0            89.666667  1234.25           1.0   1173.25     61.00    194.5   139.00      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=11/2, buf_size=None, start_state=[0].[0m
+[06/09 11:40:35]  --------------------------------------------------------------------------------
+[06/09 11:40:35]  Iteration: 6 (0 solution, 5 counterexamples)
+[06/09 11:40:35]  Generator returned sat in 0.003633 secs.
+[06/09 11:40:35]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -2max_c + 2alpha > 0):
+    + 2min_c
+else:
+    + 1alpha + 1/2min_c[0m
+[06/09 11:40:36]  Verifer returned sat in 0.279660 secs.
+[06/09 11:40:36]  sf_get_cex returned in 0.315556 secs.
+[06/09 11:40:36]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0      17208.000000       1.000000       1.000000      16775.733119             0.0                     0.0       90.956592           100.0                1.0            -1.000000  432.266881          -1.0  350.514469  81.752412         NaN         NaN      NaN
+1      17389.913183  182345.450161     181.913183      16957.485531             0.0                     0.0       90.956592           100.0                2.0            90.876206  432.427653           1.0  432.427653   0.000000  181.913183  181.752412      0.0
+2      17571.826367  182345.610932     181.913183      17017.855305             0.0                     0.0       90.956592           100.0                3.0            80.707395  553.971061           1.0  514.340836  39.630225  181.913183   60.369775      0.0
+3      17753.739550  182467.154341     181.913183      17139.077170             0.0                     0.0       90.956592           100.0                2.0            90.836013  614.662379           1.0  596.254019  18.408360  181.913183  121.221865      0.0
+4      17935.652733  182527.845659     181.913183      17198.000000             0.0                     0.0       90.956592           100.0                3.0            84.453376  737.652733           1.0  678.167203  59.485531  181.913183   58.922830      0.0
+5      18117.565916  182650.836013     181.913183      17257.726688             0.0                     0.0       90.956592           100.0                3.0            80.332262  859.839228           1.0  760.080386  99.758842  181.913183   59.726688      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=6195/311, buf_size=None, start_state=[0].[0m
+[06/09 11:40:36]  --------------------------------------------------------------------------------
+[06/09 11:40:36]  Iteration: 7 (0 solution, 6 counterexamples)
+[06/09 11:40:36]  Generator returned sat in 0.003466 secs.
+[06/09 11:40:36]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -2max_c + 2alpha > 0):
+    + 1alpha + 2min_c
+else:
+    + 1alpha + 1/2min_c[0m
+[06/09 11:40:36]  Verifer returned sat in 0.215265 secs.
+[06/09 11:40:36]  sf_get_cex returned in 0.252277 secs.
+[06/09 11:40:36]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0     -61394.590164       1.000000       1.000000     -61699.836066             0.0                     0.0            99.0           100.0                5.0            -1.000000  305.245902          -1.0  224.098361   81.147541         NaN         NaN      NaN
+1     -61176.918033  217977.377049     217.672131     -61546.721311             0.0                     0.0            99.0           100.0                5.0            76.557377  369.803279           1.0  341.770492   28.032787  217.672131  153.114754      0.0
+2     -60959.245902  218041.934426     217.672131     -61419.016393             0.0                     0.0            99.0           100.0                1.0            93.606557  459.770492           1.0  459.442623    0.327869  217.672131  127.704918      0.0
+3     -60741.573770  218131.901639     217.672131     -61394.262295             0.0                     0.0            99.0           100.0                1.0            76.393443  652.688525           1.0  577.114754   75.573770  217.672131   24.754098      0.0
+4     -60523.901639  218324.819672     217.672131     -61318.688525             0.0                     0.0            99.0           100.0                2.0            76.229508  794.786885           1.0  694.786885  100.000000  217.672131   75.573770      0.0
+5     -60306.229508  218466.918033     217.672131     -61165.573770             0.0                     0.0            99.0           100.0                2.0            89.043716  859.344262           1.0  812.459016   46.885246  217.672131  153.114754      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1200/61, buf_size=None, start_state=[0].[0m
+[06/09 11:40:36]  --------------------------------------------------------------------------------
+[06/09 11:40:36]  Iteration: 8 (0 solution, 7 counterexamples)
+[06/09 11:40:36]  Generator returned sat in 0.013283 secs.
+[06/09 11:40:36]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -2max_c + -2alpha > 0):
+    + 1alpha + 2min_c
+else:
+    + 1alpha + 1min_c[0m
+[06/09 11:40:37]  Verifer returned sat in 0.452454 secs.
+[06/09 11:40:37]  sf_get_cex returned in 0.488398 secs.
+[06/09 11:40:37]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0       -156.638655       1.000000       1.000000       -971.050420             0.0                     0.0           100.0           100.0                3.0            -1.000000  814.411765          -1.0  715.672269  98.739496         NaN         NaN      NaN
+1        -37.058824  120394.243697     119.579832       -800.777311             0.0                     0.0           100.0           100.0                4.0            85.136555  763.718487           1.0  735.252101  28.466387  119.579832  170.273109      0.0
+2         82.521008  120343.550420     119.579832       -672.310924             0.0                     0.0           100.0           100.0                3.0            99.579832  754.831933           1.0  754.831933   0.000000  119.579832  128.466387      0.0
+3        202.100840  120334.663866     119.579832       -639.677871             0.0                     0.0           100.0           100.0                4.0            82.843137  841.778711           1.0  774.411765  67.366947  119.579832   32.633053      0.0
+4        321.680672  120421.610644     119.579832       -571.890756             0.0                     0.0           100.0           100.0                3.0            79.831933  893.571429           1.0  793.991597  99.579832  119.579832   67.787115      0.0
+5        441.260504  120473.403361     119.579832       -417.899160             0.0                     0.0           100.0           100.0                4.0            92.191877  859.159664           1.0  813.571429  45.588235  119.579832  153.991597      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2330/119, buf_size=None, start_state=[0].[0m
+[06/09 11:40:37]  --------------------------------------------------------------------------------
+[06/09 11:40:37]  Iteration: 9 (0 solution, 8 counterexamples)
+[06/09 11:40:37]  Generator returned sat in 0.008019 secs.
+[06/09 11:40:37]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -3/2max_c + 2alpha > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 1alpha + 1min_c[0m
+[06/09 11:40:38]  Verifer returned sat in 0.377257 secs.
+[06/09 11:40:38]  sf_get_cex returned in 0.414735 secs.
+[06/09 11:40:38]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0        -114478.00           1.00           1.00       -115263.000             0.0                     0.0           100.0           119.0                5.0            -1.000000  785.000          -1.0    686.00    99.000      NaN      NaN      NaN
+1        -114363.75      115035.00         114.25       -115129.500             0.0                     0.0           100.0           119.0                5.0            66.750000  765.750           1.0    700.25    65.500   114.25  133.500      0.0
+2        -114249.50      115015.75         114.25       -115064.000             0.0                     0.0           100.0           119.0                5.0            66.333333  814.500           1.0    714.50   100.000   114.25   65.500      0.0
+3        -114135.25      115064.50         114.25       -114864.000             0.0                     0.0           100.0           119.0                4.0           100.000000  728.750           1.0    728.75     0.000   114.25  200.000      0.0
+4        -114021.00      114978.75         114.25       -114864.000             0.0                     0.0           100.0           119.0                4.0            79.800000  843.000           1.0    743.00   100.000   114.25    0.000      0.0
+5        -113906.75      115093.00         114.25       -114731.625             0.0                     0.0           100.0           119.0                4.0            88.562500  824.875           1.0    757.25    67.625   114.25  132.375      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=57/4, buf_size=None, start_state=[0].[0m
+[06/09 11:40:38]  --------------------------------------------------------------------------------
+[06/09 11:40:38]  Iteration: 10 (0 solution, 9 counterexamples)
+[06/09 11:40:38]  Generator returned sat in 0.004521 secs.
+[06/09 11:40:38]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -3/2max_c + 2alpha > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:40:39]  Verifer returned sat in 0.692107 secs.
+[06/09 11:40:39]  sf_get_cex returned in 0.729326 secs.
+[06/09 11:40:39]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t      queue_t  utilized_0,t    bqueue_t    tqueue_t    del_A_f     del_S_f  del_L_f
+0       -399.436620       1.000000        1.00000       -955.455399             0.0                     0.0        92.29108           100.0                3.0            -1.000000   556.018779          -1.0  495.971831   60.046948        NaN         NaN      NaN
+1       -214.854460  185138.178404      184.58216       -797.098592             0.0                     0.0        92.29108           100.0                4.0            79.178404   582.244131           1.0  580.553991    1.690141  184.58216  158.356808      0.0
+2        -30.272300  185164.403756      184.58216       -695.971831             0.0                     0.0        92.29108           100.0                4.0            86.494523   665.699531           1.0  665.136150    0.563380  184.58216  101.126761      0.0
+3        154.309859  185247.859155      184.58216       -646.816901             0.0                     0.0        92.29108           100.0                4.0            77.159624   801.126761           1.0  749.718310   51.408451  184.58216   49.154930      0.0
+4        338.892019  185383.286385      184.58216       -495.408451             0.0                     0.0        92.29108           100.0                3.0            92.009390   834.300469           1.0  834.300469    0.000000  184.58216  151.408451      0.0
+5        523.474178  185416.460094      184.58216       -495.408451             0.0                     0.0        92.29108           100.0                3.0            76.674491  1018.882629           1.0  918.882629  100.000000  184.58216    0.000000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=20/71, buf_size=None, start_state=[0].[0m
+[06/09 11:40:39]  --------------------------------------------------------------------------------
+[06/09 11:40:39]  Iteration: 11 (0 solution, 10 counterexamples)
+[06/09 11:40:39]  Generator returned sat in 0.007823 secs.
+[06/09 11:40:39]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:40:39]  Verifer returned sat in 0.240068 secs.
+[06/09 11:40:39]  sf_get_cex returned in 0.277143 secs.
+[06/09 11:40:39]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t  del_A_f     del_S_f  del_L_f
+0          -1575.25       1.000000            1.0      -1974.009259             0.0                     0.0            97.0      129.333333                5.0            -1.000000  398.759259          -1.0  329.333333  69.425926      NaN         NaN      NaN
+1          -1381.25  194398.759259          194.0      -1897.583333             0.0                     0.0            97.0      129.333333                3.0            38.212963  516.333333           1.0  423.333333  93.000000    194.0   76.425926      0.0
+2          -1187.25  194516.333333          194.0      -1704.583333             0.0                     0.0            97.0      129.333333                4.0            96.500000  517.333333           1.0  517.333333   0.000000    194.0  193.000000      0.0
+3           -993.25  194517.333333          194.0      -1662.305556             0.0                     0.0            97.0      129.333333                4.0            78.425926  669.055556           1.0  611.333333  57.722222    194.0   42.277778      0.0
+4           -799.25  194669.055556          194.0      -1574.750000             0.0                     0.0            97.0      129.333333                2.0            80.708333  775.500000           1.0  705.333333  70.166667    194.0   87.555556      0.0
+5           -605.25  194775.500000          194.0      -1437.157407             0.0                     0.0            97.0      129.333333                3.0            92.085185  831.907407           1.0  799.333333  32.574074    194.0  137.592593      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/2, buf_size=None, start_state=[0].[0m
+[06/09 11:40:40]  --------------------------------------------------------------------------------
+[06/09 11:40:40]  Iteration: 12 (0 solution, 11 counterexamples)
+[06/09 11:40:40]  Generator returned sat in 0.006839 secs.
+[06/09 11:40:40]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + -1alpha > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:40:40]  Verifer returned sat in 0.368681 secs.
+[06/09 11:40:40]  sf_get_cex returned in 0.406109 secs.
+[06/09 11:40:40]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0    -136465.254902       1.000000       1.000000    -137066.196078             0.0                     0.0       67.960784           100.0                4.0            -1.000000  600.941176          -1.0  598.176471    2.764706         NaN         NaN      NaN
+1    -136329.333333  136522.509804     135.921569    -136964.725490             0.0                     0.0       67.960784           100.0                4.0            50.735294  635.392157           1.0  634.098039    1.294118  135.921569  101.470588      0.0
+2    -136193.411765  136556.960784     135.921569    -136863.490196             0.0                     0.0       67.960784           100.0                1.0            67.568627  670.078431           1.0  670.019608    0.058824  135.921569  101.235294      0.0
+3    -136057.490196  136591.647059     135.921569    -136863.372549             0.0                     0.0       67.960784           100.0                2.0            50.705882  805.882353           1.0  705.941176   99.941176  135.921569    0.117647      0.0
+4    -135921.568627  136727.450980     135.921569    -136763.431373             0.0                     0.0       67.960784           100.0                3.0            60.552941  841.862745           1.0  741.862745  100.000000  135.921569   99.941176      0.0
+5    -135785.647059  136763.431373     135.921569    -136661.372549             0.0                     0.0       67.960784           100.0                4.0            67.470588  875.725490           1.0  777.784314   97.941176  135.921569  102.058824      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=33/17, buf_size=None, start_state=[0].[0m
+[06/09 11:40:40]  --------------------------------------------------------------------------------
+[06/09 11:40:40]  Iteration: 13 (0 solution, 12 counterexamples)
+[06/09 11:40:41]  Generator returned sat in 0.014868 secs.
+[06/09 11:40:41]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_c + 2max_c + -1alpha > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:40:41]  Verifer returned sat in 0.426851 secs.
+[06/09 11:40:41]  sf_get_cex returned in 0.465322 secs.
+[06/09 11:40:41]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t    tqueue_t    del_A_f    del_S_f  del_L_f
+0      17036.000000       1.000000       1.000000      17007.888922             0.0                     0.0       74.165924           100.0                3.0            -1.000000  28.111078          -1.0  28.111078    0.000000        NaN        NaN      NaN
+1      17073.134937   37163.048213      37.134937      17036.000000             0.0                     0.0       74.165924           100.0                4.0            14.055539  37.134937           1.0 -34.753985   71.888922  37.134937  28.111078      0.0
+2      17110.269874   37172.072072      37.134937      17107.888922             0.0                     0.0       74.165924           100.0                0.0            35.944461   2.380952           0.0 -10.687061   13.068013  37.134937  71.888922      0.0
+3      17147.404811   37137.318087      37.134937      17120.956935             0.0                     0.0       74.165924           100.0                0.0            28.318978  26.447876           0.0   0.000000   26.447876  37.134937  13.068013      0.0
+4      17184.539749   37161.385011      37.134937      17147.404811             0.0                     0.0       74.165924           100.0                0.0            27.903178  37.134937           0.0 -23.297198   60.432135  37.134937  26.447876      0.0
+5      17221.674686   37172.072072      37.134937      17207.836947             0.0                     0.0       74.165924           100.0                0.0            34.367389  13.837739           0.0 -86.162261  100.000000  37.134937  60.432135      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=25/481, buf_size=None, start_state=[0].[0m
+[06/09 11:40:41]  --------------------------------------------------------------------------------
+[06/09 11:40:41]  Iteration: 14 (0 solution, 13 counterexamples)
+[06/09 11:40:42]  Generator returned sat in 0.013810 secs.
+[06/09 11:40:42]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + 1max_c + 2alpha > 0):
+    + 1min_c
+else:
+    [0m
+[06/09 11:40:42]  Verifer returned sat in 0.303957 secs.
+[06/09 11:40:42]  sf_get_cex returned in 0.341065 secs.
+[06/09 11:40:42]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t  del_A_f     del_S_f  del_L_f
+0     -99820.102339       1.000000            1.0    -100711.154971             0.0                     0.0           100.0      110.131579                3.0            -1.000000  891.052632          -1.0  792.017544  99.035088      NaN         NaN      NaN
+1     -99720.102339  100891.052632          100.0    -100545.540936             0.0                     0.0           100.0      110.131579                3.0            82.807018  825.438596           1.0  792.017544  33.421053    100.0  165.614035      0.0
+2     -99620.102339  100825.438596          100.0    -100412.119883             0.0                     0.0           100.0      110.131579                4.0            99.678363  792.017544           1.0  792.017544   0.000000    100.0  133.421053      0.0
+3     -99520.102339  100792.017544          100.0    -100380.014620             0.0                     0.0           100.0      110.131579                4.0            82.785088  859.912281           1.0  792.017544  67.894737    100.0   32.105263      0.0
+4     -99420.102339  100859.912281          100.0    -100301.944444             0.0                     0.0           100.0      110.131579                3.0            81.842105  881.842105           1.0  792.017544  89.824561    100.0   78.070175      0.0
+5     -99320.102339  100881.842105          100.0    -100145.540936             0.0                     0.0           100.0      110.131579                4.0            94.269006  825.438596           1.0  792.017544  33.421053    100.0  156.403509      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2275/114, buf_size=None, start_state=[0].[0m
+[06/09 11:40:42]  --------------------------------------------------------------------------------
+[06/09 11:40:42]  Iteration: 15 (0 solution, 14 counterexamples)
+[06/09 11:40:42]  Generator returned sat in 0.004418 secs.
+[06/09 11:40:42]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + 1max_c + 2alpha > 0):
+    + -1alpha + 2min_c
+else:
+    [0m
+[06/09 11:40:43]  Verifer returned sat in 0.504010 secs.
+[06/09 11:40:43]  sf_get_cex returned in 0.540436 secs.
+[06/09 11:40:43]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0     -19459.459459       1.000000       1.000000     -19462.054054             0.0                     0.0       92.612613           100.0                1.0            -1.000000   2.594595          -1.0   2.594595   0.000000        NaN        NaN      NaN
+1     -19440.000000   19462.054054      19.459459     -19453.297297             0.0                     0.0       92.612613           100.0                0.0             4.378378  13.297297           0.0 -18.378378  31.675676  19.459459   8.756757      0.0
+2     -19420.540541   19472.756757      19.459459     -19421.621622             0.0                     0.0       92.612613           100.0                0.0            15.837838   1.081081           0.0   0.000000   1.081081  19.459459  31.675676      0.0
+3     -19401.081081   19460.540541      19.459459     -19420.540541             0.0                     0.0       92.612613           100.0                0.0            10.918919  19.459459           0.0 -19.459459  38.918919  19.459459   1.081081      0.0
+4     -19381.621622   19478.918919      19.459459     -19381.621622             0.0                     0.0       92.612613           100.0                0.0            19.459459   0.000000           0.0   0.000000   0.000000  19.459459  38.918919      0.0
+5     -19362.162162   19459.459459      19.459459     -19375.459459             0.0                     0.0       92.612613           100.0                0.0            15.567568  13.297297           0.0 -80.540541  93.837838  19.459459   6.162162      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=720/37, buf_size=None, start_state=[0].[0m
+[06/09 11:40:43]  --------------------------------------------------------------------------------
+[06/09 11:40:43]  Iteration: 16 (0 solution, 15 counterexamples)
+[06/09 11:40:44]  Generator returned sat in 0.015990 secs.
+[06/09 11:40:44]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + 3/2max_c + -2alpha > 0):
+    + 1alpha + 2min_c
+else:
+    + -1alpha + 1/2min_c[0m
+[06/09 11:40:44]  Verifer returned sat in 0.329448 secs.
+[06/09 11:40:44]  sf_get_cex returned in 0.367974 secs.
+[06/09 11:40:44]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0     -52255.220833           1.00            1.0     -52811.270833             0.0                     0.0          91.325           100.0                4.0               -1.000   556.05          -1.0    554.55      1.50      NaN      NaN      NaN
+1     -52071.320833      184456.05          183.9     -52710.270833             0.0                     0.0          91.325           100.0                4.0               50.500   638.95           1.0    638.45      0.50    183.9   101.00      0.0
+2     -51887.420833      184538.95          183.9     -52691.420833             0.0                     0.0          91.325           100.0                2.0               39.950   804.00           1.0    722.35     81.65    183.9    18.85      0.0
+3     -51703.520833      184704.00          183.9     -52509.770833             0.0                     0.0          91.325           100.0                3.0               90.825   806.25           1.0    806.25      0.00    183.9   181.65      0.0
+4     -51519.620833      184706.25          183.9     -52509.770833             0.0                     0.0          91.325           100.0                3.0               60.550   990.15           1.0    890.15    100.00    183.9     0.00      0.0
+5     -51335.720833      184890.15          183.9     -52327.120833             0.0                     0.0          91.325           100.0                4.0               91.325   991.40           1.0    974.05     17.35    183.9   182.65      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=5/4, buf_size=None, start_state=[0].[0m
+[06/09 11:40:44]  --------------------------------------------------------------------------------
+[06/09 11:40:44]  Iteration: 17 (0 solution, 16 counterexamples)
+[06/09 11:40:45]  Generator returned sat in 0.020391 secs.
+[06/09 11:40:45]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -3/2min_c + 1max_c + -2alpha > 0):
+    + 2min_c
+else:
+    + -1alpha + 1/2min_c[0m
+[06/09 11:40:45]  Verifer returned sat in 0.415535 secs.
+[06/09 11:40:45]  sf_get_cex returned in 0.450407 secs.
+[06/09 11:40:45]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0        372.086364       1.000000       1.000000        372.086364             0.0                     0.0       70.772727          141.75                5.0            -1.000000   0.000000          -1.0   0.000000   0.000000        NaN        NaN      NaN
+1        389.881818   17795.454545      17.795455        372.086364             0.0                     0.0       70.772727          141.75                5.0             0.000000  17.795455           1.0   0.000000  17.795455  17.795455   0.000000      0.0
+2        407.677273   17813.250000      17.795455        389.881818             0.0                     0.0       70.772727          141.75                0.0             8.897727  17.795455           0.0   0.000000  17.795455  17.795455  17.795455      0.0
+3        425.472727   17813.250000      17.795455        407.677273             0.0                     0.0       70.772727          141.75                0.0            11.863636  17.795455           0.0   0.000000  17.795455  17.795455  17.795455      0.0
+4        443.268182   17813.250000      17.795455        425.677273             0.0                     0.0       70.772727          141.75                0.0            13.397727  17.590909           0.0   0.000000  17.590909  17.795455  18.000000      0.0
+5        461.063636   17813.045455      17.795455        456.972727             0.0                     0.0       70.772727          141.75                0.0            16.977273   4.090909           0.0 -82.204545  86.295455  17.795455  31.295455      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=783/44, buf_size=None, start_state=[0].[0m
+[06/09 11:40:45]  --------------------------------------------------------------------------------
+[06/09 11:40:45]  Iteration: 18 (0 solution, 17 counterexamples)
+[06/09 11:40:46]  Generator returned sat in 0.010406 secs.
+[06/09 11:40:46]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    
+else:
+    + 1alpha + 1/2min_c[0m
+[06/09 11:40:46]  Verifer returned sat in 0.526553 secs.
+[06/09 11:40:46]  sf_get_cex returned in 0.564806 secs.
+[06/09 11:40:46]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t   queue_t  utilized_0,t   bqueue_t   tqueue_t  del_A_f    del_S_f  del_L_f
+0          -5777.75       1.000000           1.00      -5786.250000             0.0                     0.0           9.375           100.0                0.0            -1.000000  8.500000          -1.0   8.500000   0.000000      NaN        NaN      NaN
+1          -5768.50    9258.500000           9.25      -5768.500000             0.0                     0.0           9.375           100.0                0.0             8.875000  0.000000           0.0  -0.833333   0.833333     9.25  17.750000      0.0
+2          -5759.25    9250.000000           9.25      -5767.666667             0.0                     0.0           9.375           100.0                0.0             6.194444  8.416667           0.0   0.000000   8.416667     9.25   0.833333      0.0
+3          -5750.00    9258.416667           9.25      -5759.250000             0.0                     0.0           9.375           100.0                0.0             6.750000  9.250000           0.0   0.000000   9.250000     9.25   8.416667      0.0
+4          -5740.75    9259.250000           9.25      -5741.666667             0.0                     0.0           9.375           100.0                0.0             8.916667  0.916667           0.0   0.000000   0.916667     9.25  17.583333      0.0
+5          -5731.50    9250.916667           9.25      -5731.500000             0.0                     0.0           9.375           100.0                0.0             9.250000  0.000000           0.0 -90.750000  90.750000     9.25  10.166667      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=73/16, buf_size=None, start_state=[0].[0m
+[06/09 11:40:46]  --------------------------------------------------------------------------------
+[06/09 11:40:46]  Iteration: 19 (0 solution, 18 counterexamples)
+[06/09 11:40:47]  Generator returned sat in 0.005024 secs.
+[06/09 11:40:47]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    
+else:
+    + 1alpha + 1min_c[0m
+[06/09 11:40:47]  Verifer returned sat in 0.489816 secs.
+[06/09 11:40:47]  sf_get_cex returned in 0.527788 secs.
+[06/09 11:40:47]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0    -160077.102804       1.000000       1.000000    -160141.268692             0.0                     0.0       45.226636           100.0                1.0            -1.000000  64.165888          -1.0  33.123832  31.042056        NaN        NaN      NaN
+1    -160031.850467   45316.502336      45.252336    -160110.226636             0.0                     0.0       45.226636           100.0                2.0            15.521028  78.376168           1.0   0.000000  78.376168  45.252336  31.042056      0.0
+2    -160031.824766     104.077103       0.025701    -160031.824766             0.0                     0.0       45.226636           100.0                0.0            39.200935   0.000000           0.0 -15.032710  15.032710   0.025701  78.401869      0.0
+3    -159986.572430   45252.336449      45.252336    -160016.792056             0.0                     0.0       45.226636           100.0                0.0            31.144860  30.219626           0.0   0.000000  30.219626  45.252336  15.032710      0.0
+4    -159941.320093   45282.556075      45.252336    -159986.572430             0.0                     0.0       45.226636           100.0                0.0            30.939252  45.252336           0.0   0.000000  45.252336  45.252336  30.219626      0.0
+5    -159896.067757   45297.588785      45.252336    -159941.294393             0.0                     0.0       45.226636           100.0                0.0            33.786449  45.226636           0.0 -54.747664  99.974299  45.252336  45.278037      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=11/428, buf_size=None, start_state=[0].[0m
+[06/09 11:40:47]  --------------------------------------------------------------------------------
+[06/09 11:40:47]  Iteration: 20 (0 solution, 19 counterexamples)
+[06/09 11:40:48]  Generator returned sat in 0.008944 secs.
+[06/09 11:40:48]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    + -1alpha
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:40:48]  Verifer returned sat in 0.324410 secs.
+[06/09 11:40:48]  sf_get_cex returned in 0.362614 secs.
+[06/09 11:40:48]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t   queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0           16392.0          1.000            1.0         15499.125             0.0                     0.0           100.0           100.0                2.0            -1.000000   892.875          -1.0     809.0    83.875      NaN      NaN      NaN
+1           16400.5       9392.875            8.5         15653.875             0.0                     0.0           100.0           100.0                1.0            77.375000   746.625           1.0     717.5    29.125      8.5  154.750      0.0
+2           16609.0     209246.625          208.5         15783.000             0.0                     0.0           100.0           100.0                1.0            94.625000   826.000           1.0     826.0     0.000    208.5  129.125      0.0
+3           16817.5     209326.000          208.5         15807.625             0.0                     0.0           100.0           100.0                2.0            77.125000  1009.875           1.0     934.5    75.375    208.5   24.625      0.0
+4           16826.0       9509.875            8.5         15883.500             0.0                     0.0           100.0           100.0                3.0            76.875000   942.500           1.0     843.0    99.500      8.5   75.875      0.0
+5           16834.5       9442.500            8.5         16038.250             0.0                     0.0           100.0           100.0                4.0            89.854167   796.250           1.0     751.5    44.750      8.5  154.750      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=17/2, buf_size=None, start_state=[0].[0m
+[06/09 11:40:48]  --------------------------------------------------------------------------------
+[06/09 11:40:48]  Iteration: 21 (0 solution, 20 counterexamples)
+[06/09 11:40:49]  Generator returned sat in 0.009371 secs.
+[06/09 11:40:49]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:40:49]  Verifer returned sat in 0.263993 secs.
+[06/09 11:40:49]  sf_get_cex returned in 0.301936 secs.
+[06/09 11:40:49]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0      26354.000000       1.000000       1.000000      25636.133333             0.0                     0.0           100.0           104.0                3.0            -1.000000  717.866667          -1.0  625.466667  92.400000         NaN         NaN      NaN
+1      26354.266667     984.533333       0.266667      25794.666667             0.0                     0.0           100.0           104.0                1.0            79.266667  559.600000           1.0  525.733333  33.866667    0.266667  158.533333      0.0
+2      26554.000000  200292.933333     199.733333      25928.533333             0.0                     0.0           100.0           104.0                1.0            97.466667  625.466667           1.0  625.466667   0.000000  199.733333  133.866667      0.0
+3      26753.733333  200358.800000     199.733333      25952.666667             0.0                     0.0           100.0           104.0                2.0            79.133333  801.066667           1.0  725.200000  75.866667  199.733333   24.133333      0.0
+4      26754.000000    1067.733333       0.266667      26032.800000             0.0                     0.0           100.0           104.0                3.0            79.333333  721.200000           1.0  625.466667  95.733333    0.266667   80.133333      0.0
+5      26754.266667     987.866667       0.266667      26194.666667             0.0                     0.0           100.0           104.0                4.0            93.088889  559.600000           1.0  525.733333  33.866667    0.266667  161.866667      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=4/15, buf_size=None, start_state=[0].[0m
+[06/09 11:40:49]  --------------------------------------------------------------------------------
+[06/09 11:40:49]  Iteration: 22 (0 solution, 21 counterexamples)
+[06/09 11:40:50]  Generator returned sat in 0.012435 secs.
+[06/09 11:40:50]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1min_c
+else:
+    + 1alpha[0m
+[06/09 11:40:50]  Verifer returned sat in 0.242685 secs.
+[06/09 11:40:50]  sf_get_cex returned in 0.280289 secs.
+[06/09 11:40:50]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0        139.500000       1.000000       1.000000         39.500000             0.0                     0.0       40.428571           100.0                0.0            -1.000000  100.000000          -1.0  100.000000   0.000000        NaN        NaN      NaN
+1        179.928571   40528.571429      40.428571         69.214286             0.0                     0.0       40.428571           100.0                1.0            14.857143  110.714286           1.0   40.428571  70.285714  40.428571  29.714286      0.0
+2        189.000000    9182.142857       9.071429        139.500000             0.0                     0.0       40.428571           100.0                2.0            35.142857   49.500000           1.0    0.000000  49.500000   9.071429  70.285714      0.0
+3        198.071429    9120.928571       9.071429        189.000000             0.0                     0.0       40.428571           100.0                0.0            39.928571    9.071429           0.0    0.000000   9.071429   9.071429  49.500000      0.0
+4        238.500000   40437.642857      40.428571        198.071429             0.0                     0.0       40.428571           100.0                0.0            32.214286   40.428571           0.0   -0.500000  40.928571  40.428571   9.071429      0.0
+5        278.928571   40469.000000      40.428571        239.000000             0.0                     0.0       40.428571           100.0                0.0            33.957143   39.928571           0.0    0.000000  39.928571  40.428571  40.928571      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=127/14, buf_size=None, start_state=[0].[0m
+[06/09 11:40:50]  --------------------------------------------------------------------------------
+[06/09 11:40:50]  Iteration: 23 (0 solution, 22 counterexamples)
+[06/09 11:40:51]  Generator returned sat in 0.013234 secs.
+[06/09 11:40:51]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c + -2alpha > 0):
+    + -1alpha
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:40:52]  Verifer returned sat in 0.545327 secs.
+[06/09 11:40:52]  sf_get_cex returned in 0.582762 secs.
+[06/09 11:40:52]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0       -341.290429       1.000000       1.000000       -705.589573             0.0                     0.0            99.0      123.963157                2.0            -1.000000  364.299144          -1.0  282.585215  81.713929         NaN         NaN      NaN
+1       -149.318061  192336.666627     191.972367       -620.274146             0.0                     0.0            99.0      123.963157                3.0            42.657713  470.956085           1.0  374.557583  96.398502  191.972367   85.315427      0.0
+2         42.654306  192443.323568     191.972367       -448.440298             0.0                     0.0            99.0      123.963157                3.0            85.916924  491.094604           1.0  466.529950  24.564654  191.972367  171.833848      0.0
+3        234.626674  192463.462087     191.972367       -323.875644             0.0                     0.0            99.0      123.963157                1.0            98.799501  558.502318           1.0  558.502318   0.000000  191.972367  124.564654      0.0
+4        426.599041  192530.869800     191.972367       -320.166409             0.0                     0.0            99.0      123.963157                2.0            77.084633  746.765450           1.0  650.474685  96.290765  191.972367    3.709235      0.0
+5        618.571409  192719.132933     191.972367       -199.711988             0.0                     0.0            99.0      123.963157                3.0            84.312931  818.283397           1.0  742.447053  75.836344  191.972367  120.454421      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=101433/16828, buf_size=None, start_state=[0].[0m
+[06/09 11:40:52]  --------------------------------------------------------------------------------
+[06/09 11:40:52]  Iteration: 24 (0 solution, 23 counterexamples)
+[06/09 11:40:52]  Generator returned sat in 0.010019 secs.
+[06/09 11:40:52]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + -2alpha > 0):
+    + -1alpha
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:40:53]  Verifer returned sat in 0.279338 secs.
+[06/09 11:40:53]  sf_get_cex returned in 0.315041 secs.
+[06/09 11:40:53]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0      13854.000000       1.000000       1.000000      13339.321429             0.0                     0.0            93.0      117.964286                3.0            -1.000000  514.678571          -1.0  436.428571  78.250000         NaN         NaN      NaN
+1      14029.232143  175746.821429     175.232143      13498.607143             0.0                     0.0            93.0      117.964286                3.0            79.642857  530.625000           1.0  511.660714  18.964286  175.232143  159.285714      0.0
+2      14204.464286  175762.767857     175.232143      13617.571429             0.0                     0.0            93.0      117.964286                4.0            92.750000  586.892857           1.0  586.892857   0.000000  175.232143  118.964286      0.0
+3      14379.696429  175819.035714     175.232143      13657.392857             0.0                     0.0            93.0      117.964286                3.0            79.517857  722.303571           1.0  662.125000  60.178571  175.232143   39.821429      0.0
+4      14554.928571  175954.446429     175.232143      13735.535714             0.0                     0.0            93.0      117.964286                3.0            79.242857  819.392857           1.0  737.357143  82.035714  175.232143   78.142857      0.0
+5      14730.160714  176051.535714     175.232143      13854.000000             0.0                     0.0            93.0      117.964286                4.0            85.779762  876.160714           1.0  812.589286  63.571429  175.232143  118.464286      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=603/56, buf_size=None, start_state=[0].[0m
+[06/09 11:40:53]  --------------------------------------------------------------------------------
+[06/09 11:40:53]  Iteration: 25 (0 solution, 24 counterexamples)
+[06/09 11:40:54]  Generator returned sat in 0.019523 secs.
+[06/09 11:40:54]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:40:54]  Verifer returned unsat in 0.663364 secs.
+[06/09 11:40:54]  sf_get_cex returned in 0.701137 secs.
+[06/09 11:40:54]  Proved solution: 
+[1m[92mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:40:54]  --------------------------------------------------------------------------------
+[06/09 11:40:54]  Iteration: 26 (1 solution, 24 counterexamples)
+[06/09 11:40:55]  Generator returned sat in 0.004185 secs.
+[06/09 11:40:55]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:40:55]  Verifer returned sat in 0.304049 secs.
+[06/09 11:40:55]  sf_get_cex returned in 0.340197 secs.
+[06/09 11:40:55]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0    -146660.311316       1.000000       1.000000    -147412.613927             0.0                     0.0            89.0           125.0                5.0            -1.000000  752.302611          -1.0  752.302611    0.000000         NaN         NaN      NaN
+1    -146583.448029   77615.589862      76.863287    -147387.942652             0.0                     0.0            89.0           125.0                0.0            12.335637  804.494624           0.0  729.165899   75.328725   76.863287   24.671275      0.0
+2    -146405.448029  178804.494624     178.000000    -147312.613927             0.0                     0.0            89.0           125.0                1.0            37.664363  907.165899           1.0  807.165899  100.000000  178.000000   75.328725      0.0
+3    -146328.584741   77770.453149      76.863287    -147134.887353             0.0                     0.0            89.0           125.0                2.0            88.863287  806.302611           1.0  784.029186   22.273425   76.863287  177.726575      0.0
+4    -146251.721454   77669.589862      76.863287    -147088.268305             0.0                     0.0            89.0           125.0                3.0            74.918587  836.546851           1.0  760.892473   75.654378   76.863287   46.619048      0.0
+5    -146174.858167   77699.834101      76.863287    -147008.564772             0.0                     0.0            89.0           125.0                4.0            76.012289  833.706605           1.0  737.755760   95.950845   76.863287   79.703533      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=7901/651, buf_size=None, start_state=[0].[0m
+[06/09 11:40:55]  --------------------------------------------------------------------------------
+[06/09 11:40:55]  Iteration: 27 (1 solution, 25 counterexamples)
+[06/09 11:40:56]  Generator returned sat in 0.007545 secs.
+[06/09 11:40:56]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:40:57]  Verifer returned sat in 0.535029 secs.
+[06/09 11:40:57]  sf_get_cex returned in 0.572672 secs.
+[06/09 11:40:57]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0          0.000000       1.000000       1.000000       -777.862289             0.0                     0.0       98.292782           100.0                4.0            -1.000000  777.862289          -1.0  705.121655   72.740634         NaN         NaN      NaN
+1         98.060827   98838.689754      98.060827       -700.231954             0.0                     0.0       98.292782           100.0                0.0            38.815167  798.292782           0.0  703.182482   95.110299   98.060827   77.630335      0.0
+2        294.878345  197615.810387     196.817518       -506.049472             0.0                     0.0       98.292782           100.0                1.0            97.091241  800.927817           1.0  800.000000    0.927817  196.817518  194.182482      0.0
+3        392.939173   98861.755282      98.060827       -405.353609             0.0                     0.0       98.292782           100.0                2.0            98.292782  798.292782           1.0  798.060827    0.231954   98.060827  100.695863      0.0
+4        491.000000   98859.120246      98.060827       -394.349701             0.0                     0.0       98.292782           100.0                3.0            76.702518  885.349701           1.0  796.121655   89.228046   98.060827   11.003908      0.0
+5        589.060827   98946.177165      98.060827       -305.121655             0.0                     0.0       98.292782           100.0                4.0            79.022060  894.182482           1.0  794.182482  100.000000   98.060827   89.228046      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=527/2272, buf_size=None, start_state=[0].[0m
+[06/09 11:40:57]  --------------------------------------------------------------------------------
+[06/09 11:40:57]  Iteration: 28 (1 solution, 26 counterexamples)
+[06/09 11:40:58]  Generator returned sat in 0.006557 secs.
+[06/09 11:40:58]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1min_c
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:40:58]  Verifer returned sat in 0.594660 secs.
+[06/09 11:40:58]  sf_get_cex returned in 0.633090 secs.
+[06/09 11:40:58]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t  del_A_f     del_S_f  del_L_f
+0    -194263.863636       1.000000            1.0    -194912.000000             0.0                     0.0           100.0           107.0                1.0            -1.000000  648.136364          -1.0  648.136364    0.000000      NaN         NaN      NaN
+1    -194164.363636  100148.136364           99.5    -194877.909091             0.0                     0.0           100.0           107.0                0.0            17.045455  713.545455           0.0  647.636364   65.909091     99.5   34.090909      0.0
+2    -193964.863636  200213.545455          199.5    -194806.727273             0.0                     0.0           100.0           107.0                1.0            35.590909  841.863636           1.0  747.136364   94.727273    199.5   71.181818      0.0
+3    -193865.363636  100341.863636           99.5    -194667.363636             0.0                     0.0           100.0           107.0                2.0            70.181818  802.000000           1.0  746.636364   55.363636     99.5  139.363636      0.0
+4    -193765.863636  100302.000000           99.5    -194513.000000             0.0                     0.0           100.0           107.0                3.0            97.909091  747.136364           1.0  746.136364    1.000000     99.5  154.363636      0.0
+5    -193666.363636  100247.136364           99.5    -194512.000000             0.0                     0.0           100.0           107.0                4.0            73.681818  845.636364           1.0  745.636364  100.000000     99.5    1.000000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/2, buf_size=None, start_state=[0].[0m
+[06/09 11:40:58]  --------------------------------------------------------------------------------
+[06/09 11:40:58]  Iteration: 29 (1 solution, 27 counterexamples)
+[06/09 11:40:59]  Generator returned sat in 0.015948 secs.
+[06/09 11:40:59]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:00]  Verifer returned sat in 0.442385 secs.
+[06/09 11:41:00]  sf_get_cex returned in 0.480558 secs.
+[06/09 11:41:00]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t      queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0    -403533.078880       1.000000       1.000000    -404350.759966             0.0                     0.0           100.0           100.0                5.0            -1.000000   817.681086          -1.0  816.154368    1.526718         NaN         NaN      NaN
+1    -403437.460560   96436.001696      95.618321    -404281.930450             0.0                     0.0           100.0           100.0                5.0            34.414758   844.469890           1.0  811.772689   32.697201   95.618321   68.829517      0.0
+2    -403341.842239   96462.790500      95.618321    -404207.107153             0.0                     0.0           100.0           100.0                5.0            47.884271   865.264914           1.0  807.391009   57.873904   95.618321   74.823297      0.0
+3    -403246.223919   96483.585524      95.618321    -404059.750636             0.0                     0.0           100.0           100.0                2.0            74.059938   813.526718           1.0  803.009330   10.517388   95.618321  147.356517      0.0
+4    -403041.842239  205195.206107     204.381679    -403949.996607             0.0                     0.0           100.0           100.0                3.0            85.703515   908.154368           1.0  907.391009    0.763359  204.381679  109.754029      0.0
+5    -402946.223919   96526.474979      95.618321    -403949.233249             0.0                     0.0           100.0           100.0                4.0            66.921120  1003.009330           1.0  903.009330  100.000000   95.618321    0.763359      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=574/131, buf_size=None, start_state=[0].[0m
+[06/09 11:41:00]  --------------------------------------------------------------------------------
+[06/09 11:41:00]  Iteration: 30 (1 solution, 28 counterexamples)
+[06/09 11:41:01]  Generator returned sat in 0.010686 secs.
+[06/09 11:41:01]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:01]  Verifer returned sat in 0.309209 secs.
+[06/09 11:41:01]  sf_get_cex returned in 0.346374 secs.
+[06/09 11:41:01]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0          0.000000       1.000000       1.000000       -764.292017             0.0                     0.0            98.0           103.0                2.0            -1.000000  764.292017          -1.0  667.401261   96.890756         NaN         NaN      NaN
+1         97.945378   98709.670168      97.945378       -599.656513             0.0                     0.0            98.0           103.0                1.0            82.317752  697.601891           1.0  665.346639   32.255252   97.945378  164.635504      0.0
+2        294.000000  196752.223739     196.054622       -470.455882             0.0                     0.0            98.0           103.0                2.0            97.945378  764.455882           1.0  761.401261    3.054622  196.054622  129.200630      0.0
+3        391.945378   98709.834034      97.945378       -436.213585             0.0                     0.0            98.0           103.0                2.0            82.019608  828.158964           1.0  759.346639   68.812325   97.945378   34.242297      0.0
+4        489.890756   98773.537115      97.945378       -367.401261             0.0                     0.0            98.0           103.0                3.0            79.378151  857.292017           1.0  757.292017  100.000000   97.945378   68.812325      0.0
+5        587.836134   98802.670168      97.945378       -212.382353             0.0                     0.0            98.0           103.0                4.0            91.984944  800.218487           1.0  755.237395   44.981092   97.945378  155.018908      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=13/238, buf_size=None, start_state=[0].[0m
+[06/09 11:41:01]  --------------------------------------------------------------------------------
+[06/09 11:41:01]  Iteration: 31 (1 solution, 29 counterexamples)
+[06/09 11:41:02]  Generator returned sat in 0.007365 secs.
+[06/09 11:41:02]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:02]  Verifer returned sat in 0.328053 secs.
+[06/09 11:41:02]  sf_get_cex returned in 0.362273 secs.
+[06/09 11:41:02]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0          0.000000       1.000000       1.000000       -648.827586             0.0                     0.0            92.0           100.0                5.0            -1.000000  648.827586          -1.0  648.827586    0.000000         NaN         NaN      NaN
+1         91.931034   92579.862069      91.931034       -648.827586             0.0                     0.0            92.0           100.0                5.0             0.000000  740.758621           1.0  640.758621  100.000000   91.931034    0.000000      0.0
+2        183.862069   92671.793103      91.931034       -498.655172             0.0                     0.0            92.0           100.0                1.0            75.086207  682.517241           1.0  632.689655   49.827586   91.931034  150.172414      0.0
+3        367.862069  184682.517241     184.000000       -373.034483             0.0                     0.0            92.0           100.0                2.0            91.931034  740.896552           1.0  716.689655   24.206897  184.000000  125.620690      0.0
+4        459.793103   92671.931034      91.931034       -348.620690             0.0                     0.0            92.0           100.0                3.0            75.051724  808.413793           1.0  708.620690   99.793103   91.931034   24.413793      0.0
+5        551.724138   92739.448276      91.931034       -248.551724             0.0                     0.0            92.0           100.0                4.0            80.055172  800.275862           1.0  700.551724   99.724138   91.931034  100.068966      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2/29, buf_size=None, start_state=[0].[0m
+[06/09 11:41:02]  --------------------------------------------------------------------------------
+[06/09 11:41:02]  Iteration: 32 (1 solution, 30 counterexamples)
+[06/09 11:41:03]  Generator returned sat in 0.020467 secs.
+[06/09 11:41:03]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + 2alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:04]  Verifer returned sat in 0.387051 secs.
+[06/09 11:41:04]  sf_get_cex returned in 0.421877 secs.
+[06/09 11:41:04]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t    del_A_f    del_S_f  del_L_f
+0      66669.218855       1.000000       1.000000      66555.602694             0.0                     0.0       41.494949           102.0                2.0            -1.000000  113.616162          -1.0  113.616162    0.000000        NaN        NaN      NaN
+1      66690.794613   21689.373737      21.575758      66638.592593             0.0                     0.0       41.494949           102.0                2.0            41.494949   52.202020           1.0   35.191919   17.010101  21.575758  82.989899      0.0
+2      66712.370370   21627.959596      21.575758      66661.655219             0.0                     0.0       41.494949           102.0                2.0            35.350842   50.715152           1.0    0.000000   50.715152  21.575758  23.062626      0.0
+3      66733.946128   21626.472727      21.575758      66721.582492             0.0                     0.0       41.494949           102.0                0.0            41.494949   12.363636           0.0    0.000000   12.363636  21.575758  59.927273      0.0
+4      66755.521886   21588.121212      21.575758      66733.946128             0.0                     0.0       41.494949           102.0                0.0            35.668687   21.575758           0.0    0.000000   21.575758  21.575758  12.363636      0.0
+5      66777.097643   21597.333333      21.575758      66755.521886             0.0                     0.0       41.494949           102.0                0.0            33.319865   21.575758           0.0  -78.424242  100.000000  21.575758  21.575758      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1972/99, buf_size=None, start_state=[0].[0m
+[06/09 11:41:04]  --------------------------------------------------------------------------------
+[06/09 11:41:04]  Iteration: 33 (1 solution, 31 counterexamples)
+[06/09 11:41:05]  Generator returned sat in 0.009486 secs.
+[06/09 11:41:05]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + 1alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:05]  Verifer returned sat in 0.318112 secs.
+[06/09 11:41:05]  sf_get_cex returned in 0.356335 secs.
+[06/09 11:41:05]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0         28578.000          1.000          1.000           28191.5             0.0                     0.0           100.0         161.875                5.0            -1.000000  386.500          -1.0   287.500      99.0      NaN      NaN      NaN
+1         28789.875     212261.500        211.875           28390.5             0.0                     0.0           100.0         161.875                0.0            99.500000  399.375           0.0   399.375       0.0  211.875    199.0      0.0
+2         29001.750     212274.375        211.875           28390.5             0.0                     0.0           100.0         161.875                0.0            66.333333  611.250           0.0   511.250     100.0  211.875      0.0      0.0
+3         29213.625     212486.250        211.875           28590.5             0.0                     0.0           100.0         161.875                1.0           100.000000  623.125           1.0   623.125       0.0  211.875    200.0      0.0
+4         29425.500     212498.125        211.875           28590.5             0.0                     0.0           100.0         161.875                1.0            79.800000  835.000           1.0   735.000     100.0  211.875      0.0      0.0
+5         29637.375     212710.000        211.875           28790.0             0.0                     0.0           100.0         161.875                2.0            99.875000  847.375           1.0   846.875       0.5  211.875    199.5      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=95/8, buf_size=None, start_state=[0].[0m
+[06/09 11:41:05]  --------------------------------------------------------------------------------
+[06/09 11:41:05]  Iteration: 34 (1 solution, 32 counterexamples)
+[06/09 11:41:06]  Generator returned sat in 0.009039 secs.
+[06/09 11:41:06]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + 1alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:06]  Verifer returned sat in 0.334797 secs.
+[06/09 11:41:06]  sf_get_cex returned in 0.372768 secs.
+[06/09 11:41:06]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t  bqueue_t    tqueue_t  del_A_f    del_S_f  del_L_f
+0     -34667.833333       1.000000            1.0     -34703.583333             0.0                     0.0            54.0           100.0                4.0            -1.000000  35.750000          -1.0     35.75    0.000000      NaN        NaN      NaN
+1     -34633.333333   34535.750000           34.5     -34663.666667             0.0                     0.0            54.0           100.0                0.0            19.958333  30.333333           0.0      0.00   30.333333     34.5  39.916667      0.0
+2     -34598.833333   34530.333333           34.5     -34627.750000             0.0                     0.0            54.0           100.0                0.0            25.277778  28.916667           0.0     -0.50   29.416667     34.5  35.916667      0.0
+3     -34564.333333   34528.916667           34.5     -34598.333333             0.0                     0.0            54.0           100.0                0.0            26.312500  34.000000           0.0    -34.50   68.500000     34.5  29.416667      0.0
+4     -34529.833333   34534.000000           34.5     -34529.833333             0.0                     0.0            54.0           100.0                0.0            34.750000   0.000000           0.0    -25.75   25.750000     34.5  68.500000      0.0
+5     -34495.333333   34500.000000           34.5     -34504.083333             0.0                     0.0            54.0           100.0                0.0            33.250000   8.750000           0.0    -91.25  100.000000     34.5  25.750000      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=39/2, buf_size=None, start_state=[0].[0m
+[06/09 11:41:06]  --------------------------------------------------------------------------------
+[06/09 11:41:06]  Iteration: 35 (1 solution, 33 counterexamples)
+[06/09 11:41:08]  Generator returned sat in 0.014741 secs.
+[06/09 11:41:08]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:08]  Verifer returned sat in 0.241320 secs.
+[06/09 11:41:08]  sf_get_cex returned in 0.280208 secs.
+[06/09 11:41:08]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0       -277.071038       1.000000       1.000000       -740.535519             0.0                     0.0       89.448087      141.989071                5.0            -1.000000  463.464481          -1.0  463.464481   0.000000         NaN         NaN      NaN
+1        -98.174863  179359.639344     178.896175       -705.333333             0.0                     0.0       89.448087      141.989071                0.0            17.601093  607.158470           0.0  542.360656  64.797814  178.896175   35.202186      0.0
+2         80.721311  179503.333333     178.896175       -634.535519             0.0                     0.0       89.448087      141.989071                1.0            35.398907  715.256831           1.0  621.256831  94.000000  178.896175   70.797814      0.0
+3        259.617486  179611.431694     178.896175       -493.333333             0.0                     0.0       89.448087      141.989071                2.0            70.666667  752.950820           1.0  700.153005  52.797814  178.896175  141.202186      0.0
+4        438.513661  179649.125683     178.896175       -421.355191             0.0                     0.0       89.448087      141.989071                3.0            71.060109  859.868852           1.0  779.049180  80.819672  178.896175   71.978142      0.0
+5        617.409836  179756.043716     178.896175       -277.005464             0.0                     0.0       89.448087      141.989071                3.0            89.382514  894.415301           1.0  857.945355  36.469945  178.896175  144.349727      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1216/61, buf_size=None, start_state=[0].[0m
+[06/09 11:41:08]  --------------------------------------------------------------------------------
+[06/09 11:41:08]  Iteration: 36 (1 solution, 34 counterexamples)
+[06/09 11:41:09]  Generator returned sat in 0.016262 secs.
+[06/09 11:41:09]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -1max_c + -1alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:09]  Verifer returned sat in 0.494651 secs.
+[06/09 11:41:09]  sf_get_cex returned in 0.532962 secs.
+[06/09 11:41:09]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0     151146.228814       1.000000       1.000000     151146.228814             0.0                     0.0            62.5           100.0                5.0            -1.000000   0.000000          -1.0   0.000000   0.000000        NaN        NaN      NaN
+1     151189.088983   42860.169492      42.860169     151166.578390             0.0                     0.0            62.5           100.0                0.0            10.174788  22.510593           0.0   0.000000  22.510593  42.860169  20.349576      0.0
+2     151231.949153   42882.680085      42.860169     151231.949153             0.0                     0.0            62.5           100.0                0.0            32.685381   0.000000           0.0   0.000000   0.000000  42.860169  65.370763      0.0
+3     151274.809322   42860.169492      42.860169     151231.949153             0.0                     0.0            62.5           100.0                0.0            21.790254  42.860169           0.0   0.000000  42.860169  42.860169   0.000000      0.0
+4     151317.669492   42903.029661      42.860169     151298.760593             0.0                     0.0            62.5           100.0                0.0            33.405720  18.908898           0.0 -20.349576  39.258475  42.860169  66.811441      0.0
+5     151360.529661   42879.078390      42.860169     151338.019068             0.0                     0.0            62.5           100.0                0.0            35.356638  22.510593           0.0   0.000000  22.510593  42.860169  39.258475      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=4635/236, buf_size=None, start_state=[0].[0m
+[06/09 11:41:10]  --------------------------------------------------------------------------------
+[06/09 11:41:10]  Iteration: 37 (1 solution, 35 counterexamples)
+[06/09 11:41:11]  Generator returned sat in 0.043645 secs.
+[06/09 11:41:11]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -1max_c + -2alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:12]  Verifer returned sat in 1.142786 secs.
+[06/09 11:41:12]  sf_get_cex returned in 1.181204 secs.
+[06/09 11:41:12]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t      queue_t  utilized_0,t     bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0      23412.961823       1.000000       1.000000      22612.237685             0.0                     0.0        72.37931           107.0                3.0            -1.000000   800.724138          -1.0   793.120690   7.603448         NaN         NaN      NaN
+1      23576.599754  164438.655172     163.637931      22719.841133             0.0                     0.0        72.37931           107.0                1.0            53.801724   856.758621           1.0   856.758621   0.000000  163.637931  107.603448      0.0
+2      23740.237685  164494.689655     163.637931      22754.743432             0.0                     0.0        72.37931           107.0                2.0            47.501916   985.494253           1.0   920.396552  65.097701  163.637931   34.902299      0.0
+3      23903.875616  164623.425287     163.637931      22899.260673             0.0                     0.0        72.37931           107.0                3.0            72.258621  1004.614943           1.0   984.034483  20.580460  163.637931  144.517241      0.0
+4      24067.513547  164642.545977     163.637931      22934.082512             0.0                     0.0        72.37931           107.0                4.0            64.368966  1133.431034           1.0  1047.672414  85.758621  163.637931   34.821839      0.0
+5      24231.151478  164771.362069     163.637931      23041.203202             0.0                     0.0        72.37931           107.0                4.0            71.614943  1189.948276           1.0  1111.310345  78.637931  163.637931  107.120690      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1095/58, buf_size=None, start_state=[0].[0m
+[06/09 11:41:12]  --------------------------------------------------------------------------------
+[06/09 11:41:12]  Iteration: 38 (1 solution, 36 counterexamples)
+[06/09 11:41:13]  Generator returned sat in 0.021166 secs.
+[06/09 11:41:13]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    + -1alpha + 1min_c
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:41:13]  Verifer returned sat in 0.387005 secs.
+[06/09 11:41:13]  sf_get_cex returned in 0.425369 secs.
+[06/09 11:41:14]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t  bqueue_t    tqueue_t  del_A_f     del_S_f  del_L_f
+0         -55686.25       1.000000           1.00     -56349.250000             0.0                     0.0           100.0      133.083333                4.0            -1.000000  663.000000          -1.0    663.00    0.000000      NaN         NaN      NaN
+1         -55598.50   88413.000000          87.75     -56315.916667             0.0                     0.0           100.0      133.083333                0.0            16.666667  717.416667           0.0    650.75   66.666667    87.75   33.333333      0.0
+2         -55410.75  188467.416667         187.75     -56247.750000             0.0                     0.0           100.0      133.083333                1.0            34.083333  837.000000           1.0    738.50   98.500000   187.75   68.166667      0.0
+3         -55223.00  188587.000000         187.75     -56109.916667             0.0                     0.0           100.0      133.083333                2.0            68.916667  886.916667           1.0    826.25   60.666667   187.75  137.833333      0.0
+4         -55135.25   88636.916667          87.75     -56049.250000             0.0                     0.0           100.0      133.083333                3.0            66.666667  914.000000           1.0    814.00  100.000000    87.75   60.666667      0.0
+5         -55047.50   88664.000000          87.75     -55849.750000             0.0                     0.0           100.0      133.083333                4.0            99.750000  802.250000           1.0    801.75    0.500000    87.75  199.500000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=49/4, buf_size=None, start_state=[0].[0m
+[06/09 11:41:14]  --------------------------------------------------------------------------------
+[06/09 11:41:14]  Iteration: 39 (1 solution, 37 counterexamples)
+[06/09 11:41:15]  Generator returned sat in 0.018624 secs.
+[06/09 11:41:15]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha + 1min_c
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:41:16]  Verifer returned sat in 1.103009 secs.
+[06/09 11:41:16]  sf_get_cex returned in 1.141506 secs.
+[06/09 11:41:16]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0     -161628.36028           1.00           1.00     -162052.16028             0.0                     0.0           100.0           104.0                2.0            -1.000000   423.80          -1.0    331.36     92.44      NaN      NaN      NaN
+1     -161430.64028      198143.80         197.72     -161859.72028             0.0                     0.0           100.0           104.0                2.0            96.220000   429.08           1.0    429.08      0.00   197.72   192.44      0.0
+2     -161232.92028      198149.08         197.72     -161859.16028             0.0                     0.0           100.0           104.0                3.0            64.333333   626.24           1.0    526.80     99.44   197.72     0.56      0.0
+3     -161135.20028       98346.24          97.72     -161667.84028             0.0                     0.0           100.0           104.0                2.0            96.080000   532.64           1.0    524.52      8.12    97.72   191.32      0.0
+4     -160937.48028      198252.64         197.72     -161628.08028             0.0                     0.0           100.0           104.0                2.0            84.816000   690.60           1.0    622.24     68.36   197.72    39.76      0.0
+5     -160739.76028      198410.60         197.72     -161546.88028             0.0                     0.0           100.0           104.0                3.0            84.213333   807.12           1.0    719.96     87.16   197.72    81.20      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=57/25, buf_size=None, start_state=[0].[0m
+[06/09 11:41:16]  --------------------------------------------------------------------------------
+[06/09 11:41:16]  Iteration: 40 (1 solution, 38 counterexamples)
+[06/09 11:41:17]  Generator returned sat in 0.014087 secs.
+[06/09 11:41:17]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha + 1min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:18]  Verifer returned sat in 0.590677 secs.
+[06/09 11:41:18]  sf_get_cex returned in 0.628505 secs.
+[06/09 11:41:18]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0     -99212.851481       1.000000       1.000000     -99587.041803             0.0                     0.0            99.0           116.0                2.0            -1.000000  374.190323          -1.0  325.925806  48.264516         NaN         NaN      NaN
+1     -99014.851481  198374.190323     198.000000     -99510.281588             0.0                     0.0            99.0           116.0                2.0            38.380108  495.430108           1.0  423.925806  71.504301  198.000000   76.760215      0.0
+2     -98816.851481  198495.430108     198.000000     -99357.554706             0.0                     0.0            99.0           116.0                3.0            76.495699  540.703226           1.0  521.925806  18.777419  198.000000  152.726882      0.0
+3     -98717.983739   99408.445161      98.867742     -99238.777287             0.0                     0.0            99.0           116.0                2.0            90.501434  520.793548           1.0  520.793548   0.000000   98.867742  118.777419      0.0
+4     -98519.983739  198520.793548     198.000000     -99205.885889             0.0                     0.0            99.0           116.0                2.0            76.231183  685.902151           1.0  618.793548  67.108602  198.000000   32.891398      0.0
+5     -98321.983739  198685.902151     198.000000     -99122.512771             0.0                     0.0            99.0           116.0                3.0            77.553763  800.529032           1.0  716.793548  83.735484  198.000000   83.373118      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=41/310, buf_size=None, start_state=[0].[0m
+[06/09 11:41:18]  --------------------------------------------------------------------------------
+[06/09 11:41:18]  Iteration: 41 (1 solution, 39 counterexamples)
+[06/09 11:41:19]  Generator returned sat in 0.028834 secs.
+[06/09 11:41:19]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c + 1alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:41:20]  Verifer returned sat in 0.495994 secs.
+[06/09 11:41:20]  sf_get_cex returned in 0.532685 secs.
+[06/09 11:41:20]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0          0.000000       1.000000       1.000000       -430.968326             0.0                     0.0       86.684766      117.728507                3.0            -1.000000  430.968326          -1.0  359.161388   71.806938         NaN         NaN      NaN
+1        170.146305  170577.273002     170.146305       -344.730015             0.0                     0.0       86.684766      117.728507                2.0            43.119155  514.876320           1.0  429.307692   85.568627  170.146305   86.238311      0.0
+2        340.292609  170661.180995     170.146305       -259.161388             0.0                     0.0       86.684766      117.728507                3.0            57.268979  599.453997           1.0  499.453997  100.000000  170.146305   85.568627      0.0
+3        510.438914  170745.758673     170.146305        -86.238311             0.0                     0.0       86.684766      117.728507                3.0            86.461538  596.677225           1.0  569.600302   27.076923  170.146305  172.923077      0.0
+4        680.585219  170742.981900     170.146305          0.223228             0.0                     0.0       86.684766      117.728507                2.0            86.461538  680.361991           1.0  639.746606   40.615385  170.146305   86.461538      0.0
+5        850.731523  170826.666667     170.146305         40.838612             0.0                     0.0       86.684766      117.728507                3.0            78.634490  809.892911           1.0  709.892911  100.000000  170.146305   40.615385      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=2137/663, buf_size=None, start_state=[0].[0m
+[06/09 11:41:20]  --------------------------------------------------------------------------------
+[06/09 11:41:20]  Iteration: 42 (1 solution, 40 counterexamples)
+[06/09 11:41:21]  Generator returned sat in 0.010850 secs.
+[06/09 11:41:21]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 3/2min_c + -1max_c + -1alpha > 0):
+    + -1alpha + 1min_c
+else:
+    + -1alpha + 2min_c[0m
+[06/09 11:41:21]  Verifer returned sat in 0.459699 secs.
+[06/09 11:41:21]  sf_get_cex returned in 0.497625 secs.
+[06/09 11:41:21]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t  bqueue_t   tqueue_t  del_A_f    del_S_f  del_L_f
+0        111.263158       1.000000            1.0        111.263158             0.0                     0.0       19.947368           100.0                0.0            -1.000000   0.000000          -1.0 -3.684211   3.684211      NaN        NaN      NaN
+1        131.263158   20000.000000           20.0        114.947368             0.0                     0.0       19.947368           100.0                0.0             1.842105  16.315789           0.0 -0.105263  16.421053     20.0   3.684211      0.0
+2        151.263158   20016.315789           20.0        131.368421             0.0                     0.0       19.947368           100.0                0.0             8.210526  19.894737           0.0  0.000000  19.894737     20.0  16.421053      0.0
+3        171.263158   20019.894737           20.0        171.052632             0.0                     0.0       19.947368           100.0                0.0            19.842105   0.210526           0.0  0.000000   0.210526     20.0  39.684211      0.0
+4        191.263158   20000.210526           20.0        181.894737             0.0                     0.0       19.947368           100.0                0.0            16.842105   9.368421           0.0 -3.684211  13.052632     20.0  10.842105      0.0
+5        211.263158   20009.368421           20.0        194.947368             0.0                     0.0       19.947368           100.0                0.0            16.000000  16.315789           0.0 -0.105263  16.421053     20.0  13.052632      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=378/19, buf_size=None, start_state=[0].[0m
+[06/09 11:41:21]  --------------------------------------------------------------------------------
+[06/09 11:41:21]  Iteration: 43 (1 solution, 41 counterexamples)
+[06/09 11:41:23]  Generator returned sat in 0.032820 secs.
+[06/09 11:41:23]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:41:23]  Verifer returned sat in 0.577311 secs.
+[06/09 11:41:23]  sf_get_cex returned in 0.615040 secs.
+[06/09 11:41:23]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0        -43.928571       1.000000       1.000000       -863.928571             0.0                     0.0           100.0           100.0                3.0            -1.000000  820.000000          -1.0  720.000000  100.000000         NaN         NaN      NaN
+1        -24.107143   20641.428571      19.821429       -710.833333             0.0                     0.0           100.0           100.0                4.0            76.547619  686.726190           1.0  639.821429   46.904762   19.821429  153.095238      0.0
+2         -4.285714   20508.154762      19.821429       -563.928571             0.0                     0.0           100.0           100.0                2.0           100.000000  559.642857           1.0  559.642857    0.000000   19.821429  146.904762      0.0
+3        195.714286  200559.642857     200.000000       -559.761905             0.0                     0.0           100.0           100.0                2.0            76.041667  755.476190           1.0  659.642857   95.833333  200.000000    4.166667      0.0
+4        395.714286  200755.476190     200.000000       -463.928571             0.0                     0.0           100.0           100.0                3.0            80.000000  859.642857           1.0  759.642857  100.000000  200.000000   95.833333      0.0
+5        415.535714   20681.071429      19.821429       -271.190476             0.0                     0.0           100.0           100.0                4.0            98.789683  686.726190           1.0  679.464286    7.261905   19.821429  192.738095      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=555/28, buf_size=None, start_state=[0].[0m
+[06/09 11:41:23]  --------------------------------------------------------------------------------
+[06/09 11:41:23]  Iteration: 44 (1 solution, 42 counterexamples)
+[06/09 11:41:25]  Generator returned sat in 0.016897 secs.
+[06/09 11:41:25]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:41:25]  Verifer returned sat in 0.508701 secs.
+[06/09 11:41:25]  sf_get_cex returned in 0.546761 secs.
+[06/09 11:41:25]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0             -75.5            1.0            1.0            -798.2             0.0                     0.0           100.0           100.0                4.0                -1.00    722.7          -1.0     623.7      99.0      NaN      NaN      NaN
+1             -57.0        19222.7           18.5            -636.6             0.0                     0.0           100.0           100.0                2.0                80.80    579.6           1.0     542.2      37.4     18.5    161.6      0.0
+2             161.5       219079.6          218.5            -499.7             0.0                     0.0           100.0           100.0                2.0                99.50    661.2           1.0     660.7       0.5    218.5    136.9      0.0
+3             380.0       219161.2          218.5            -476.0             0.0                     0.0           100.0           100.0                3.0                80.55    856.0           1.0     779.2      76.8    218.5     23.7      0.0
+4             398.5        19356.0           18.5            -399.2             0.0                     0.0           100.0           100.0                3.0                79.80    797.7           1.0     697.7     100.0     18.5     76.8      0.0
+5             417.0        19297.7           18.5            -242.6             0.0                     0.0           100.0           100.0                4.0                92.60    659.6           1.0     616.2      43.4     18.5    156.6      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=37/2, buf_size=None, start_state=[0].[0m
+[06/09 11:41:25]  --------------------------------------------------------------------------------
+[06/09 11:41:25]  Iteration: 45 (1 solution, 43 counterexamples)
+[06/09 11:41:27]  Generator returned sat in 0.020407 secs.
+[06/09 11:41:27]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -1R > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:41:27]  Verifer returned sat in 0.583647 secs.
+[06/09 11:41:27]  sf_get_cex returned in 0.620434 secs.
+[06/09 11:41:27]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t      queue_t  utilized_0,t    bqueue_t   tqueue_t     del_A_f     del_S_f  del_L_f
+0     153247.391919       1.000000       1.000000     152367.324351             0.0                     0.0            98.0           101.0                4.0            -1.000000   880.067568          -1.0  844.013514  36.054054         NaN         NaN      NaN
+1     153267.378405   20866.554054      19.986486     152407.405432             0.0                     0.0            98.0           101.0                1.0            20.040541   859.972973           1.0  764.000000  95.972973   19.986486   40.081081      0.0
+2     153463.378405  196859.972973     196.000000     152603.378405             0.0                     0.0            98.0           101.0                1.0            97.986486   860.000000           1.0  860.000000   0.000000  196.000000  195.972973      0.0
+3     153659.378405  196860.000000     196.000000     152636.939216             0.0                     0.0            98.0           101.0                2.0            76.511261  1022.439189           1.0  956.000000  66.439189  196.000000   33.560811      0.0
+4     153679.364892   21008.925676      19.986486     152704.391919             0.0                     0.0            98.0           101.0                3.0            74.246622   974.972973           1.0  875.986486  98.986486   19.986486   67.452703      0.0
+5     153699.351378   20961.459459      19.986486     152839.378405             0.0                     0.0            98.0           101.0                4.0            86.394595   859.972973           1.0  795.972973  64.000000   19.986486  134.986486      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1479/74, buf_size=None, start_state=[0].[0m
+[06/09 11:41:27]  --------------------------------------------------------------------------------
+[06/09 11:41:27]  Iteration: 46 (1 solution, 44 counterexamples)
+[06/09 11:41:29]  Generator returned sat in 0.020072 secs.
+[06/09 11:41:29]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:41:29]  Verifer returned unsat in 0.425819 secs.
+[06/09 11:41:29]  sf_get_cex returned in 0.465226 secs.
+[06/09 11:41:29]  Proved solution: 
+[1m[92mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:41:29]  --------------------------------------------------------------------------------
+[06/09 11:41:29]  Iteration: 47 (2 solution, 44 counterexamples)
+[06/09 11:41:31]  Generator returned sat in 0.021564 secs.
+[06/09 11:41:31]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + 1alpha + 2min_c
+else:
+    + 2min_c[0m
+[06/09 11:41:31]  Verifer returned sat in 0.402245 secs.
+[06/09 11:41:31]  sf_get_cex returned in 0.439957 secs.
+[06/09 11:41:31]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t  tqueue_t     del_A_f  del_S_f  del_L_f
+0          0.333333       1.000000       1.000000            -329.0             0.0                     0.0       99.166667      115.333333                2.0            -1.000000  329.333333          -1.0  299.333333      30.0         NaN      NaN      NaN
+1        198.666667  198662.666667     198.333333            -230.0             0.0                     0.0       99.166667      115.333333                0.0            49.500000  428.666667           0.0  397.666667      31.0  198.333333     99.0      0.0
+2        397.000000  198762.000000     198.333333            -197.5             0.0                     0.0       99.166667      115.333333                1.0            43.833333  594.500000           1.0  496.000000      98.5  198.333333     32.5      0.0
+3        595.333333  198927.833333     198.333333               0.5             0.0                     0.0       99.166667      115.333333                1.0            99.000000  594.833333           1.0  594.333333       0.5  198.333333    198.0      0.0
+4        793.666667  198928.166667     198.333333               1.0             0.0                     0.0       99.166667      115.333333                2.0            66.166667  792.666667           1.0  692.666667     100.0  198.333333      0.5      0.0
+5        992.000000  199126.000000     198.333333             116.0             0.0                     0.0       99.166667      115.333333                3.0            78.375000  876.000000           1.0  791.000000      85.0  198.333333    115.0      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/6, buf_size=None, start_state=[0].[0m
+[06/09 11:41:31]  --------------------------------------------------------------------------------
+[06/09 11:41:31]  Iteration: 48 (2 solution, 45 counterexamples)
+[06/09 11:41:33]  Generator returned sat in 0.077802 secs.
+[06/09 11:41:33]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 2R > 0):
+    + 1min_c
+else:
+    [0m
+[06/09 11:41:33]  Verifer returned sat in 0.447432 secs.
+[06/09 11:41:33]  sf_get_cex returned in 0.486305 secs.
+[06/09 11:41:33]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0       -174.941667           1.00            1.0       -232.541667             0.0                     0.0            40.8           100.0                1.0              -1.0000    57.60          -1.0      57.6      0.00      NaN      NaN      NaN
+1       -134.141667       40857.60           40.8       -206.191667             0.0                     0.0            40.8           100.0                2.0              13.1750    72.05           1.0      -1.6     73.65     40.8    26.35      0.0
+2       -115.141667       19072.05           19.0       -132.541667             0.0                     0.0            40.8           100.0                0.0              36.8250    17.40           0.0       0.0     17.40     19.0    73.65      0.0
+3        -74.341667       40817.40           40.8       -115.141667             0.0                     0.0            40.8           100.0                0.0              30.3500    40.80           0.0       0.0     40.80     40.8    17.40      0.0
+4        -33.541667       40840.80           40.8        -74.341667             0.0                     0.0            40.8           100.0                0.0              32.9625    40.80           0.0       0.0     40.80     40.8    40.80      0.0
+5          7.258333       40840.80           40.8        -33.541667             0.0                     0.0            40.8           100.0                0.0              34.5300    40.80           0.0     -59.2    100.00     40.8    40.80      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=19, buf_size=None, start_state=[0].[0m
+[06/09 11:41:33]  --------------------------------------------------------------------------------
+[06/09 11:41:33]  Iteration: 49 (2 solution, 46 counterexamples)
+[06/09 11:41:35]  Generator returned sat in 0.011947 secs.
+[06/09 11:41:35]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 2R > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 1alpha + 1/2min_c[0m
+[06/09 11:41:35]  Verifer returned sat in 0.543156 secs.
+[06/09 11:41:35]  sf_get_cex returned in 0.582047 secs.
+[06/09 11:41:35]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t  bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0    -226762.634409       1.000000       1.000000    -226764.569892             0.0                     0.0       19.354839           100.0                4.0            -1.000000   1.935484          -1.0  1.935484   0.000000        NaN        NaN      NaN
+1    -226733.602151   29034.193548      29.032258    -226741.344086             0.0                     0.0       19.354839           100.0                0.0            11.612903   7.741935           0.0  0.000000   7.741935  29.032258  23.225806      0.0
+2    -226714.247312   19362.580645      19.354839    -226733.602151             0.0                     0.0       19.354839           100.0                0.0            10.322581  19.354839           0.0  0.000000  19.354839  19.354839   7.741935      0.0
+3    -226694.892473   19374.193548      19.354839    -226714.247312             0.0                     0.0       19.354839           100.0                0.0            12.580645  19.354839           0.0  0.000000  19.354839  19.354839  19.354839      0.0
+4    -226675.537634   19374.193548      19.354839    -226675.537634             0.0                     0.0       19.354839           100.0                0.0            19.354839   0.000000           0.0  0.000000   0.000000  19.354839  38.709677      0.0
+5    -226656.182796   19354.838710      19.354839    -226663.924731             0.0                     0.0       19.354839           100.0                0.0            17.419355   7.741935           0.0  0.000000   7.741935  19.354839  11.612903      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=True, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=600/31, buf_size=None, start_state=[0].[0m
+[06/09 11:41:35]  --------------------------------------------------------------------------------
+[06/09 11:41:35]  Iteration: 50 (2 solution, 47 counterexamples)
+[06/09 11:41:37]  Generator returned sat in 0.014063 secs.
+[06/09 11:41:37]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + -1alpha
+else:
+    + 1alpha + 1min_c[0m
+[06/09 11:41:37]  Verifer returned sat in 0.417642 secs.
+[06/09 11:41:37]  sf_get_cex returned in 0.455687 secs.
+[06/09 11:41:37]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0       -548.160804       1.000000       1.000000       -560.160804             0.0                     0.0        37.60804           100.0                0.0            -1.000000  12.000000          -1.0  12.000000   0.000000        NaN        NaN      NaN
+1       -510.512563   37660.241206      37.648241       -543.678392             0.0                     0.0        37.60804           100.0                0.0             8.241206  33.165829           0.0  -0.040201  33.206030  37.648241  16.482412      0.0
+2       -472.864322   37681.407035      37.648241       -510.472362             0.0                     0.0        37.60804           100.0                0.0            16.603015  37.608040           0.0 -37.527638  75.135678  37.648241  33.206030      0.0
+3       -435.216080   37685.849246      37.648241       -435.336683             0.0                     0.0        37.60804           100.0                0.0            37.567839   0.120603           0.0   0.000000   0.120603  37.648241  75.135678      0.0
+4       -397.567839   37648.361809      37.648241       -410.371859             0.0                     0.0        37.60804           100.0                0.0            33.366834  12.804020           0.0   0.000000  12.804020  37.648241  24.964824      0.0
+5       -359.919598   37661.045226      37.648241       -360.201005             0.0                     0.0        37.60804           100.0                0.0            37.567839   0.281407           0.0  -0.040201   0.321608  37.648241  50.170854      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=8/199, buf_size=None, start_state=[0].[0m
+[06/09 11:41:37]  --------------------------------------------------------------------------------
+[06/09 11:41:37]  Iteration: 51 (2 solution, 48 counterexamples)
+[06/09 11:41:39]  Generator returned sat in 0.052852 secs.
+[06/09 11:41:39]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:41:39]  Verifer returned sat in 0.271435 secs.
+[06/09 11:41:39]  sf_get_cex returned in 0.310090 secs.
+[06/09 11:41:39]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0       -222.102177       1.000000       1.000000       -708.743178             0.0                     0.0       94.518564           100.0                3.0            -1.000000  486.641001          -1.0  485.825412    0.815589         NaN         NaN      NaN
+1        -13.200980  209387.837602     208.901197       -650.704363             0.0                     0.0       94.518564           100.0                2.0            29.019407  637.503383           1.0  594.726609   42.776774  208.901197   58.038815      0.0
+2         34.058302   47896.785423      47.259282       -508.063520             0.0                     0.0       94.518564           100.0                3.0            71.320421  542.121822           1.0  541.985891    0.135932   47.259282  142.640843      0.0
+3        242.959498  209443.318422     208.901197       -474.956740             0.0                     0.0       94.518564           100.0                4.0            58.582541  717.916238           1.0  650.887087   67.029151  208.901197   33.106781      0.0
+4        451.860695  209619.112838     208.901197       -407.927589             0.0                     0.0       94.518564           100.0                4.0            60.694194  859.788284           1.0  759.788284  100.000000  208.901197   67.029151      0.0
+5        660.761891  209760.984884     208.901197       -221.966245             0.0                     0.0       94.518564           100.0                3.0            92.980672  882.728137           1.0  868.689480   14.038657  208.901197  185.961343      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=20897/1052, buf_size=None, start_state=[0].[0m
+[06/09 11:41:39]  --------------------------------------------------------------------------------
+[06/09 11:41:39]  Iteration: 52 (2 solution, 49 counterexamples)
+[06/09 11:41:41]  Generator returned sat in 0.028132 secs.
+[06/09 11:41:41]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 2R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:41:41]  Verifer returned sat in 0.558306 secs.
+[06/09 11:41:41]  sf_get_cex returned in 0.597237 secs.
+[06/09 11:41:41]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t  bqueue_t    tqueue_t  del_A_f     del_S_f  del_L_f
+0     198734.333333       1.000000            1.0     198465.500000             0.0                     0.0           100.0           172.0                1.0            -1.000000  268.833333          -1.0     238.0   30.833333      NaN         NaN      NaN
+1     198951.833333  217768.833333          217.5     198596.333333             0.0                     0.0           100.0           172.0                0.0            65.416667  355.500000           0.0     355.5    0.000000    217.5  130.833333      0.0
+2     199169.333333  217855.500000          217.5     198596.333333             0.0                     0.0           100.0           172.0                0.0            43.611111  573.000000           0.0     473.0  100.000000    217.5    0.000000      0.0
+3     199386.833333  218073.000000          217.5     198796.333333             0.0                     0.0           100.0           172.0                1.0           100.000000  590.500000           1.0     590.5    0.000000    217.5  200.000000      0.0
+4     199604.333333  218090.500000          217.5     198796.333333             0.0                     0.0           100.0           172.0                1.0            66.666667  808.000000           1.0     708.0  100.000000    217.5    0.000000      0.0
+5     199821.833333  218308.000000          217.5     198968.833333             0.0                     0.0           100.0           172.0                2.0            93.125000  853.000000           1.0     825.5   27.500000    217.5  172.500000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=35/2, buf_size=None, start_state=[0].[0m
+[06/09 11:41:42]  --------------------------------------------------------------------------------
+[06/09 11:41:42]  Iteration: 53 (2 solution, 50 counterexamples)
+[06/09 11:41:43]  Generator returned sat in 0.015516 secs.
+[06/09 11:41:43]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:41:44]  Verifer returned unsat in 0.631518 secs.
+[06/09 11:41:44]  sf_get_cex returned in 0.670913 secs.
+[06/09 11:41:44]  Proved solution: 
+[1m[92mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:41:44]  --------------------------------------------------------------------------------
+[06/09 11:41:44]  Iteration: 54 (3 solution, 50 counterexamples)
+[06/09 11:41:45]  Generator returned sat in 0.018005 secs.
+[06/09 11:41:45]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -2min_c + 1max_c + 1alpha > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:41:46]  Verifer returned sat in 0.524796 secs.
+[06/09 11:41:46]  sf_get_cex returned in 0.563329 secs.
+[06/09 11:41:46]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t  bqueue_t    tqueue_t  del_A_f    del_S_f  del_L_f
+0             3.125       1.000000          1.000        -67.000000             0.0                     0.0           59.75           100.0                5.0            -1.000000  70.125000          -1.0    70.125    0.000000      NaN        NaN      NaN
+1            33.000   29945.125000         29.875        -37.895833             0.0                     0.0           59.75           100.0                4.0            14.552083  70.895833           1.0     0.000   70.895833   29.875  29.104167      0.0
+2            62.875   29945.895833         29.875         33.000000             0.0                     0.0           59.75           100.0                0.0            35.447917  29.875000           0.0     0.000   29.875000   29.875  70.895833      0.0
+3            92.750   29904.875000         29.875         92.250000             0.0                     0.0           59.75           100.0                0.0            43.381944   0.500000           0.0     0.000    0.500000   29.875  59.250000      0.0
+4           122.625   29875.500000         29.875         93.250000             0.0                     0.0           59.75           100.0                0.0            32.786458  29.375000           0.0     0.000   29.375000   29.875   1.000000      0.0
+5           152.500   29904.375000         29.875        122.625000             0.0                     0.0           59.75           100.0                0.0            32.104167  29.875000           0.0   -70.125  100.000000   29.875  29.375000      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=39/2, buf_size=None, start_state=[0].[0m
+[06/09 11:41:46]  --------------------------------------------------------------------------------
+[06/09 11:41:46]  Iteration: 55 (3 solution, 51 counterexamples)
+[06/09 11:41:48]  Generator returned sat in 0.037000 secs.
+[06/09 11:41:48]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -2min_c + 1max_c + 1alpha > 0):
+    + 1alpha + 2min_c
+else:
+    + -1alpha + 1/2min_c[0m
+[06/09 11:41:49]  Verifer returned sat in 1.051466 secs.
+[06/09 11:41:49]  sf_get_cex returned in 1.089584 secs.
+[06/09 11:41:49]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0      16036.000000       1.000000       1.000000      16036.000000             0.0                     0.0       78.064516      136.451613                3.0            -1.000000   0.000000          -1.0   0.000000   0.000000        NaN        NaN      NaN
+1      16055.677419   19677.419355      19.677419      16041.913978             0.0                     0.0       78.064516      136.451613                0.0             2.956989  13.763441           0.0   0.000000  13.763441  19.677419   5.913978      0.0
+2      16075.354839   19691.182796      19.677419      16055.677419             0.0                     0.0       78.064516      136.451613                0.0             6.881720  19.677419           0.0   0.000000  19.677419  19.677419  13.763441      0.0
+3      16095.032258   19697.096774      19.677419      16095.032258             0.0                     0.0       78.064516      136.451613                0.0            19.677419   0.000000           0.0  -5.806452   5.806452  19.677419  39.354839      0.0
+4      16114.709677   19677.419355      19.677419      16100.838710             0.0                     0.0       78.064516      136.451613                0.0            15.053763  13.870968           0.0   0.000000  13.870968  19.677419   5.806452      0.0
+5      16134.387097   19691.290323      19.677419      16134.387097             0.0                     0.0       78.064516      136.451613                0.0            19.677419   0.000000           0.0 -80.322581  80.322581  19.677419  33.548387      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=610/31, buf_size=None, start_state=[0].[0m
+[06/09 11:41:49]  --------------------------------------------------------------------------------
+[06/09 11:41:49]  Iteration: 56 (3 solution, 52 counterexamples)
+[06/09 11:41:50]  Generator returned sat in 0.045941 secs.
+[06/09 11:41:50]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c + 2alpha > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 1min_c[0m
+[06/09 11:41:51]  Verifer returned sat in 0.593285 secs.
+[06/09 11:41:51]  sf_get_cex returned in 0.633271 secs.
+[06/09 11:41:51]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t   queue_t  utilized_0,t   bqueue_t   tqueue_t   del_A_f   del_S_f  del_L_f
+0         -59.15625        1.00000        1.00000         -59.15625             0.0                     0.0         74.9375           100.0                1.0            -1.000000   0.00000          -1.0    0.00000    0.00000       NaN       NaN      NaN
+1         -21.56250    37593.75000       37.59375         -21.56250             0.0                     0.0         74.9375           100.0                0.0            18.796875   0.00000           0.0   -0.50000    0.50000  37.59375  37.59375      0.0
+2          16.03125    37593.75000       37.59375         -21.06250             0.0                     0.0         74.9375           100.0                0.0            12.697917  37.09375           0.0    0.00000   37.09375  37.59375   0.50000      0.0
+3          53.62500    37630.84375       37.59375          16.40625             0.0                     0.0         74.9375           100.0                0.0            18.890625  37.21875           0.0    0.00000   37.21875  37.59375  37.46875      0.0
+4          91.21875    37630.96875       37.59375          53.62500             0.0                     0.0         74.9375           100.0                0.0            24.895833  37.59375           0.0  -37.59375   75.18750  37.59375  37.21875      0.0
+5         128.81250    37631.34375       37.59375         128.81250             0.0                     0.0         74.9375           100.0                0.0            37.593750   0.00000           0.0 -100.00000  100.00000  37.59375  75.18750      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/8, buf_size=None, start_state=[0].[0m
+[06/09 11:41:51]  --------------------------------------------------------------------------------
+[06/09 11:41:51]  Iteration: 57 (3 solution, 53 counterexamples)
+[06/09 11:41:53]  Generator returned sat in 0.014807 secs.
+[06/09 11:41:53]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c + 1alpha > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 1min_c[0m
+[06/09 11:41:54]  Verifer returned sat in 1.347687 secs.
+[06/09 11:41:54]  sf_get_cex returned in 1.386226 secs.
+[06/09 11:41:54]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0     -42640.019792         1.0000         1.0000     -42640.019792             0.0                     0.0            74.0           100.0                3.0            -1.000000   0.0000          -1.0    0.0000    0.0000      NaN      NaN      NaN
+1     -42600.532292     39487.5000        39.4875     -42640.019792             0.0                     0.0            74.0           100.0                3.0             0.000000  39.4875           1.0    0.0000   39.4875  39.4875   0.0000      0.0
+2     -42561.044792     39526.9875        39.4875     -42584.769792             0.0                     0.0            74.0           100.0                0.0            27.625000  23.7250           0.0    0.0000   23.7250  39.4875  55.2500      0.0
+3     -42521.557292     39511.2250        39.4875     -42560.557292             0.0                     0.0            74.0           100.0                0.0            26.487500  39.0000           0.0    0.0000   39.0000  39.4875  24.2125      0.0
+4     -42482.069792     39526.5000        39.4875     -42521.557292             0.0                     0.0            74.0           100.0                0.0            29.615625  39.4875           0.0    0.0000   39.4875  39.4875  39.0000      0.0
+5     -42442.582292     39526.9875        39.4875     -42482.069792             0.0                     0.0            74.0           100.0                0.0            31.590000  39.4875           0.0  -60.5125  100.0000  39.4875  39.4875      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=199/80, buf_size=None, start_state=[0].[0m
+[06/09 11:41:54]  --------------------------------------------------------------------------------
+[06/09 11:41:54]  Iteration: 58 (3 solution, 54 counterexamples)
+[06/09 11:41:56]  Generator returned sat in 0.014446 secs.
+[06/09 11:41:56]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -3/2max_c > 0):
+    + 1alpha + 1/2min_c
+else:
+    + 1min_c[0m
+[06/09 11:41:57]  Verifer returned sat in 0.638871 secs.
+[06/09 11:41:57]  sf_get_cex returned in 0.677136 secs.
+[06/09 11:41:57]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t  bqueue_t    tqueue_t  del_A_f     del_S_f  del_L_f
+0           23722.0       1.000000            1.0      22871.500000             0.0                     0.0           100.0      133.333333                5.0            -1.000000  850.500000          -1.0     754.5   96.000000      NaN         NaN      NaN
+1           23822.0  100850.500000          100.0      23020.000000             0.0                     0.0           100.0      133.333333                5.0            74.250000  802.000000           1.0     754.5   47.500000    100.0  148.500000      0.0
+2           23922.0  100802.000000          100.0      23153.333333             0.0                     0.0           100.0      133.333333                4.0            93.944444  768.666667           1.0     754.5   14.166667    100.0  133.333333      0.0
+3           24022.0  100768.666667          100.0      23167.500000             0.0                     0.0           100.0      133.333333                2.0            74.000000  854.500000           1.0     754.5  100.000000    100.0   14.166667      0.0
+4           24122.0  100854.500000          100.0      23366.500000             0.0                     0.0           100.0      133.333333                3.0            99.500000  755.500000           1.0     754.5    1.000000    100.0  199.000000      0.0
+5           24222.0  100755.500000          100.0      23420.000000             0.0                     0.0           100.0      133.333333                4.0            91.416667  802.000000           1.0     754.5   47.500000    100.0   53.500000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1/2, buf_size=None, start_state=[0].[0m
+[06/09 11:41:57]  --------------------------------------------------------------------------------
+[06/09 11:41:57]  Iteration: 59 (3 solution, 55 counterexamples)
+[06/09 11:41:58]  Generator returned sat in 0.051904 secs.
+[06/09 11:41:59]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + 1alpha + 2min_c
+else:
+    + -1alpha + 1/2min_c[0m
+[06/09 11:41:59]  Verifer returned sat in 0.254210 secs.
+[06/09 11:41:59]  sf_get_cex returned in 0.292336 secs.
+[06/09 11:41:59]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t      queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0       -143.486334       1.000000       1.000000       -985.094177             0.0                     0.0            87.5           100.0                2.0            -1.000000   841.607843          -1.0  841.607843    0.000000         NaN         NaN      NaN
+1       -117.491236   26836.705882      25.995098       -952.251040             0.0                     0.0            87.5           100.0                2.0            16.421569   834.759804           1.0  767.602941   67.156863   25.995098   32.843137      0.0
+2        -91.496138   26829.857843      25.995098       -885.094177             0.0                     0.0            87.5           100.0                3.0            33.578431   793.598039           1.0  693.598039  100.000000   25.995098   67.156863      0.0
+3        101.258764  193548.500000     192.754902       -752.251040             0.0                     0.0            87.5           100.0                3.0            66.666667   853.509804           1.0  786.352941   67.156863  192.754902  132.843137      0.0
+4        294.013666  193608.411765     192.754902       -680.682412             0.0                     0.0            87.5           100.0                3.0            68.137255   974.696078           1.0  879.107843   95.588235  192.754902   71.568627      0.0
+5        486.768568  193729.598039     192.754902       -536.074569             0.0                     0.0            87.5           100.0                4.0            87.254902  1022.843137           1.0  971.862745   50.980392  192.754902  144.607843      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=1811/102, buf_size=None, start_state=[0].[0m
+[06/09 11:41:59]  --------------------------------------------------------------------------------
+[06/09 11:41:59]  Iteration: 60 (3 solution, 56 counterexamples)
+[06/09 11:42:01]  Generator returned sat in 0.013430 secs.
+[06/09 11:42:01]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1min_c[0m
+[06/09 11:42:01]  Verifer returned sat in 0.444503 secs.
+[06/09 11:42:01]  sf_get_cex returned in 0.482926 secs.
+[06/09 11:42:01]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0        -93.083333           1.00          1.000       -744.333333             0.0                     0.0          83.875           111.0                1.0            -1.000000   651.25          -1.0   616.750    34.500      NaN      NaN      NaN
+1         -9.208333       84526.25         83.875       -659.958333             0.0                     0.0          83.875           111.0                2.0            42.187500   650.75           1.0   600.625    50.125   83.875   84.375      0.0
+2         74.666667       84525.75         83.875       -521.083333             0.0                     0.0          83.875           111.0                3.0            74.416667   595.75           1.0   584.500    11.250   83.875  138.875      0.0
+3        262.166667      188095.75        187.500       -409.833333             0.0                     0.0          83.875           111.0                3.0            83.625000   672.00           1.0   672.000     0.000  187.500  111.250      0.0
+4        449.666667      188172.00        187.500       -409.833333             0.0                     0.0          83.875           111.0                3.0            66.900000   859.50           1.0   759.500   100.000  187.500    0.000      0.0
+5        637.166667      188359.50        187.500       -296.833333             0.0                     0.0          83.875           111.0                4.0            74.583333   934.00           1.0   847.000    87.000  187.500  113.000      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=True, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=79/4, buf_size=None, start_state=[0].[0m
+[06/09 11:42:01]  --------------------------------------------------------------------------------
+[06/09 11:42:01]  Iteration: 61 (3 solution, 57 counterexamples)
+[06/09 11:42:03]  Generator returned sat in 0.029532 secs.
+[06/09 11:42:03]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 1min_qdel + -2R > 0):
+    + 1alpha
+else:
+    + 1min_c[0m
+[06/09 11:42:03]  Verifer returned sat in 0.308900 secs.
+[06/09 11:42:03]  sf_get_cex returned in 0.347686 secs.
+[06/09 11:42:03]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t  del_A_f    del_S_f  del_L_f
+0        139.555333       1.000000            1.0        135.110889             0.0                     0.0            20.0           100.0                0.0            -1.000000   4.444444          -1.0   4.444444   0.000000      NaN        NaN      NaN
+1        159.555333   20004.444444           20.0        142.888667             0.0                     0.0            20.0           100.0                0.0             3.888889  16.666667           0.0  -0.222222  16.888889     20.0   7.777778      0.0
+2        179.555333   20016.666667           20.0        159.777556             0.0                     0.0            20.0           100.0                0.0             8.444444  19.777778           0.0 -19.777778  39.555556     20.0  16.888889      0.0
+3        199.555333   20019.777778           20.0        199.333111             0.0                     0.0            20.0           100.0                0.0            19.777778   0.222222           0.0 -13.555556  13.777778     20.0  39.555556      0.0
+4        219.555333   20000.222222           20.0        213.110889             0.0                     0.0            20.0           100.0                0.0            17.777778   6.444444           0.0   0.000000   6.444444     20.0  13.777778      0.0
+5        239.555333   20006.444444           20.0        222.888667             0.0                     0.0            20.0           100.0                0.0            16.000000  16.666667           0.0 -80.000000  96.666667     20.0   9.777778      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=178/9, buf_size=None, start_state=[0].[0m
+[06/09 11:42:03]  --------------------------------------------------------------------------------
+[06/09 11:42:03]  Iteration: 62 (3 solution, 58 counterexamples)
+[06/09 11:42:05]  Generator returned sat in 0.039562 secs.
+[06/09 11:42:05]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1alpha[0m
+[06/09 11:42:06]  Verifer returned unsat in 0.482051 secs.
+[06/09 11:42:06]  sf_get_cex returned in 0.520461 secs.
+[06/09 11:42:06]  Proved solution: 
+[1m[92mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1alpha[0m
+[06/09 11:42:06]  --------------------------------------------------------------------------------
+[06/09 11:42:06]  Iteration: 63 (4 solution, 58 counterexamples)
+[06/09 11:42:08]  Generator returned sat in 0.047698 secs.
+[06/09 11:42:08]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -1max_c + -1alpha > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 1alpha + 2min_c[0m
+[06/09 11:42:09]  Verifer returned sat in 1.060588 secs.
+[06/09 11:42:09]  sf_get_cex returned in 1.098070 secs.
+[06/09 11:42:09]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t     queue_t  utilized_0,t    bqueue_t    tqueue_t     del_A_f     del_S_f  del_L_f
+0    -110341.515152       1.000000       1.000000    -110525.606061             0.0                     0.0            99.0      178.454545                4.0            -1.000000  184.090909          -1.0  179.090909    5.000000         NaN         NaN      NaN
+1    -110123.969697  217729.545455     217.545455    -110456.363636             0.0                     0.0            99.0      178.454545                4.0            34.621212  332.393939           1.0  296.636364   35.757576  217.545455   69.242424      0.0
+2    -109906.424242  217877.848485     217.545455    -110320.606061             0.0                     0.0            99.0      178.454545                0.0            68.333333  414.181818           0.0  414.181818    0.000000  217.545455  135.757576      0.0
+3    -109688.878788  217959.636364     217.545455    -110320.606061             0.0                     0.0            99.0      178.454545                0.0            51.250000  631.727273           0.0  531.727273  100.000000  217.545455    0.000000      0.0
+4    -109471.333333  218177.181818     217.545455    -110123.515152             0.0                     0.0            99.0      178.454545                1.0            98.545455  652.181818           1.0  649.272727    2.909091  217.545455  197.090909      0.0
+5    -109253.787879  218197.636364     217.545455    -110112.878788             0.0                     0.0            99.0      178.454545                2.0            69.242424  859.090909           1.0  766.818182   92.272727  217.545455   10.636364      0.0
+fefficient=True, bounded_queue=False, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=True, ramp_down_bq=False, ramp_up_queue=True, ramp_down_queue=False, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=215/11, buf_size=None, start_state=[0].[0m
+[06/09 11:42:09]  --------------------------------------------------------------------------------
+[06/09 11:42:09]  Iteration: 64 (4 solution, 59 counterexamples)
+[06/09 11:42:11]  Generator returned sat in 0.030598 secs.
+[06/09 11:42:11]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -1max_c + -1alpha > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:42:12]  Verifer returned sat in 0.827188 secs.
+[06/09 11:42:12]  sf_get_cex returned in 0.865833 secs.
+[06/09 11:42:12]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t  queue_t  utilized_0,t  bqueue_t  tqueue_t  del_A_f  del_S_f  del_L_f
+0       10153.49975          1.000            1.0       10143.12475             0.0                     0.0            79.5           100.0                0.0              -1.0000   10.375          -1.0    10.375      0.00      NaN      NaN      NaN
+1       10173.49975      20010.375           20.0       10152.74975             0.0                     0.0            79.5           100.0                1.0               4.8125   20.750           1.0     0.000     20.75     20.0    9.625      0.0
+2       10193.49975      20020.750           20.0       10173.49975             0.0                     0.0            79.5           100.0                0.0              10.3750   20.000           0.0     0.000     20.00     20.0   20.750      0.0
+3       10213.49975      20020.000           20.0       10213.49975             0.0                     0.0            79.5           100.0                0.0              20.2500    0.000           0.0     0.000      0.00     20.0   40.000      0.0
+4       10233.49975      20000.000           20.0       10213.49975             0.0                     0.0            79.5           100.0                0.0              15.1875   20.000           0.0     0.000     20.00     20.0    0.000      0.0
+5       10253.49975      20020.000           20.0       10251.49975             0.0                     0.0            79.5           100.0                0.0              19.7500    2.000           0.0   -80.000     82.00     20.0   38.000      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=True, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=79/4, buf_size=None, start_state=[0].[0m
+[06/09 11:42:12]  --------------------------------------------------------------------------------
+[06/09 11:42:12]  Iteration: 65 (4 solution, 60 counterexamples)
+[06/09 11:42:13]  Generator returned sat in 0.029488 secs.
+[06/09 11:42:14]  Candidate solution: 
+[1m[94mr_f = max alpha,
+if (+ 2min_c + -1max_c + -1alpha > 0):
+    + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:42:14]  Verifer returned sat in 0.567502 secs.
+[06/09 11:42:14]  sf_get_cex returned in 0.607202 secs.
+[06/09 11:42:14]  Counter example: 
+[93m   adv__arrival_0,t  adv__cwnd_0,t  adv__rate_0,t  adv__service_0,t  adv__losts_0,t  adv__loss_detected_0,t  adv__min_c_0,t  adv__max_c_0,t  adv__min_qdel_0,t  recomputed_minc_0,t    queue_t  utilized_0,t   bqueue_t   tqueue_t    del_A_f    del_S_f  del_L_f
+0     101806.867779       1.000000       1.000000     101806.867779             0.0                     0.0       66.042362           100.0                1.0            -1.000000   0.000000          -1.0   0.000000   0.000000        NaN        NaN      NaN
+1     101839.888960   33021.181001      33.021181     101826.511040             0.0                     0.0       66.042362           100.0                0.0             9.821630  13.377920           0.0   0.000000  13.377920  33.021181  19.643261      0.0
+2     101872.910141   33034.558922      33.021181     101872.910141             0.0                     0.0       66.042362           100.0                0.0            23.199551   0.000000           0.0   0.000000   0.000000  33.021181  46.399101      0.0
+3     101905.931322   33021.181001      33.021181     101883.832478             0.0                     0.0       66.042362           100.0                0.0            19.241175  22.098845           0.0   0.000000  22.098845  33.021181  10.922336      0.0
+4     101938.952503   33043.279846      33.021181     101905.931322             0.0                     0.0       66.042362           100.0                0.0            19.855071  33.021181           0.0 -20.066881  53.088062  33.021181  22.098845      0.0
+5     101971.973684   33054.202182      33.021181     101959.019384             0.0                     0.0       66.042362           100.0                0.0            26.544031  12.954300           0.0   0.000000  12.954300  33.021181  53.088062      0.0
+fefficient=False, bounded_queue=True, bounded_loss_count=True, bounded_large_loss_count=True, bounded_loss_amount=True, ramp_up_cwnd=False, 
+, ramp_down_cwnd=False, ramp_up_bq=False, ramp_down_bq=False, ramp_up_queue=False, ramp_down_queue=True, loss_count=0, 
+, large_loss_count=0, loss_amount=0, beliefs_remain_consistent=True, beliefs_improve=False, alpha=33/779, buf_size=None, start_state=[0].[0m
+[06/09 11:42:14]  --------------------------------------------------------------------------------
+[06/09 11:42:14]  Iteration: 66 (4 solution, 61 counterexamples)
+[06/09 11:42:16]  Generator returned unsat in 0.138822 secs.
+[06/09 11:42:16]  [96mNo more solutions found[0m
+[06/09 11:42:16]  Final solutions:
+[06/09 11:42:16]  0: [1m[92mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha + 1/2min_c
+else:
+    + 2min_c[0m
+[06/09 11:42:16]  1: [1m[92mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1/2min_c[0m
+[06/09 11:42:16]  2: [1m[92mr_f = max alpha,
+if (+ -1min_qdel + 1R > 0):
+    + 1alpha + 2min_c
+else:
+    + 1alpha[0m
+[06/09 11:42:16]  3: [1m[92mr_f = max alpha,
+if (+ 1min_qdel > 0):
+    + -1alpha
+else:
+    + 2min_c[0m
+[06/09 11:42:16]  Took 103.297189 secs.
