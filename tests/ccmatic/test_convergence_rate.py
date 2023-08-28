@@ -1,18 +1,22 @@
 import scipy
 import math
 import matplotlib.pyplot as plt
+from plot_config.figure_type_creator import FigureTypeCreator as FTC
 
-ALPHA = 5
-MAX_LINK_RATE = 1000
+doc = FTC(paper_use_small_font=True).get_figure_type()
+
+ALPHA = 3
+MAX_LINK_RATE = 200
 STEP = 10
-START = 10
+START = 5
+BBUFFER_SEC = 1
 
 
 def get_growth(f):
     min_c = [START]
     trange = list(range(MAX_LINK_RATE))
     for t in trange:
-        min_c.append(min_c[-1] + f(min_c[-1]))
+        min_c.append(min_c[-1] + f(min_c[-1])/BBUFFER_SEC)
 
     # print(min_c)
 
@@ -34,16 +38,17 @@ if(__name__ == "__main__"):
         'const': lambda x: ALPHA,
         'linear': lambda x: x,
     }
-    fig, ax = plt.subplots()
-    ax.set_xlabel("Bandwidth")
-    ax.set_ylabel("Convergence time")
+    # fig, ax = plt.subplots()
+    fig, ax = doc.subfigures()
+    ax.set_xlabel("C (Bandwidth) [same unit as $\epsilon$]")
+    ax.set_ylabel("$F^{-1}(C)$ (Convergence time) [RTTs]")
     for name, f in fdict.items():
         print(name)
         convergence_time_func = get_growth(f)
         bw_range = range(START, MAX_LINK_RATE, STEP)
         ctime = [convergence_time_func(bw) for bw in bw_range]
         ax.plot(bw_range, ctime, label=name)
-    ax.legend()
-    ax.grid()
-    fig.set_tight_layout(True)
-    fig.savefig("tmp/convergence.pdf", bbox_inches='tight')
+    ax.legend(title="$f(C)$")
+    ax.grid(True)
+    # fig.set_tight_layout(True)
+    fig.savefig("tmp/convergence.pdf", bbox_inches='tight', pad_inches=0.01)
