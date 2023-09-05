@@ -33,22 +33,26 @@ if(__name__ == "__main__"):
         # 'const': lambda x: ALPHA,
         # 'linear': lambda x: max(ALPHA, x),
 
-        'log': math.log,
-        'sqrt': math.sqrt,
+        '$\\log(\\mathit{C})$': math.log,
+        '$\\sqrt{\\mathit{C}}$': math.sqrt,
         'const': lambda x: ALPHA,
-        'linear': lambda x: x,
+        '$\\mathit{C}$': lambda x: x,
     }
     # fig, ax = plt.subplots()
-    fig, ax = doc.subfigures()
-    ax.set_xlabel("C (Bandwidth) [same unit as $\epsilon$]")
-    ax.set_ylabel("$F^{-1}(C)$ (Convergence time) [RTTs]")
+    fig, ax = doc.subfigures(yscale=0.7)
+    ax.set_xlabel("Bandwidth $\\mathit{C}$ [same unit as $\epsilon$]")
+    ax.set_ylabel("Convergence time\n$F^{-1}(\\mathit{C})$ [$\\mathit{RTT}$s]")
     for name, f in fdict.items():
         print(name)
         convergence_time_func = get_growth(f)
         bw_range = range(START, MAX_LINK_RATE, STEP)
         ctime = [convergence_time_func(bw) for bw in bw_range]
         ax.plot(bw_range, ctime, label=name)
-    ax.legend(title="$f(C)$")
+    legend = ax.legend(title="$f(\\mathit{C})$") #, borderpad=0.2)
+    # frame = legend.get_frame()
+    # frame.set_linewidth(0.5)
+    # frame.set_edgecolor('black')
+    # legend.set_frame_on(False)
     ax.grid(True)
     # fig.set_tight_layout(True)
     fig.savefig("tmp/convergence.pdf", bbox_inches='tight', pad_inches=0.01)
