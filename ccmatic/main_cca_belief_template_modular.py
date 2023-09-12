@@ -107,7 +107,6 @@ elif (cond):
 ...
 """
 
-
 n_exprs = 2 if args.infinite_buffer else 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
@@ -116,6 +115,7 @@ elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
 # else:
 #     if(not args.dynamic_buffer and not args.app_limited):
 #         n_exprs = 2
+# n_exprs = 2
 n_conds = n_exprs - 1
 
 
@@ -341,8 +341,8 @@ else:
     cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
     # We don't expect losses in steady state. Losses only happen when beliefs
     # are changing.
-    cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 + 1
-    cc.desired_loss_amount_bound_alpha = (cc.T-1)  # (cc.T-1)/2 - 1
+    cc.desired_loss_amount_bound_multiplier = 0 # (cc.T-1)/2 + 1
+    cc.desired_loss_amount_bound_alpha = 4  # (cc.T-1)  # (cc.T-1)/2 - 1
 
 cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
