@@ -49,3 +49,9 @@ Whenever updating beliefs, you might need to update some/all of above.
    same as the non timeout belief.)
 2. For min_c_lambda we actually recompute using O(n^3) constraints, so we can
    ignore the above.
+
+### Proofs with different bq_belief
+1. Update main_.._modular.py to use correct belief (1 change)
+2. Update cbr_delay.py (verifier file) (1 change)
+3. Update proofs.py file (1 change)
+4. In cbr_delay.py: update fix_stale_minc_lambda and bq belief (2 changes)

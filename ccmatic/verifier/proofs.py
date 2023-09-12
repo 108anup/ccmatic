@@ -88,23 +88,33 @@ class CBRDelayProofs(Proofs):
             self.steady__bq_belief.final_inside())
 
     def setup_offline_cache(self):
-        if(self.solution_id == "drain_probe"):
-            self.recursive[self.movement_mult__consistent] = 1.9
-            self.recursive[self.steady__minc_c_lambda.lo] = 24
-            self.recursive[self.steady__bq_belief.hi] = 321
-            self.recursive[self.movement_add__min_c_lambda] = 0.2
+        link = self.link
+        c, v = self.link.c, self.link.v
+        assert isinstance(c, CBRDelayLink.LinkModelConfig)
+        assert isinstance(v, CBRDelayLink.LinkVariables)
 
-            """
-            [04/11 18:07:22]     adv__Desired__util_f
-            0                 0.199
-            [04/11 18:07:49]     adv__Desired__queue_bound_multiplier
-            0                                   1.5
-            [04/11 18:08:02]     adv__Desired__loss_count_bound
-            0                             3.0
-            [04/11 18:08:06]  {'adv__Desired__large_loss_count_bound': {0}}
-            [04/11 18:08:35]     adv__Desired__loss_amount_bound
-            0                              0.3
-            """
+        if(self.solution_id == "drain_probe"):
+            if(id(self.bq_belief) == id(v.bq_belief1)):
+                self.recursive[self.movement_mult__consistent] = 1.9
+                self.recursive[self.steady__minc_c_lambda.lo] = 24
+                self.recursive[self.steady__bq_belief.hi] = 321
+                self.recursive[self.movement_add__min_c_lambda] = 0.2
+
+                """
+                T = 10 (TODO verify)
+
+                [04/11 18:07:22]     adv__Desired__util_f
+                0                 0.199
+                [04/11 18:07:49]     adv__Desired__queue_bound_multiplier
+                0                                   1.5
+                [04/11 18:08:02]     adv__Desired__loss_count_bound
+                0                             3.0
+                [04/11 18:08:06]  {'adv__Desired__large_loss_count_bound': {0}}
+                [04/11 18:08:35]     adv__Desired__loss_amount_bound
+                0                              0.3
+                """
+            else:
+                pass
 
     def lemma1__beliefs_become_consistent(self,):
         link = self.link

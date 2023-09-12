@@ -120,8 +120,8 @@ class CBRDelayLink(BaseLink):
 
     class LinkModelConfig(ModelConfig):
         minc_lambda_measurement_interval: float = 1
-        fix_stale__min_c_lambda: bool = False
-        fix_stale__bq_belief: bool = False
+        fix_stale__min_c_lambda: bool = True
+        fix_stale__bq_belief: bool = True
 
     @staticmethod
     def update_bq_belief(c: ModelConfig, s: MySolver, v: Variables):
@@ -303,6 +303,9 @@ class CBRDelayLink(BaseLink):
                     # Timeout if min_c from ack rate is consistent and lower
                     # than min_c_lambda
                     minc_increased_and_lower = z3.And(v.min_c[n][c.T-1] > v.min_c[n][0], v.min_c[n][c.T-1] < overall_minc)
+                    # assert c.T > 1
+                    # minc_increased_and_lower = z3.And(
+                    #     v.max_measured_c[n][c.T-1][0] > v.max_measured_c[n][1][0], v.max_measured_c[n][c.T-1][0] < overall_minc)
 
                     # timeout_min_c_lambda = timeout_allowed
                     # timeout_min_c_lambda = z3.And(timeout_allowed, bq_went_low_rtt_ago)
@@ -314,7 +317,7 @@ class CBRDelayLink(BaseLink):
                                                              z3.If(probe_based_timeout, True, False))),
                                                  False)
 
-                    if (v.bq_belief == v.bq_belief2):
+                    if (id(v.bq_belief) == id(v.bq_belief2)):
                         # large_inflight_before_probe_list = []
                         # for _t in range(1, c.T):
                         #     large_inflight_before_probe_list.append(

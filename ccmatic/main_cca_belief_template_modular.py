@@ -341,8 +341,8 @@ else:
     cc.desired_large_loss_count_bound = 0   # if NO_LARGE_LOSS else (cc.T-1)/2
     # We don't expect losses in steady state. Losses only happen when beliefs
     # are changing.
-    cc.desired_loss_amount_bound_multiplier = 0 # (cc.T-1)/2 + 1
-    cc.desired_loss_amount_bound_alpha = 4  # (cc.T-1)  # (cc.T-1)/2 - 1
+    cc.desired_loss_amount_bound_multiplier = (cc.T-1)/2 + 1  # 0
+    cc.desired_loss_amount_bound_alpha = cc.T-1  # (cc.T-1)/2 - 1  # 4
 
 cc.opt_cegis = not args.opt_cegis_n
 cc.opt_ve = not args.opt_ve_n
