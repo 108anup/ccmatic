@@ -15,7 +15,7 @@ GlobalConfig().default_logger_setup(logger)
 
 class CBRDelayProofs(Proofs):
 
-    check_lemmas = False
+    check_lemmas = True
 
     def setup_steady_variables(self):
         super().setup_steady_variables()
@@ -101,8 +101,7 @@ class CBRDelayProofs(Proofs):
                 self.recursive[self.movement_add__min_c_lambda] = 0.2
 
                 """
-                T = 10 (TODO verify)
-
+                T = 7
                 [04/11 18:07:22]     adv__Desired__util_f
                 0                 0.199
                 [04/11 18:07:49]     adv__Desired__queue_bound_multiplier
@@ -112,6 +111,8 @@ class CBRDelayProofs(Proofs):
                 [04/11 18:08:06]  {'adv__Desired__large_loss_count_bound': {0}}
                 [04/11 18:08:35]     adv__Desired__loss_amount_bound
                 0                              0.3
+
+                With T = 9, we get 0.285 utilization
                 """
             else:
                 pass

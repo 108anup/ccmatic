@@ -300,6 +300,8 @@ class CBRDelayLink(BaseLink):
                     inflight_did_not_drain = v.bq_belief1[n][t] > v.alpha
                     probe_based_timeout = z3.And(probe_happened, probe_did_not_happen_in_last_2_rm, inflight_did_not_drain)
 
+                    probe_did_not_happen_in_last_3_rm = False  # z3.And(*[v.r_f[n][t] <= v.alpha for t in range(t-2, t+1)])
+
                     # Timeout if min_c from ack rate is consistent and lower
                     # than min_c_lambda
                     minc_increased_and_lower = z3.And(v.min_c[n][c.T-1] > v.min_c[n][0], v.min_c[n][c.T-1] < overall_minc)
@@ -314,7 +316,8 @@ class CBRDelayLink(BaseLink):
                     timeout_min_c_lambda = z3.If(timeout_allowed,
                                                  z3.If(large_loss_happened, True,
                                                        z3.If(minc_increased_and_lower, True,
-                                                             z3.If(probe_based_timeout, True, False))),
+                                                             z3.If(probe_did_not_happen_in_last_3_rm, True,
+                                                                   z3.If(probe_based_timeout, True, False)))),
                                                  False)
 
                     if (id(v.bq_belief) == id(v.bq_belief2)):
