@@ -304,6 +304,8 @@ class CBRDelayLink(BaseLink):
 
                     # Timeout if min_c from ack rate is consistent and lower
                     # than min_c_lambda
+                    # Note minc can only increase if it is consistent, so we do not need to check this.
+                    # Verifier can just set minc = C and side step this check. I do not think this is really doing anything.
                     minc_increased_and_lower = z3.And(v.min_c[n][c.T-1] > v.min_c[n][0], v.min_c[n][c.T-1] < overall_minc)
                     # assert c.T > 1
                     # minc_increased_and_lower = z3.And(
