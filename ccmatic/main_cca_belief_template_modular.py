@@ -107,7 +107,7 @@ elif (cond):
 ...
 """
 
-n_exprs = 2 if args.infinite_buffer else 3
+n_exprs = 2 if not args.dynamic_buffer else 3
 if(template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1):
     n_exprs = 4
 elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
