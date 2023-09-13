@@ -128,8 +128,8 @@ class CBRDelayProofs(Proofs):
 
                 More conservative timeout (minc_lambda_lo = 22)
                 T=7, util 0.199, queue=1.5, loss_count=3.0, loss_amt=0.3
-                T=8, util 0.219,
-                T=9,
+                T=8, util 0.219, queue=1.7, loss_count=4.1, loss_amt=0.4
+                T=9, util 0.282
                 """
                 pass
 
