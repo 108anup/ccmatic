@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument('--finite-buffer', action='store_true')
     parser.add_argument('--dynamic-buffer', action='store_true')
     parser.add_argument('--large-buffer', action='store_true')
+    parser.add_argument('--small-buffer', action='store_true')
     parser.add_argument('-T', action='store', type=int, default=6)
     parser.add_argument('--ideal', action='store_true')
     parser.add_argument('--app-limited', action='store_true')
@@ -72,6 +73,8 @@ def get_args():
 args = get_args()
 assert args.infinite_buffer + args.finite_buffer + args.dynamic_buffer == 1
 assert (not args.large_buffer) or args.dynamic_buffer
+assert (not args.small_buffer) or args.dynamic_buffer
+assert (not args.small_buffer) or (not args.large_buffer)
 logger.info(args)
 
 # ----------------------------------------------------------------
@@ -134,8 +137,10 @@ if (args.verifier_type == VerifierType.cbrdelay):
     expr_terms.append(TemplateTerm('min_c_lambda', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars_min_c_lambda))
     # if(not args.finite_buffer):
-    expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
-                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+    # expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
+    #                                 TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
+    expr_terms.append(TemplateTerm('bq_belief', TemplateTermType.VAR,
+                      TemplateTermUnit.BYTES_OR_RATE, search_range_expr_consts))
 else:
     expr_terms.append(TemplateTerm('min_c', TemplateTermType.VAR,
                                    TemplateTermUnit.BYTES_OR_RATE, search_range_expr_vars))
@@ -163,8 +168,15 @@ cond_terms = [
                  TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts),
 ]
 if (args.verifier_type == VerifierType.cbrdelay and not args.infinite_buffer):
+    cond_terms = []
     cond_terms.append(
         TemplateTerm('bq_belief', TemplateTermType.VAR,
+                     TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts))
+    cond_terms.append(
+        TemplateTerm('min_c_lambda', TemplateTermType.VAR,
+                     TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts))
+    cond_terms.append(
+        TemplateTerm('alpha', TemplateTermType.CONST,
                      TemplateTermUnit.BYTES_OR_RATE, search_range_cond_consts))
 if (USE_BUFFER and args.dynamic_buffer):
     cond_terms.append(TemplateTerm('min_buffer', TemplateTermType.VAR, TemplateTermUnit.TIME,
@@ -226,12 +238,12 @@ custom_search_constraints = []
 #                 main_tb.get_expr_coeff(ei, "alpha") != 0,
 #                 z3.Sum(*coeff_list) == 1))
 
-if (args.verifier_type == VerifierType.cbrdelay and not args.finite_buffer):
-    # Should only use min_c or min_c_lambda (not both in RHS expr)
-    for ei in range(n_exprs):
-        non_zero_list = [main_tb.get_expr_coeff(ei, 'min_c') != 0,
-                         main_tb.get_expr_coeff(ei, 'min_c_lambda') != 0]
-        custom_search_constraints.append(z3.Sum(*non_zero_list) <= 1)
+# if (args.verifier_type == VerifierType.cbrdelay and not args.finite_buffer):
+#     # Should only use min_c or min_c_lambda (not both in RHS expr)
+#     for ei in range(n_exprs):
+#         non_zero_list = [main_tb.get_expr_coeff(ei, 'min_c') != 0,
+#                          main_tb.get_expr_coeff(ei, 'min_c_lambda') != 0]
+#         custom_search_constraints.append(z3.Sum(*non_zero_list) <= 1)
 
 search_constraints = z3.And(
     *main_tb.get_search_space_constraints(),
@@ -398,6 +410,8 @@ if (CONVERGENCE_BASED_ON_BUFFER):
 
 if(args.large_buffer):
     link.environment = z3.And(link.environment, c.buf_min >= 3 * c.C * (c.R + c.D))
+if(args.small_buffer):
+    link.environment = z3.And(link.environment, c.buf_min <= 3 * c.C * (c.R + c.D))
 
 # ----------------------------------------------------------------
 # KNOWN SOLUTIONS

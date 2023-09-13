@@ -223,6 +223,15 @@ class CBRDelayProofs(Proofs):
             [Metric(self.steady__minc_c_lambda.lo, 0.1*c.C, c.C, 1, True)],
             [Metric(self.steady__bq_belief.hi, 0, 10 * c.C * (c.R + c.D), 1, False)]]
 
+        # ss_assignments = [
+        #     self.steady__minc_c_lambda.lo == 51,
+        #     self.steady__bq_belief.hi == 400
+        # ]
+        # model = self.debug_verifier(z3.Not(z3.And(self.initial_beliefs_valid,
+        #                                           self.initial_beliefs_consistent,
+        #                                           self.initial_beliefs_inside)), ss_assignments)
+        # import ipdb; ipdb.set_trace()
+
         os = OptimizationStruct(
             self.link, self.vs, [], metric_lists,
             lemma21, self.get_counter_example_str)
@@ -249,7 +258,7 @@ class CBRDelayProofs(Proofs):
         assert isinstance(v, CBRDelayLink.LinkVariables)
 
         some_belief_improves_towards_shrinking = False
-        if(self.solution_id == "drain_probe"):
+        if(self.solution_id == "drain_probe" or self.solution_id == "drain_bq_probe"):
             movement_add = self.movement_add__min_c_lambda * v.alpha
             svs = [self.steady__minc_c_lambda, self.steady__bq_belief]
             none_degrade = z3.And(*[x.does_not_degrage() for x in svs])

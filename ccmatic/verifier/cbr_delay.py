@@ -155,6 +155,7 @@ class CBRDelayLink(BaseLink):
 
                 if(c.fix_stale__bq_belief and t == c.T-1):
                     s.add(v.bq_belief2[n][t] == v.bq_belief1[n][t])
+                    # s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
                 else:
                     s.add(v.bq_belief2[n][t] == z3_min(v.bq_belief1[n][t], bq2))
 
@@ -285,6 +286,9 @@ class CBRDelayLink(BaseLink):
                     large_loss_count = z3.Sum(*large_loss_list)
                     large_loss_happened = large_loss_count > 0
 
+                    high_qdel_happened = False  # z3.Or(*[v.min_qdel[n][t] > c.D for t in range(1, c.T)])
+                    large_loss_happened = z3.Or(large_loss_happened, high_qdel_happened)
+
                     # Deprecated
                     # bq_went_low_rtt_ago_list = []
                     # for et in range(t, 0, -1):
@@ -295,8 +299,8 @@ class CBRDelayLink(BaseLink):
                     # bq_went_low_rtt_ago = z3.Or(bq_went_low_rtt_ago_list)
 
                     # Timeout if probe happened and queue did not drain
-                    probe_happened = z3.Or(*[v.r_f[n][_t] > v.alpha for _t in range(1, t+1)])
-                    probe_did_not_happen_in_last_2_rm = z3.And(*[v.r_f[n][t] <= v.alpha for t in range(t-1, t+1)])
+                    probe_happened = z3.Or(*[v.r_f[n][_t] > 3 * v.min_c_lambda[n][_t-1] for _t in range(1, t+1)])
+                    probe_did_not_happen_in_last_2_rm = z3.And(*[v.r_f[n][_t] <= 3 * v.min_c_lambda[n][_t-1] for _t in range(t-1, t+1)])
                     inflight_did_not_drain = v.bq_belief1[n][t] > v.alpha
                     probe_based_timeout = z3.And(probe_happened, probe_did_not_happen_in_last_2_rm, inflight_did_not_drain)
 
@@ -323,12 +327,12 @@ class CBRDelayLink(BaseLink):
                                                  False)
 
                     if (id(v.bq_belief) == id(v.bq_belief2)):
-                        probe_count = z3.Sum(*[z3.If(v.r_f[n][_t] > v.alpha, 1, 0) for _t in range(1, t+1)])
+                        probe_count = z3.Sum(*[z3.If(v.r_f[n][_t] > 3 * v.min_c_lambda[n][_t-1], 1, 0) for _t in range(1, t+1)])
                         probe_happened = probe_count >= 1 #  z3.Or(*[v.r_f[n][_t] > v.alpha for _t in range(1, t+1)])
                         probe_happened_in_last_3_rm = z3.Or(
-                            *[v.r_f[n][_t] > v.alpha for _t in range(t-2, t+1)])
+                            *[v.r_f[n][_t] > 3 * v.min_c_lambda[n][_t-1] for _t in range(t-2, t+1)])
                         two_probe_in_last_3_shifted_intervals = z3.Or(
-                            *[z3.Sum(*[v.r_f[n][__t] > v.alpha
+                            *[z3.Sum(*[v.r_f[n][__t] > 3 * v.min_c_lambda[n][_t-1]
                                         for __t in range(_t-3, _t+1)]) >= 2
                                 for _t in range(t-2, t+1)])
                         good_inter_probe_time = z3.And(
@@ -527,6 +531,7 @@ class CBRDelayLink(BaseLink):
     def setup_environment(self, c: ModelConfig, v: Variables):
         s = super().setup_environment(c, v)
         assert isinstance(c, CBRDelayLink.LinkModelConfig)
+        assert isinstance(v, CBRDelayLink.LinkVariables)
 
         if(c.calculate_qdel):
             self.calculate_first_qdel_env(c, s, v)
@@ -539,9 +544,9 @@ class CBRDelayLink(BaseLink):
             # TODO: see how history would need to be maintained in the kernel.
             assert c.N == 1
             probe_happened = z3.Or(
-                *[v.r_f[0][t] > v.alpha for t in range(1, c.T)])
+                *[v.r_f[0][t] > 3 * v.min_c_lambda[0][t-1] for t in range(1, c.T)])
             probe_happened_2_rm_ago = z3.Or(
-                *[v.r_f[0][t] > v.alpha for t in range(1, c.T-2)])
+                *[v.r_f[0][t] > 3 * v.min_c_lambda[0][t-1] for t in range(1, c.T-2)])
             s.add(z3.Implies(probe_happened, probe_happened_2_rm_ago))
 
         return s

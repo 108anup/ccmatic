@@ -1,5 +1,6 @@
 import z3
 from ccmatic.cegis import CegisConfig, VerifierType
+from ccmatic.common import try_except_wrapper
 
 from ccmatic.generator import TemplateBuilder, TemplateType, solution_parser
 
@@ -14,7 +15,8 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
     if (n_exprs >= 3 and
         template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED and
-            main_lhs_term == 'r_f'):
+            main_lhs_term == 'r_f' and
+            main_tb.get_expr_coeff(0, 'min_c') is not None):
         drain_probe_steady = solution_parser(
             """
             r_f = max alpha,
@@ -45,6 +47,21 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
     if (n_exprs >= 2 and
         template_type == TemplateType.IF_ELSE_CHAIN and
         main_lhs_term == 'r_f' and
+            main_tb.get_cond_coeff(0, 'bq_belief') is not None and
+            main_tb.get_expr_coeff(0, 'bq_belief') is not None):
+        drain_bq_probe = solution_parser(
+            """
+            r_f = max alpha,
+            if (+ 1bq_belief + -1alpha > 0):
+                + 1min_c_lambda + -1bq_belief
+            else:
+                + 3min_c_lambda + 1alpha
+            """, main_tb)
+        solution_dict['drain_bq_probe'] = drain_bq_probe
+
+    if (n_exprs >= 2 and
+        template_type == TemplateType.IF_ELSE_CHAIN and
+        main_lhs_term == 'r_f' and
             main_tb.get_cond_coeff(0, 'bq_belief') is not None):
         # This does not pass the verifier. Can perhaps only gaurantee lower
         # utilization. Because minc_lambda can be farther away from minc with
@@ -62,7 +79,8 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
     if (n_exprs >= 2 and
             template_type == TemplateType.IF_ELSE_CHAIN and
-            main_lhs_term == 'r_f'):
+            main_lhs_term == 'r_f' and
+            main_tb.get_expr_coeff(0, 'min_c') is not None):
         probe_until_shrink = solution_parser(
             """
             r_f = max alpha,
@@ -75,7 +93,8 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
     if (n_exprs >= 3 and
             template_type == TemplateType.IF_ELSE_CHAIN and
-            main_lhs_term == 'r_f'):
+            main_lhs_term == 'r_f' and
+            main_tb.get_expr_coeff(0, 'min_c') is not None):
         two_probes = solution_parser(
             """
             r_f = max alpha,
@@ -90,7 +109,8 @@ def get_solutions_cbr_delay(main_tb: TemplateBuilder,
 
     if (n_exprs >= 4 and
        template_type == TemplateType.IF_ELSE_COMPOUND_DEPTH_1 and
-       main_lhs_term == 'r_f'):
+       main_lhs_term == 'r_f' and
+            main_tb.get_expr_coeff(0, 'min_c') is not None):
         buffer_based = solution_parser(
             """
             r_f = max alpha,
