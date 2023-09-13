@@ -323,12 +323,13 @@ class CBRDelayLink(BaseLink):
                                                  False)
 
                     if (id(v.bq_belief) == id(v.bq_belief2)):
-                        probe_happened = z3.Or(*[v.r_f[n][_t] > v.alpha for _t in range(1, t+1)])
+                        probe_count = z3.Sum(*[z3.If(v.r_f[n][_t] > v.alpha, 1, 0) for _t in range(1, t+1)])
+                        probe_happened = probe_count >= 1 #  z3.Or(*[v.r_f[n][_t] > v.alpha for _t in range(1, t+1)])
                         probe_happened_in_last_3_rm = z3.Or(
                             *[v.r_f[n][_t] > v.alpha for _t in range(t-2, t+1)])
                         two_probe_in_last_3_shifted_intervals = z3.Or(
                             *[z3.Sum(*[v.r_f[n][__t] > v.alpha
-                                        for __t in range(_t-2, _t+1)]) >= 2
+                                        for __t in range(_t-3, _t+1)]) >= 2
                                 for _t in range(t-2, t+1)])
                         good_inter_probe_time = z3.And(
                             probe_happened_in_last_3_rm, two_probe_in_last_3_shifted_intervals)
@@ -340,6 +341,14 @@ class CBRDelayLink(BaseLink):
                                                         z3.If(large_loss_happened, True,
                                                             z3.If(probe_did_not_happen, False,
                                                                     z3.If(large_inter_probe_time, True, False))), False)
+                        timeout_min_c_lambda = (
+                            z3.If(timeout_allowed,
+                                  z3.If(large_loss_happened, True,
+                                        z3.If(probe_count == 0, False,
+                                              z3.If(z3.And(probe_count == 1, probe_based_timeout), True,
+                                                    z3.If(z3.And(probe_count >= 2, z3.Not(good_inter_probe_time)), True, False)))),
+                                  False)
+                        )
 
                         # Ideally below should work but somehow it doesnt
                         # # large_inflight_before_probe_list = []

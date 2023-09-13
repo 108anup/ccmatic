@@ -116,14 +116,20 @@ class CBRDelayProofs(Proofs):
                 """
             else:
                 self.recursive[self.movement_mult__consistent] = 1.9
-                self.recursive[self.steady__minc_c_lambda.lo] = 14  # 20  # 14
+                self.recursive[self.steady__minc_c_lambda.lo] = 22  # 14
                 self.recursive[self.steady__bq_belief.hi] = 321
                 self.recursive[self.movement_add__min_c_lambda] = 0.2
 
                 """
-                T=7, we get utilization as 0.167. (Timeout is too aggressive), others are same as above.
-                T=8, we get utilization as 0.139.
-                T=9, we get utilization as 0.179.
+                Aggressive timeout (minc_lambda_lo = 14)
+                T=7, we get utilization as 0.167. others are same as above.
+                T=8, we get utilization as 0.139. queue=1.7, loss_count=4.1, loss_amt=0.4
+                T=9, we get utilization as 0.179. queue=1.7, loss_count=4.1, loss_amt=0.4
+
+                More conservative timeout (minc_lambda_lo = 22)
+                T=7, util 0.199, queue=1.5, loss_count=3.0, loss_amt=0.3
+                T=8, util 0.219,
+                T=9,
                 """
                 pass
 
