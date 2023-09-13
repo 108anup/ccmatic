@@ -112,7 +112,8 @@ class CBRDelayProofs(Proofs):
                 [04/11 18:08:35]     adv__Desired__loss_amount_bound
                 0                              0.3
 
-                With T = 9, we get 0.285 utilization
+                With T = 9, we get 0.285 utilization, 1.7 queue, 4.1 loss_count, 0.4 loss_amt
+                With T = 8, we get 0.239 utilization, 1.7 queue, 4.1 loss_count, 0.4 loss_amt
                 """
             else:
                 self.recursive[self.movement_mult__consistent] = 1.9
@@ -129,7 +130,7 @@ class CBRDelayProofs(Proofs):
                 More conservative timeout (minc_lambda_lo = 22)
                 T=7, util 0.199, queue=1.5, loss_count=3.0, loss_amt=0.3
                 T=8, util 0.219, queue=1.7, loss_count=4.1, loss_amt=0.4
-                T=9, util 0.282
+                T=9, util 0.282, queue=1.7, loss_count=4.1, loss_amt=0.4
                 """
                 pass
 
