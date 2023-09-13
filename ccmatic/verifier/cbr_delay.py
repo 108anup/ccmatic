@@ -287,6 +287,8 @@ class CBRDelayLink(BaseLink):
                     large_loss_happened = large_loss_count > 0
 
                     high_qdel_happened = False  # z3.Or(*[v.min_qdel[n][t] > c.D for t in range(1, c.T)])
+                    # Verifier can produce trace where min_qdel is high, but minc_lambda is already low.
+                    # This is the classic, do not know if we have already decreased rate or not issue.
                     large_loss_happened = z3.Or(large_loss_happened, high_qdel_happened)
 
                     # Deprecated
@@ -301,7 +303,7 @@ class CBRDelayLink(BaseLink):
                     # Timeout if probe happened and queue did not drain
                     probe_happened = z3.Or(*[v.r_f[n][_t] > 3 * v.min_c_lambda[n][_t-1] for _t in range(1, t+1)])
                     probe_did_not_happen_in_last_2_rm = z3.And(*[v.r_f[n][_t] <= 3 * v.min_c_lambda[n][_t-1] for _t in range(t-1, t+1)])
-                    inflight_did_not_drain = v.bq_belief1[n][t] > v.alpha
+                    inflight_did_not_drain = v.bq_belief1[n][t] > 2 * v.alpha
                     probe_based_timeout = z3.And(probe_happened, probe_did_not_happen_in_last_2_rm, inflight_did_not_drain)
 
                     probe_did_not_happen_in_last_3_rm = False  # z3.And(*[v.r_f[n][t] <= v.alpha for t in range(t-2, t+1)])
@@ -548,6 +550,11 @@ class CBRDelayLink(BaseLink):
             probe_happened_2_rm_ago = z3.Or(
                 *[v.r_f[0][t] > 3 * v.min_c_lambda[0][t-1] for t in range(1, c.T-2)])
             s.add(z3.Implies(probe_happened, probe_happened_2_rm_ago))
+
+            # Only look at traces which have two probes.
+            # Assuming when there is a single probe, we will timeout correctly.
+            probe_count = z3.Sum(*[z3.If(v.r_f[0][_t] > 3 * v.min_c_lambda[0][_t-1], 1, 0) for _t in range(1, c.T)])
+            s.add(probe_count >= 2)
 
         return s
 

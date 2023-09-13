@@ -101,6 +101,10 @@ class CBRDelayProofs(Proofs):
                 self.recursive[self.movement_add__min_c_lambda] = 0.2
 
                 """
+                We have assumed that if there is a probe, then snapshot is
+                aligned so that one probe happened more than 2 Rm ago.
+                """
+                """
                 T = 7
                 [04/11 18:07:22]     adv__Desired__util_f
                 0                 0.199
@@ -114,6 +118,10 @@ class CBRDelayProofs(Proofs):
 
                 With T = 9, we get 0.285 utilization, 1.7 queue, 4.1 loss_count, 0.4 loss_amt
                 With T = 8, we get 0.239 utilization, 1.7 queue, 4.1 loss_count, 0.4 loss_amt
+
+                The non-zero loss amount just means that our thresh for alpha
+                in loss is low, it should be higher.
+                Loss is still bounded by const multiple of alpha as there are no large loss events.
                 """
             else:
                 self.recursive[self.movement_mult__consistent] = 1.9
@@ -133,6 +141,21 @@ class CBRDelayProofs(Proofs):
                 T=9, util 0.282, queue=1.7, loss_count=4.1, loss_amt=0.4
                 """
                 pass
+        if(self.solution_id == "drain_bq_probe"):
+            self.recursive[self.movement_mult__consistent] = 1.9
+            self.recursive[self.steady__minc_c_lambda.lo] = 23
+            self.recursive[self.steady__bq_belief.hi] = 321
+            self.recursive[self.movement_add__min_c_lambda] = 0.2
+
+            """
+            We have assumed we only look at small buffer cases.
+            On top of that snapshots have atleast 2 probes.
+
+            T=7, util 0.275, queue=1.5, loss_count=3.0, loss_amt=0.3
+            T=8, util 0.268, queue=1.7, loss_count=4.1, loss_amt=0.4
+            T=9, util 0.295, queue=1.7, loss_count=4.1, loss_amt=0.4
+            (movement_add is 0.5alpha)
+            """
 
     def lemma1__beliefs_become_consistent(self,):
         link = self.link
@@ -220,7 +243,7 @@ class CBRDelayProofs(Proofs):
                    d.bounded_large_loss_count))
 
         metric_lists = [
-            [Metric(self.steady__minc_c_lambda.lo, 0.1*c.C, c.C, 1, True)],
+            [Metric(self.steady__minc_c_lambda.lo, 0.2*c.C, c.C, 1, True)],
             [Metric(self.steady__bq_belief.hi, 0, 10 * c.C * (c.R + c.D), 1, False)]]
 
         # ss_assignments = [
