@@ -33,8 +33,8 @@ class CBRDelayProofs(Proofs):
             v.min_c_lambda[0][-1],
             z3.Real("steady__minc_c_lambda__lo"),
             None)
-        # self.bq_belief = v.bq_belief2
-        self.bq_belief = v.bq_belief1
+        self.bq_belief = v.bq_belief2
+        # self.bq_belief = v.bq_belief1
         self.steady__bq_belief = SteadyStateVariable(
             "steady__bq_belief",
             self.bq_belief[0][0],
@@ -115,6 +115,16 @@ class CBRDelayProofs(Proofs):
                 With T = 9, we get 0.285 utilization
                 """
             else:
+                self.recursive[self.movement_mult__consistent] = 1.9
+                self.recursive[self.steady__minc_c_lambda.lo] = 14  # 20  # 14
+                self.recursive[self.steady__bq_belief.hi] = 321
+                self.recursive[self.movement_add__min_c_lambda] = 0.2
+
+                """
+                T=7, we get utilization as 0.167. (Timeout is too aggressive), others are same as above.
+                T=8, we get utilization as 0.139.
+                T=9, we get utilization as 0.179.
+                """
                 pass
 
     def lemma1__beliefs_become_consistent(self,):

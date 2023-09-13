@@ -188,8 +188,8 @@ def get_value_for_term(
         return v.alpha
     elif (tt.name == "bq_belief"):
         assert isinstance(v, CBRDelayLink.LinkVariables)
-        return v.bq_belief1[n][t-1]
-        # return v.bq_belief2[n][t-1]
+        # return v.bq_belief1[n][t-1]
+        return v.bq_belief2[n][t-1]
     else:
         return v.__getattribute__(tt.name)[n][t-1]
 
