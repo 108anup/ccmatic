@@ -150,6 +150,7 @@ class CBRDelayProofs(Proofs):
             """
             We have assumed we only look at small buffer cases.
             On top of that snapshots have atleast 2 probes.
+            (With the bottom assumption, we do not need the top assumption anymore.)
 
             T=7, util 0.275, queue=1.5, loss_count=3.0, loss_amt=0.3
             T=8, util 0.268, queue=1.7, loss_count=4.1, loss_amt=0.4
