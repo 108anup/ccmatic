@@ -118,7 +118,7 @@ elif(template_type == TemplateType.IF_ELSE_3LEAF_UNBALANCED):
 # else:
 #     if(not args.dynamic_buffer and not args.app_limited):
 #         n_exprs = 2
-# n_exprs = 2
+n_exprs = 2
 n_conds = n_exprs - 1
 
 
