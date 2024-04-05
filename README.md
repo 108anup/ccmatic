@@ -1,3 +1,5 @@
+# Plot convergence graph using tests/ccmatic/test_convergence_rate.py
+
 # CCmatic
 Tool to synthesize CCAs that provably achieve given desired properties (e.g., high utilization, low delay), under all traces that a network model can exhibit (e.g., CCAC network model).
 
