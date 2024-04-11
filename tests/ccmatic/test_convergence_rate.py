@@ -56,7 +56,7 @@ if(__name__ == "__main__"):
         '$O(1)$': '$\\Omega(\\mathit{C})$',
         '$O(\\log\\mathit{C})$': '$\\Omega(\dots)$',
         '$O(\\sqrt{\\mathit{C}})$': '$\\Omega(\dots)$',
-        '$O(\\mathit{C})$': '$\\Omega(1)$'
+        '$O(\\mathit{C})$': '$\\Omega(\\log\\mathit{C})$'
     }
 
     # fig, ax = plt.subplots()
@@ -83,9 +83,9 @@ if(__name__ == "__main__"):
     fig.savefig("convergence.svg", bbox_inches='tight', pad_inches=0.01)
 
 
-    fig, ax = ppt.subfigures(yscale=0.7, xscale=0.5)
-    ax.set_ylabel("Pkt loss on bwdth probe\n[log scale]")
-    ax.set_xlabel("Convergence time [$\\mathit{RTT}$s]")
+    fig, ax = ppt.subfigures(yscale=0.7, xscale=0.85)
+    ax.set_xlabel("Loss [log scale]")
+    ax.set_ylabel("Convergence time [$\\mathit{RTT}$s]")
     C = 150
 
     xticks = []
@@ -98,21 +98,17 @@ if(__name__ == "__main__"):
         convergence_time_func = get_growth(f)
         loss = f(C)
         ctime = convergence_time_func(C)
-        xticks.append(ctime)
-        yticks.append(loss)
-        # xlabels.append(str(ctime) + INVERSE[name])
-        # ylabels.append(str(loss) + name)
-        xlabels.append(INVERSE[name])
-        ylabels.append(name)
-        # bw_range = range(START, MAX_LINK_RATE, STEP)
-        # ctime = [convergence_time_func(bw) for bw in bw_range]
-
-        # ax.plot(ctime, loss, label=name)
+        yticks.append(ctime)
+        xticks.append(loss)
+        # ylabels.append(str(ctime) + INVERSE[name])
+        # xlabels.append(str(loss) + name)
+        ylabels.append(INVERSE[name])
+        xlabels.append(name)
 
     ax.plot(xticks, yticks, ls='--', color='black', markersize=15, marker='X')
-    ax.fill_between(xticks, yticks, [C] * len(flist), alpha=0.3)
+    ax.fill_between(xticks, yticks, [max(yticks)] * len(flist), alpha=0.3)
 
-    ax.set_yscale('log')
+    ax.set_xscale('log')
 
     ax.set_xticks(xticks)
     ax.set_yticks(yticks)
