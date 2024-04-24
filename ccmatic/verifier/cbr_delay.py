@@ -544,7 +544,7 @@ class CBRDelayLink(BaseLink):
             # WLOG realign the finite trace window so that if there is a probe,
             # the probe is moved to 2 Rm periods before the end of the trace.
             # TODO: see how history would need to be maintained in the kernel.
-            assert c.N == 1
+            # assert c.N == 1
             probe_happened = z3.Or(
                 *[v.r_f[0][t] > 3 * v.min_c_lambda[0][t-1] for t in range(1, c.T)])
             probe_happened_2_rm_ago = z3.Or(
@@ -624,22 +624,22 @@ class CBRDelayLink(BaseLink):
             for n in range(c.N):
                 df[get_name_for_list(vn.min_c_lambda[n])] = _get_model_value(v.min_c_lambda[n])
                 df[get_name_for_list(vn.bq_belief1[n])] = _get_model_value(v.bq_belief1[n])
-                df[get_name_for_list(vn.bq_belief2[n])] = _get_model_value(v.bq_belief2[n])
+                # df[get_name_for_list(vn.bq_belief2[n])] = _get_model_value(v.bq_belief2[n])
                 # df[get_name_for_list(vn.recomputed_min_c_lambda[n])] = _get_model_value(v.recomputed_min_c_lambda[n])
                 # df[get_name_for_list(vn.under_utilized[n])] = _get_model_value(v.under_utilized[n])
 
-        if(c.calculate_qdel):
-            qdelay = []
-            for t in range(c.T):
-                this_value = c.T
-                for dt in range(c.T):
-                    value = counter_example.eval(v.first_qdel[t][dt])
-                    bool_value = bool(value)
-                    if(bool_value):
-                        this_value = min(this_value, dt)
-                        break
-                qdelay.append(this_value)
-            assert len(qdelay) == c.T
-            df["first_qdel_t"] = np.array(qdelay).astype(float)
+        # if(c.calculate_qdel):
+        #     qdelay = []
+        #     for t in range(c.T):
+        #         this_value = c.T
+        #         for dt in range(c.T):
+        #             value = counter_example.eval(v.first_qdel[t][dt])
+        #             bool_value = bool(value)
+        #             if(bool_value):
+        #                 this_value = min(this_value, dt)
+        #                 break
+        #         qdelay.append(this_value)
+        #     assert len(qdelay) == c.T
+        #     df["first_qdel_t"] = np.array(qdelay).astype(float)
 
         return df.astype(float)
