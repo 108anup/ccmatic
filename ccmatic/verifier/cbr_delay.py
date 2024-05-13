@@ -120,8 +120,8 @@ class CBRDelayLink(BaseLink):
 
     class LinkModelConfig(ModelConfig):
         minc_lambda_measurement_interval: float = 1
-        fix_stale__min_c_lambda: bool = True
-        fix_stale__bq_belief: bool = True
+        fix_stale__min_c_lambda: bool = False
+        fix_stale__bq_belief: bool = False
 
     @staticmethod
     def update_bq_belief(c: ModelConfig, s: MySolver, v: Variables):

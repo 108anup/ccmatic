@@ -25,7 +25,7 @@ cc.template_beliefs = True
 cc.template_beliefs_use_buffer = False
 cc.template_beliefs_use_max_buffer = False
 cc.N = 2
-cc.T = 7
+cc.T = 10
 cc.history = cc.R
 cc.cca = "none"
 
@@ -96,7 +96,7 @@ beliefs_shrink = z3.Or(
 )
 agg_util_inv = z3.Or(d.fefficient, d.ramp_up_cwnd, d.ramp_up_bq, d.ramp_up_queue)
 gap_decrease = z3.Implies(
-    v.min_c_lambda[0][0] > 10 * v.min_c_lambda[1][0],
+    v.min_c_lambda[0][0] > 5 * v.min_c_lambda[1][0],
     z3.And(
         # v.min_c_lambda[0][c.T - 1] < v.min_c_lambda[0][0],
         v.min_c_lambda[1][c.T - 1] >= v.min_c_lambda[1][0] + v.alpha/10,
@@ -105,8 +105,11 @@ gap_decrease = z3.Implies(
 desired = z3.And(
     z3.Or(beliefs_shrink, agg_util_inv)
 )  # This passes implying that CCA ensures freedom from arbitrary underutilization
-# desired = z3.And(z3.Or(beliefs_shrink, agg_util_inv), z3.Or(gap_decrease))
+desired = z3.And(z3.Or(beliefs_shrink, agg_util_inv), z3.Or(gap_decrease))
 # desired = False
+
+verifier.add(v.min_c_lambda[1][0] >= 10)
+verifier.add(v.bq(0) == 0)
 
 verifier.add(z3.Not(desired))
 sat = verifier.check()
