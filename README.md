@@ -39,6 +39,10 @@ used, you may need to install the dependencies of the submodules as well:
 4. plot_config (convenience wrappers on matplotlib for plotting and plot
    configuration)
 
+Run following after cloning the repository to populate the submodules if you
+forgot to clone with `--recursive` flag.: `git submodule update --init
+--recursive`
+
 Note, the dependency may be incomplete, please reach out if you face any issues
 in running the code.
 
