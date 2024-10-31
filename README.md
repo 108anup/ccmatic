@@ -56,23 +56,37 @@ The main entry point to the tool is
 `ccmatic/main_cca_belief_template_modular.py`. Note, the other files
 `ccmatic/main_*.py` are deprecated.
 
-### Example command that synthesizes cc_qdel (used for the second row of Table 2 in the paper).
+Note, run the commands in the root directory of the repository.
+
+### Example command to synthesize CCAs
+cc_qdel (described in row 2 (group 1) of Table 2 in the paper).
 ```
-# In the root directory of the repository.
 python -m ccmatic.main_cca_belief_template_modular --infinite-buffer --verifier-type ccac -T 5 --opt-ve-n --opt-pdt-n --opt-wce-n --opt-feasible-n
+```
+
+cc_probe_slow (described in row 11 (group 6) of Table 2 in the paper).
+```
+python -m ccmatic.main_cca_belief_template_modular --dynamic-buffer --verifier-type cbrdelay -T 7 --opt-ve-n --opt-pdt-n --opt-wce-n --opt-feasible-n
 ```
 
 `ccmatic/solutions/solutions_belief_template_modular.py` contains some of the
 solutions we produced. These are used for producing proofs. We just copy-paste
 the solution from the output of the CEGIS loop to this file.
 
-### Example command to produce and check proofs for the solution cc_qdel (described in appendix F of the paper).
+### Example command to produce and check proofs
+
+For the solution cc_qdel (described in appendix F of the paper).
 ```
 python -m ccmatic.main_cca_belief_template_modular --dynamic-buffer --large-buffer --verifier-type ccac -T 10 --opt-ve-n --opt-pdt-n --opt-wce-n --opt-feasible-n --solution probe_qdel --proofs --fix-minc --fix-maxc
 ```
 
-Note, for T=10, this may take a while. If you just want to see how the tool
-runs, you can try T=6. Not all lemmas will be satisfied for T=6.
+For the solution cc_probe_slow (not described in the paper).
+```
+python -m ccmatic.main_cca_belief_template_modular --dynamic-buffer --verifier-type cbrdelay -T 10 --opt-ve-n --opt-pdt-n --opt-wce-n --opt-feasible-n --solution drain_bq_probe --proofs
+```
+
+Note, for T=10, these may take a while. If you just want to see how the tool
+runs, you can try T=7. Not all lemmas will be satisfied for T=7.
 
 Creating the proof has three steps:
 1. Writing the lemmas
@@ -97,7 +111,10 @@ self.recursive[self.steady__max_c.hi] = 301
 ```
 in the probe_qdel proof, will re-do the search for these constants in
 lemma21__beliefs_recursive (in the code). This corresponds to Lemma F.3 in the
-paper.
+paper. Note, lemmas are processed in a sequence, so checking or searching for
+constants in a later lemma may require cached constants from earlier lemmas. If
+these are absent the proof checking will show error message describing which
+cached constants are missing.
 
 ### Loss vs. convergence time tradeoff
 
