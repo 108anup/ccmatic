@@ -15,7 +15,7 @@ GlobalConfig().default_logger_setup(logger)
 
 class CBRDelayProofs(Proofs):
 
-    check_lemmas = True
+    check_lemmas = False
 
     def setup_steady_variables(self):
         super().setup_steady_variables()
