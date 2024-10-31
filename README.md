@@ -73,6 +73,10 @@ cc_probe_slow (described in row 11 (group 6) of Table 2 in the paper).
 python -m ccmatic.main_cca_belief_template_modular --dynamic-buffer --verifier-type cbrdelay -T 7 --opt-ve-n --opt-pdt-n --opt-wce-n --opt-feasible-n
 ```
 
+Note, for the cc_qdel command we set `cc.desired_util_f = 0.5` in
+`ccmatic/main_cca_belief_template_modular.py` where as set `cc.desired_util_f =
+0.3` for cc_probe_slow.
+
 `ccmatic/solutions/solutions_belief_template_modular.py` contains some of the
 solutions we produced. These are used for producing proofs. We just copy-paste
 the solution from the output of the CEGIS loop to this file.
