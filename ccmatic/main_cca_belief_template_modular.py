@@ -332,10 +332,10 @@ cc.min_maxc_minc_gap_mult = 1
 cc.maxc_minc_change_mult = 1.1
 
 cc.desired_no_large_loss = args.no_large_loss
-cc.desired_util_f = 0.1
+cc.desired_util_f = 0.5
 cc.desired_queue_bound_multiplier = 4
 cc.desired_queue_bound_alpha = 3
-if(cc.infinite_buffer):
+if cc.infinite_buffer:
     cc.desired_loss_count_bound = 0
     cc.desired_large_loss_count_bound = 0
     cc.desired_loss_amount_bound_multiplier = 0
